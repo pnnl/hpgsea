@@ -1,0 +1,703 @@
+---
+output:
+  bookdown::pdf_document2:
+    keep_tex: true
+    number_sections: false
+    toc: false
+---
+
+```{r setup, echo=FALSE, warning=FALSE, message=FALSE}
+knitr::opts_chunk$set(echo = FALSE,
+                      cache = FALSE,
+                      warning = FALSE,
+                      fig.align = "center")
+
+# Required packages
+library(knitr)
+library(kableExtra)
+library(dplyr)
+library(ggplot2)
+library(ggpubr)
+library(latex2exp)
+library(ggh4x)
+```
+
+```{r fun-prepare-data}
+prepare_data <- function(path) {
+   x <- readRDS(path) %>%
+      mutate(replicate = as.integer(replicate)) %>%
+      arrange(nperm, nSamples, maxSetSize, nSets, alpha, replicate) %>%
+      mutate(
+         x_pos = (replicate - 2L) * 0.25 + alpha,
+         across(.cols = c(nSets, nperm, maxSetSize),
+                .fns = ~ scales::comma_format()(.x)),
+         across(.cols = c(nperm, nSamples, maxSetSize, nSets),
+                .fns = ~ factor(.x, levels = unique(.x))),
+         maxSetSize = as.character(maxSetSize),
+         maxSetSize2 = ifelse(
+            nSamples == levels(nSamples)[1L] & 
+               maxSetSize == unique(maxSetSize)[1L],
+            "x",
+            maxSetSize)) %>% 
+      mutate(
+         maxSetSize2 = factor(maxSetSize2,
+                              levels = c("x", unique(maxSetSize)),
+                              labels = c(paste0("Max. set size = ",
+                                                unique(maxSetSize)[1L]), 
+                                         unique(maxSetSize))
+         ),
+         maxSetSize = maxSetSize2, 
+         maxSetSize2 = NULL)
+   
+   levels(x$nSamples)[1] <- paste0("N samples = ", levels(x$nSamples)[1])
+   
+   return(x)
+}
+```
+
+```{r fun-plot-time}
+# Format number of seconds as minutes and seconds (min:sec)
+as_ms <- function(x) {
+   m <- floor(x / 60)
+   s <- x - (m * 60)
+   
+   sprintf("%02g:%02g", m, s)
+}
+
+plot_time <- function(x, y_breaks) {
+   p <- ggplot(x, aes(x = x_pos, 
+                      y = elapsed_time, 
+                      color = nSets)) +
+      geom_point(shape = 3, 
+                 size = 1.05, 
+                 stroke = 0.8) +
+      ggh4x::facet_nested_wrap(~ nSamples + maxSetSize,
+                               nest_line = element_line(color = "black",
+                                                        linewidth = 0.25,
+                                                        linetype = 1, 
+                                                        lineend = "square"),
+                               resect = unit(8, "pt"),
+                               drop = TRUE, 
+                               nrow = 1L) +
+      scale_x_continuous(breaks = c(0, 1),
+                         labels = c("0.0", "1.0"),
+                         expand = expansion(add = 0.2)) +
+      scale_y_continuous(breaks = y_breaks,
+                         limits = c(0, max(c(y_breaks, x$elapsed_time))),
+                         labels = as_ms,
+                         sec.axis = sec_axis(
+                            transform = function(x) x,
+                            name = latex2exp::TeX(
+                               paste0("$\\pi$ = ", unique(x$nperm))
+                            )
+                         ),
+                         expand = expansion(mult = c(0.02, 0.05))) +
+      scale_color_manual(name = "Number of\ngene sets",
+                         # values = c("grey86", "grey48", "black"),
+                         values = c("grey75", "black", "#0070cc"),
+                         breaks = c("1,000", "10,000", "100,000")) +
+      labs(x = latex2exp::TeX("$\\alpha$"),
+           y = "Runtime (min:sec)") +
+      theme_bw(base_size = 9) +
+      theme(axis.title.y = element_text(size = rel(0.9)),
+            axis.ticks = element_line(color = "black", 
+                                      linewidth = 0.35),
+            axis.text = element_text(color = "black"),
+            axis.text.y.right = element_blank(),
+            axis.ticks.y.right = element_blank(),
+            panel.border = element_rect(fill = NA, 
+                                        color = "black"),
+            panel.grid.major.x = element_blank(),
+            panel.grid.minor.x = element_blank(),
+            panel.grid.major.y = element_line(color = "grey95",
+                                              linewidth = 0.35),
+            panel.grid.minor.y = element_line(color = "grey95",
+                                              linewidth = 0.35),
+            panel.spacing.x = unit(2, units = "pt"),
+            strip.background = element_blank(),
+            strip.text = element_text(size = 7))
+   
+   return(p)
+}
+```
+
+```{r timing-BLAS}
+## Fast ssGSEA - reference BLAS
+desktop <- prepare_data("../data/fast-ssGSEA_timing_results_BLAS.rds")
+
+# 1,000 permutations
+pa <- filter(desktop, nperm == "1,000") %>% 
+   plot_time(y_breaks = seq(0, 100, 20))
+
+# 10,000 permutations
+pb <- filter(desktop, nperm == "10,000") %>% 
+   plot_time(y_breaks = seq(0, 840, 120))
+
+# Combine plots
+p <- ggarrange(pa, pb,
+               labels = c("A", "B"),
+               font.label = list(face = "bold"),
+               ncol = 1L, nrow = 2L,
+               common.legend = TRUE,
+               legend = "right", vjust = 1.2)
+
+ggsave(filename = "../figures/figure-1.pdf",
+       plot = p, height = 3.7, width = 5.2, 
+       bg = "white", dpi = 300)
+
+# For package README
+ggsave(filename = "../../man/figures/README-figure-1.png",
+       plot = p, height = 3.7, width = 5.2, 
+       bg = "white", dpi = 450)
+```
+
+```{r timing-OpenBLAS}
+## Fast ssGSEA - OpenBLAS
+desktop_fast <- prepare_data("../data/fast-ssGSEA_timing_results_OpenBLAS.rds")
+
+# 1,000 permutations
+pa <- filter(desktop_fast, nperm == "1,000") %>% 
+   plot_time(y_breaks = seq(0, 30, 10))
+
+# 10,000 permutations
+pb <- filter(desktop_fast, nperm == "10,000") %>% 
+   plot_time(y_breaks = seq(0, 90, 30))
+
+# Combine plots
+p <- ggarrange(pa, pb,
+               labels = c("A", "B"),
+               font.label = list(face = "bold"),
+               ncol = 1L, nrow = 2L,
+               common.legend = TRUE,
+               legend = "right", vjust = 1.2)
+
+ggsave(filename = "../figures/figure-2.pdf",
+       plot = p, height = 3.7, width = 5.2, 
+       bg = "white", dpi = 300)
+
+# For package README
+ggsave(filename = "../../man/figures/README-figure-2.png",
+       plot = p, height = 3.7, width = 5.2, 
+       bg = "white", dpi = 450)
+```
+
+
+```{r error-comparison}
+# Format data for comparison
+df <- readRDS("../data/ssGSEA_p-value_exploration_data.rds")
+
+df <- df %>% 
+   bind_rows(.id = "alpha") %>% 
+   mutate(alpha = paste0("alpha == ", alpha))
+```
+
+```{r ES-comparison}
+# The ES is a function of the size of the gene set and the value of alpha.
+p <- ggplot(df, aes(x = set_size, y = ES.fast)) +
+   geom_bin_2d() +
+   facet_wrap(~ alpha, 
+              labeller = label_parsed) +
+   scale_x_continuous(name = "Gene set size", 
+                      breaks = c(10, seq(200, 1000, 200)),
+                      labels = scales::label_number(big.mark = ","),
+                      expand = expansion(mult = 0), 
+                      guide = guide_axis(angle = 90)) +
+   scale_y_continuous(name = "ES / 1,000",
+                      breaks = seq(-4, 4) * 1000,
+                      labels = seq(-4, 4),
+                      expand = expansion(mult = 0)) +
+   coord_cartesian(ylim = c(-4.4, 4.4) * 1000, clip = "off") +
+   scale_fill_gradient(name = "Density",
+                       low = "grey85",
+                       high = "black",
+                       limits = c(1, 400),
+                       breaks = c(1, seq(100, 400, 100))) +
+   guides(fill = guide_colorbar(theme = theme(
+      legend.key.width = unit(0.15, "in"),
+      legend.key.height = unit(0.8, "in")
+   ))) +
+   theme_bw(base_size = 10) +
+   theme(plot.title = element_text(color = "black",
+                                   face = "bold",
+                                   margin = unit(c(0, 0, 0, 0), "pt"),
+                                   size = rel(1.1),
+                                   hjust = 0.5,
+                                   vjust = 0),
+         axis.text = element_text(color = "black"),
+         axis.line = element_blank(),
+         axis.ticks = element_line(color = "black", 
+                                   linewidth = 0.35),
+         strip.background = element_blank(),
+         panel.spacing.x = unit(10, "pt"),
+         panel.grid = element_blank(),
+         panel.border = element_rect(fill = NA, color = "black"))
+
+ggsave(filename = "../figures/supp-figure-1.pdf",
+       plot = p, height = 2.2, width = 3.5, 
+       bg = "white", dpi = 300)
+```
+
+```{r NES-comparison}
+# Middle 95% of the data
+confint_df <- df %>% 
+   summarise(.by = alpha, 
+             lower.base = quantile(NES.base, 0.025),
+             upper.base = quantile(NES.base, 0.975),
+             lower.fast = quantile(NES.fast, 0.025),
+             upper.fast = quantile(NES.fast, 0.975))
+
+# base-ssGSEA: The NES is not a function of the size of the gene set, but the
+# range of the input values affects it, as there are differences depending on
+# the value of alpha.
+pa <- ggplot(df, aes(x = set_size, y = NES.base)) +
+   geom_bin_2d() +
+   geom_hline(aes(yintercept = lower.base), 
+              data = confint_df,
+              color = "black", 
+              lty = "dashed",
+              linewidth = 0.35) +
+   geom_hline(aes(yintercept = upper.base), 
+              data = confint_df,
+              color = "black", 
+              lty = "dashed",
+              linewidth = 0.35) +
+   facet_wrap(~ alpha, labeller = label_parsed) +
+   scale_x_continuous(name = "Gene set size", 
+                      breaks = c(10, seq(200, 1000, 200)),
+                      labels = scales::label_number(big.mark = ","),
+                      expand = expansion(add = 5), 
+                      guide = guide_axis(angle = 90)) +
+   scale_y_continuous(name = "NES",
+                      limits = c(-8.5, 8.5),
+                      breaks = seq(-8, 8, 4),
+                      expand = expansion(mult = 0)) +
+   coord_cartesian(clip = "off") +
+   scale_fill_gradient(name = "Density",
+                       low = "grey85", 
+                       high = "black",
+                       limits = c(1, 150),
+                       breaks = c(1, seq(50, 150, 50))) +
+   guides(fill = guide_colorbar(theme = theme(
+      legend.key.width = unit(0.15, "in"),
+      legend.key.height = unit(0.8, "in")
+   ))) +
+   ggtitle("base-ssGSEA") +
+   theme_bw(base_size = 10) +
+   theme(plot.title = element_text(color = "black",
+                                   face = "bold",
+                                   margin = unit(c(0, 0, 0, 0), "pt"),
+                                   size = rel(1.1),
+                                   hjust = 0.5,
+                                   vjust = 0),
+         axis.text = element_text(color = "black"),
+         axis.line = element_blank(),
+         axis.ticks = element_line(color = "black", 
+                                   linewidth = 0.35),
+         strip.background = element_blank(),
+         panel.spacing.x = unit(10, "pt"),
+         panel.grid = element_blank(),
+         panel.border = element_rect(fill = NA, color = "black"))
+
+
+# fast-ssGSEA: The NES is not a function of the size of the gene set or alpha.
+pb <- ggplot(df, aes(x = set_size, y = NES.fast)) +
+   geom_bin_2d() +
+   geom_hline(aes(yintercept = lower.fast), 
+              data = confint_df,
+              color = "black", 
+              lty = "dashed",
+              linewidth = 0.35) +
+   geom_hline(aes(yintercept = upper.fast), 
+              data = confint_df,
+              color = "black", 
+              lty = "dashed",
+              linewidth = 0.35) +
+   facet_wrap(~ alpha, labeller = label_parsed) +
+   scale_x_continuous(name = "Gene set size", 
+                      breaks = c(10, seq(200, 1000, 200)),
+                      labels = scales::label_number(big.mark = ","),
+                      expand = expansion(add = 5), 
+                      guide = guide_axis(angle = 90)) +
+   scale_y_continuous(name = "NES",
+                      limits = c(-8.5, 8.5),
+                      breaks = seq(-8, 8, 4),
+                      expand = expansion(mult = 0)) +
+   coord_cartesian(clip = "off") +
+   scale_fill_gradient(name = "Density",
+                       low = "grey85",
+                       high = "black",
+                       limits = c(1, 150),
+                       breaks = c(1, seq(50, 150, 50))) +
+   guides(fill = guide_colorbar(theme = theme(
+      legend.key.width = unit(0.15, "in"),
+      legend.key.height = unit(0.8, "in")
+   ))) +
+   ggtitle("fast-ssGSEA") +
+   theme_bw(base_size = 10) +
+   theme(plot.title = element_text(color = "black",
+                                   face = "bold",
+                                   margin = unit(c(0, 0, 0, 0), "pt"),
+                                   size = rel(1.1),
+                                   hjust = 0.5,
+                                   vjust = 0),
+         axis.text = element_text(color = "black"),
+         axis.line = element_blank(),
+         axis.ticks = element_line(color = "black", 
+                                   linewidth = 0.35),
+         strip.background = element_blank(),
+         panel.spacing.x = unit(10, "pt"),
+         panel.grid = element_blank(),
+         panel.border = element_rect(fill = NA, color = "black"))
+
+# Combine plots
+p <- ggarrange(pa, pb,
+               labels = c("A", "B"),
+               font.label = list(face = "bold"),
+               nrow = 1L, ncol = 2L,
+               common.legend = TRUE,
+               legend = "right", vjust = 1.2)
+
+ggsave(filename = "../figures/supp-figure-2.pdf",
+       plot = p, height = 2.2, width = 5, 
+       bg = "white", dpi = 300)
+```
+
+
+```{r pval-hist}
+pval_hist <- function(pval, alpha, title = "", ylim) {
+   df <- data.frame(pval = pval,  
+                    alpha = alpha)
+   
+   label_df <- distinct(df, alpha) %>% 
+      mutate(x = 0.5, 
+             y = 0.1,
+             label = paste0(title, "\n", alpha))
+   
+   ggplot(data = df,
+          aes(x = pval)) +
+      geom_histogram(aes(y = after_stat(count / sum(count))),
+                     breaks = seq(0, 1, 0.05),
+                     color = "black",
+                     fill = "white",
+                     linewidth = 0.3) +
+      geom_text(aes(x = x, y = y, label = alpha),
+                parse = TRUE,
+                data = label_df,
+                size = 10 / .pt) +
+      geom_text(aes(x = x, y = y, label = title),
+                data = data.frame(x = 0.5, y = 0.12, label = title),
+                size = 10 / .pt) +
+      facet_wrap(~ alpha, 
+                 labeller = label_parsed,
+                 nrow = 1L) +
+      annotate(geom = "segment",
+               lineend = "square",
+               x = 0, xend = 1, 
+               y = 0, yend = 0,
+               linewidth = 0.5, 
+               color = "black") +
+      scale_x_continuous(name = "P-value",
+                         breaks = seq(0, 1, 0.2)) +
+      scale_y_continuous(name = "Proportion",
+                         breaks = seq(0, 0.25, 0.05),
+                         limits = ylim,
+                         expand = expansion(mult = c(0, 1e-04))) +
+      coord_cartesian(ylim = ylim, clip = "off") +
+      theme_classic(base_size = 9) +
+      theme(aspect.ratio = 0.6,
+            legend.position = "none",
+            axis.text = element_text(color = "black"),
+            axis.line.x = element_blank(),
+            axis.line.y = element_line(color = "black",
+                                       lineend = "square"),
+            axis.ticks = element_line(color = "black"),
+            strip.background = element_blank(),
+            strip.text = element_blank(),
+            panel.spacing.x = unit(10, "pt"))
+}
+
+hist_ylim <- c(0, 0.2)
+
+h1 <- pval_hist(pval = df$p_value.base[grepl("0", df$alpha)],
+                alpha = df$alpha[grepl("0", df$alpha)],
+                title = "base-ssGSEA",
+                ylim = hist_ylim)
+
+h2 <- pval_hist(pval = df$p_value.base[grepl("1", df$alpha)],
+                alpha = df$alpha[grepl("1", df$alpha)],
+                title = "base-ssGSEA",
+                ylim = hist_ylim)
+
+h3 <- pval_hist(pval = df$p_value.fast[grepl("0", df$alpha)],
+                alpha = df$alpha[grepl("0", df$alpha)],
+                title = "fast-ssGSEA",
+                ylim = hist_ylim)
+
+h4 <- pval_hist(pval = df$p_value.fast[grepl("1", df$alpha)],
+                alpha = df$alpha[grepl("1", df$alpha)],
+                title = "fast-ssGSEA",
+                ylim = hist_ylim)
+
+p <- ggarrange(h1, h2, h3, h4,
+               labels = LETTERS[1:4],
+               font.label = list(face = "bold"),
+               nrow = 2L, ncol = 2L,
+               vjust = 1.2)
+
+ggsave(filename = "../figures/figure-3.pdf",
+       plot = p, height = 4, width = 5, 
+       bg = "white", dpi = 300)
+```
+
+```{r}
+format_ratio <- function(x, digits) {
+   out <- vapply(seq_along(x), function(i) {
+      formatC(
+         signif(x[i], digits = digits[i]), 
+         digits = digits[i], # number of significant digits
+         format = "fg", # real numbers
+         flag = "#" # alternative output form
+      )
+   }, character(1L))
+   
+   out <- sub("\\.$", "", out) # remove trailing decimal point
+   
+   return(out)
+}
+```
+
+
+
+```{r tab-1, include=FALSE, eval=FALSE}
+# Tables {.unnumbered}
+
+## Table 1 {.unnumbered}
+
+table_1 <-
+   c("../data/base-ssGSEA_timing_results_for_comparison.rds",
+     "../data/fast-ssGSEA_timing_results_BLAS_for_comparison.rds") %>% 
+   lapply(function(file_i) {
+      readRDS(file_i) %>% 
+         summarise(.by = -c(replicate, elapsed_time), 
+                   elapsed_time = mean(elapsed_time),
+                   elapsed_time = round(elapsed_time, 
+                                        digits = 1L)) %>% 
+         select(-c(nGenes, minSetSize))
+   }) %>% 
+   setNames(c("base", "fast")) %>% 
+   bind_rows(.id = "method") %>% 
+   arrange(nperm, nSamples, nSets, maxSetSize, method, alpha) %>% 
+   tidyr::pivot_wider(names_from = c(method, alpha),
+                      values_from = elapsed_time) %>% 
+   select(nperm, nSamples, nSets, maxSetSize, everything()) %>%
+   # Significant digits is determined by the number of significant digits in the
+   # smallest number (the fast-ssGSEA times)
+   mutate(n_signif_0 = pmax(floor(log10(floor(fast_0))) + 2L, 1L),
+          n_signif_1 = pmax(floor(log10(floor(fast_1))) + 2L, 1L),
+          ratio_0 = format_ratio(base_0 / fast_0, digits = n_signif_0),
+          ratio_1 = format_ratio(base_1 / fast_1, digits = n_signif_1)) %>% 
+   select(-c(n_signif_0, n_signif_1))
+
+kable(x = table_1, 
+      format = "latex", 
+      escape = FALSE,
+      align = "r",
+      col.names = c("$\\pi$", "N Samples", 
+                    "N Sets", "Max. Set Size",
+                    # base-ssGSEA
+                    "$\\alpha=0$", "$\\alpha=1$", 
+                    # fast-ssGSEA
+                    "$\\alpha=0$", "$\\alpha=1$",
+                    # Ratio
+                    "$\\alpha=0$", "$\\alpha=1$")) %>%
+   kable_styling(bootstrap_options = "condensed", 
+                 latex_options = "HOLD_position") %>%
+   add_header_above(bold = TRUE,
+                    c(" " = 4L,
+                      "base-ssGSEA" = 2L,
+                      "fast-ssGSEA" = 2L, 
+                      "Ratio\n(base/fast)" = 2L)) %>%
+   add_header_above(c(" " = 4L,
+                      "Runtime (seconds)" = 4L,
+                      " " = 2L)) %>%
+   column_spec(column = 1L,
+               latex_valign = "b",
+               width = "0.2in") %>% 
+   column_spec(column = 2L,
+               latex_valign = "b",
+               width = "0.5in") %>% 
+   column_spec(column = 3L,
+               latex_valign = "b",
+               width = "0.25in") %>% 
+   column_spec(column = 4L,
+               latex_valign = "b",
+               width = "0.3in") %>% 
+   column_spec(column = c(7:10),
+               width = "0.35in")
+```
+
+
+
+```{r tab-s1, include=FALSE, eval=FALSE}
+# Supplementary Tables {.unnumbered}
+
+## Table 1 {.unnumbered}
+
+table_s1 <-
+   c("../data/base-ssGSEA_timing_results_for_comparison.rds",
+     "../data/fast-ssGSEA_timing_results_OpenBLAS_for_comparison.rds") %>% 
+   lapply(function(file_i) {
+      readRDS(file_i) %>% 
+         summarise(.by = -c(replicate, elapsed_time), 
+                   elapsed_time = mean(elapsed_time),
+                   elapsed_time = round(elapsed_time, 
+                                        digits = 1L)) %>% 
+         select(-c(nGenes, minSetSize))
+   }) %>% 
+   setNames(c("base", "fast")) %>% 
+   bind_rows(.id = "method") %>% 
+   arrange(nperm, nSamples, nSets, maxSetSize, method, alpha) %>% 
+   tidyr::pivot_wider(names_from = c(method, alpha),
+                      values_from = elapsed_time) %>% 
+   select(nperm, nSamples, nSets, maxSetSize, everything()) %>%
+   # Significant digits is determined by the number of significant digits in the
+   # smallest number (the fast-ssGSEA times)
+   mutate(n_signif_0 = pmax(floor(log10(floor(fast_0))) + 2L, 1L),
+          n_signif_1 = pmax(floor(log10(floor(fast_1))) + 2L, 1L),
+          ratio_0 = format_ratio(base_0 / fast_0, digits = n_signif_0),
+          ratio_1 = format_ratio(base_1 / fast_1, digits = n_signif_1)) %>% 
+   select(-c(n_signif_0, n_signif_1))
+
+kable(x = table_s1, 
+      format = "latex", 
+      escape = FALSE,
+      align = "r",
+      col.names = c("$\\pi$", "N Samples", 
+                    "N Sets", "Max. Set Size",
+                    # base-ssGSEA
+                    "$\\alpha=0$", "$\\alpha=1$", 
+                    # fast-ssGSEA
+                    "$\\alpha=0$", "$\\alpha=1$",
+                    # Ratio
+                    "$\\alpha=0$", "$\\alpha=1$")) %>%
+   kable_styling(bootstrap_options = "condensed", 
+                 latex_options = "HOLD_position") %>%
+   add_header_above(bold = TRUE,
+                    c(" " = 4L,
+                      "base-ssGSEA" = 2L,
+                      "fast-ssGSEA" = 2L, 
+                      "Ratio\n(base/fast)" = 2L)) %>%
+   add_header_above(c(" " = 4L,
+                      "Runtime (seconds)" = 4L,
+                      " " = 2L)) %>%
+   column_spec(column = 1L,
+               latex_valign = "b",
+               width = "0.2in") %>% 
+   column_spec(column = 2L,
+               latex_valign = "b",
+               width = "0.5in") %>% 
+   column_spec(column = 3L,
+               latex_valign = "b",
+               width = "0.25in") %>% 
+   column_spec(column = 4L,
+               latex_valign = "b",
+               width = "0.3in") %>% 
+   column_spec(column = c(7:10),
+               width = "0.35in")
+```
+
+# Tables {.unnumbered}
+
+## Table 1 {.unnumbered}
+
+```{r}
+table_1 <-
+   c("../data/base-ssGSEA_timing_results_for_comparison.rds",
+     "../data/fast-ssGSEA_timing_results_BLAS_for_comparison.rds",
+     "../data/fast-ssGSEA_timing_results_OpenBLAS_for_comparison.rds") %>% 
+   lapply(function(file_i) {
+      readRDS(file_i) %>% 
+         summarise(.by = -c(replicate, elapsed_time), 
+                   elapsed_time = mean(elapsed_time),
+                   elapsed_time = round(elapsed_time, 
+                                        digits = 1L)) %>% 
+         select(-c(nGenes, minSetSize))
+   }) %>% 
+   setNames(c("base", "fast_BLAS", "fast_OpenBLAS")) %>% 
+   bind_rows(.id = "method") %>% 
+   arrange(nperm, nSamples, nSets, maxSetSize, method, alpha) %>% 
+   tidyr::pivot_wider(names_from = c(method, alpha),
+                      values_from = elapsed_time) %>% 
+   select(nperm, nSamples, nSets, maxSetSize, everything()) %>%
+   # Significant digits is determined by the number of significant digits in the
+   # smallest number (the fast-ssGSEA times)
+   mutate(
+      # BLAS
+      n_signif_BLAS_0 = pmax(floor(log10(floor(fast_BLAS_0))) + 2L, 
+                             1L),
+      n_signif_BLAS_1 = pmax(floor(log10(floor(fast_BLAS_1))) + 2L, 
+                             1L),
+      ratio_BLAS_0 = format_ratio(base_0 / fast_BLAS_0, 
+                                  digits = n_signif_BLAS_0),
+      ratio_BLAS_1 = format_ratio(base_1 / fast_BLAS_1, 
+                                  digits = n_signif_BLAS_1),
+      # OpenBLAS
+      n_signif_OpenBLAS_0 = pmax(floor(log10(floor(fast_OpenBLAS_0))) + 2L, 
+                                 1L),
+      n_signif_OpenBLAS_1 = pmax(floor(log10(floor(fast_OpenBLAS_1))) + 2L, 
+                                 1L),
+      ratio_OpenBLAS_0 = format_ratio(base_0 / fast_OpenBLAS_0,
+                                  digits = n_signif_OpenBLAS_0),
+      ratio_OpenBLAS_1 = format_ratio(base_1 / fast_OpenBLAS_1,
+                                  digits = n_signif_OpenBLAS_1)
+   ) %>% 
+   select(-contains("n_signif"))
+
+kable(x = table_1, 
+      format = "latex", 
+      escape = FALSE,
+      align = "r",
+      col.names = c("$\\pi$", 
+                    "N Samples", 
+                    "N Sets", 
+                    "Max. Set Size",
+                    # base-ssGSEA
+                    "$\\alpha=0$", "$\\alpha=1$", 
+                    # fast-ssGSEA (BLAS)
+                    "$\\alpha=0$", "$\\alpha=1$",
+                    # fast-ssGSEA (OpenBLAS)
+                    "$\\alpha=0$", "$\\alpha=1$",
+                    # Ratio (BLAS)
+                    "$\\alpha=0$", "$\\alpha=1$",
+                    # Ratio (OpenBLAS)
+                    "$\\alpha=0$", "$\\alpha=1$")) %>%
+   kable_styling(bootstrap_options = "condensed", 
+                 latex_options = "HOLD_position") %>%
+   add_header_above(
+      bold = TRUE,
+      c(" " = 4L, # parameters
+        "base-ssGSEA" = 2L,
+        "fast-ssGSEA\n(BLAS)" = 2L,
+        "fast-ssGSEA\n(OpenBLAS)" = 2L,
+        "BLAS" = 2L,
+        "OpenBLAS" = 2L)
+   ) %>%
+   add_header_above(c(" " = 4L,
+                      "Runtime (seconds)" = 6L,
+                      "Ratio (base/fast)" = 4L)) %>%
+   column_spec(column = 1L,
+               latex_valign = "b",
+               width = "0.2in") %>% 
+   column_spec(column = 2L,
+               latex_valign = "b",
+               width = "0.5in") %>% 
+   column_spec(column = 3L,
+               latex_valign = "b",
+               width = "0.25in") %>% 
+   column_spec(column = 4L,
+               latex_valign = "b",
+               width = "0.3in") %>% 
+   column_spec(column = c(7:14),
+               width = "0.35in")
+```
+

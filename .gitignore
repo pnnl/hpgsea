@@ -1,0 +1,13 @@
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+src/*.o
+src/*.so
+src/*.dll
+sandbox
+*DS_Store
+*.log
+simulation/scripts/*.pdf
+simulation/scripts/*.tex
+*.eps

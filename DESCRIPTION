@@ -1,0 +1,31 @@
+Package: fast.ssgsea
+Type: Package
+Title: Fast Single-Sample Gene Set Enrichment Analysis (ssGSEA)
+Version: 0.1.0
+Date: 2025-07-25
+Authors@R: 
+      person(given = "Tyler", family = "Sagendorf", 
+             email = "tyler.sagendorf@pnnl.gov", 
+             role = c("aut", "cre"),
+             comment = c(ORCID = "0000-0003-1552-4870"))
+Description: Highly optimized version of Single-Sample Gene Set Enrichment 
+    Analysis (ssGSEA). Supports directional databases such as the 
+    post-translational-modification signatures database (PTMsigDB).
+License: file LICENSE
+Encoding: UTF-8
+LinkingTo: 
+   Rcpp,
+   RcppArmadillo
+Depends:
+   R (>= 4.0.0)
+Imports:
+   data.table,
+   dqrng,
+   Matrix,
+   Rcpp,
+   RcppArmadillo,
+   stats
+RoxygenNote: 7.3.2
+Suggests:
+    testthat (>= 3.0.0)
+Config/testthat/edition: 3
