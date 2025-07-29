@@ -532,6 +532,10 @@
                                         theta_m_d_i,
                                         theta_w_d_i)
 
+      # If the number of genes expected to be "up" or "down" in the set is too
+      # small, replace the corresponding permutation ES (the entire row) with
+      # zero. The final ES will only depend on the "up" or "down" ES. Gene sets
+      # were previously filtered so both halves of the ES will not be set to 0.
       ES_perm[theta_m_i < min_size, ] <- 0
       ES_perm_d[theta_m_d_i < min_size, ] <- 0L
 
@@ -905,7 +909,8 @@
 
       setorderv(tab_i, cols = c("rep_idx", "ES"), order = c(1L, 1L))
 
-      ES_ls <- split(tab_i[["ES"]], tab_i[["rep_idx"]])
+      ES_ls <- split(x = tab_i[["ES"]],
+                     f = tab_i[["rep_idx"]])
       names(ES_ls) <- NULL
 
       # Indices of non-missing values for a particular column
@@ -1024,11 +1029,17 @@
       p_value = (n_as_extreme + 1L) / (n_same_sign + 1L)
    )]
 
-   tab[n_same_sign == 0L, NES := NA_real_]
+   tab[n_same_sign == 0L, # only happens when nperm is very small
+       `:=`(NES = NA_real_,
+            p_value = NA_real_)]
 
-   if (nperm == 0L)
+   if (nperm == 0L) {
       tab[, `:=`(n_same_sign = NA_integer_,
-                 n_as_extreme = NA_integer_)]
+                 n_as_extreme = NA_integer_,
+                 p_value = NA_real_)]
+   } else if (sort) {
+      setorderv(tab, cols = c("sample", "p_value"), order = c(1L, 1L))
+   }
 
    if (adjust_globally) {
       tab[, adj_p_value := p.adjust(p_value, method = "BH")]
@@ -1036,9 +1047,6 @@
       tab[, adj_p_value := p.adjust(p_value, method = "BH"),
           by = sample]
    }
-
-   if (sort && nperm > 0L)
-      setorderv(tab, cols = c("sample", "p_value"), order = c(1L, 1L))
 
    # Reorder/select columns
    keep_cols <- intersect(
