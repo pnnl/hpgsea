@@ -36,85 +36,85 @@ BEGIN_RCPP
 END_RCPP
 }
 // Rcpp_matmult_dense
-arma::mat Rcpp_matmult_dense(arma::mat& X, arma::mat& Y);
+arma::mat Rcpp_matmult_dense(const arma::mat& X, const arma::mat& Y);
 RcppExport SEXP _fast_ssgsea_Rcpp_matmult_dense(SEXP XSEXP, SEXP YSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< arma::mat& >::type X(XSEXP);
-    Rcpp::traits::input_parameter< arma::mat& >::type Y(YSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type X(XSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type Y(YSEXP);
     rcpp_result_gen = Rcpp::wrap(Rcpp_matmult_dense(X, Y));
     return rcpp_result_gen;
 END_RCPP
 }
 // Rcpp_matmult_sparse
-arma::mat Rcpp_matmult_sparse(arma::mat& X, arma::sp_mat& Y);
+arma::mat Rcpp_matmult_sparse(const arma::mat& X, const arma::sp_mat& Y);
 RcppExport SEXP _fast_ssgsea_Rcpp_matmult_sparse(SEXP XSEXP, SEXP YSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< arma::mat& >::type X(XSEXP);
-    Rcpp::traits::input_parameter< arma::sp_mat& >::type Y(YSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type X(XSEXP);
+    Rcpp::traits::input_parameter< const arma::sp_mat& >::type Y(YSEXP);
     rcpp_result_gen = Rcpp::wrap(Rcpp_matmult_sparse(X, Y));
     return rcpp_result_gen;
 END_RCPP
 }
 // Rcpp_calcESCore
-arma::mat Rcpp_calcESCore(const double alpha, const int min_size, arma::mat& Y, arma::mat& R, arma::colvec& sumRanks, arma::sp_mat& A, arma::mat& M, arma::mat& W);
+arma::mat Rcpp_calcESCore(const double alpha, const int min_size, const arma::mat& Y, const arma::mat& R, const arma::colvec& sumRanks, const arma::sp_mat& A, const arma::mat& M, const arma::mat& W);
 RcppExport SEXP _fast_ssgsea_Rcpp_calcESCore(SEXP alphaSEXP, SEXP min_sizeSEXP, SEXP YSEXP, SEXP RSEXP, SEXP sumRanksSEXP, SEXP ASEXP, SEXP MSEXP, SEXP WSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< const double >::type alpha(alphaSEXP);
     Rcpp::traits::input_parameter< const int >::type min_size(min_sizeSEXP);
-    Rcpp::traits::input_parameter< arma::mat& >::type Y(YSEXP);
-    Rcpp::traits::input_parameter< arma::mat& >::type R(RSEXP);
-    Rcpp::traits::input_parameter< arma::colvec& >::type sumRanks(sumRanksSEXP);
-    Rcpp::traits::input_parameter< arma::sp_mat& >::type A(ASEXP);
-    Rcpp::traits::input_parameter< arma::mat& >::type M(MSEXP);
-    Rcpp::traits::input_parameter< arma::mat& >::type W(WSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type Y(YSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type R(RSEXP);
+    Rcpp::traits::input_parameter< const arma::colvec& >::type sumRanks(sumRanksSEXP);
+    Rcpp::traits::input_parameter< const arma::sp_mat& >::type A(ASEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type M(MSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type W(WSEXP);
     rcpp_result_gen = Rcpp::wrap(Rcpp_calcESCore(alpha, min_size, Y, R, sumRanks, A, M, W));
     return rcpp_result_gen;
 END_RCPP
 }
 // Rcpp_calcESPermCore
-arma::fmat Rcpp_calcESPermCore(const double alpha, arma::fmat& Y_perm, arma::fmat& R_perm, const double sumRanks_i, arma::fmat& A_perm, arma::fvec& theta_m_i, arma::fvec& theta_w_i);
+arma::fmat Rcpp_calcESPermCore(const double alpha, const arma::fmat& Y_perm, const arma::fmat& R_perm, const double sumRanks_i, const arma::fmat& A_perm, const arma::fvec& theta_m_i, const arma::fvec& theta_w_i);
 RcppExport SEXP _fast_ssgsea_Rcpp_calcESPermCore(SEXP alphaSEXP, SEXP Y_permSEXP, SEXP R_permSEXP, SEXP sumRanks_iSEXP, SEXP A_permSEXP, SEXP theta_m_iSEXP, SEXP theta_w_iSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< const double >::type alpha(alphaSEXP);
-    Rcpp::traits::input_parameter< arma::fmat& >::type Y_perm(Y_permSEXP);
-    Rcpp::traits::input_parameter< arma::fmat& >::type R_perm(R_permSEXP);
+    Rcpp::traits::input_parameter< const arma::fmat& >::type Y_perm(Y_permSEXP);
+    Rcpp::traits::input_parameter< const arma::fmat& >::type R_perm(R_permSEXP);
     Rcpp::traits::input_parameter< const double >::type sumRanks_i(sumRanks_iSEXP);
-    Rcpp::traits::input_parameter< arma::fmat& >::type A_perm(A_permSEXP);
-    Rcpp::traits::input_parameter< arma::fvec& >::type theta_m_i(theta_m_iSEXP);
-    Rcpp::traits::input_parameter< arma::fvec& >::type theta_w_i(theta_w_iSEXP);
+    Rcpp::traits::input_parameter< const arma::fmat& >::type A_perm(A_permSEXP);
+    Rcpp::traits::input_parameter< const arma::fvec& >::type theta_m_i(theta_m_iSEXP);
+    Rcpp::traits::input_parameter< const arma::fvec& >::type theta_w_i(theta_w_iSEXP);
     rcpp_result_gen = Rcpp::wrap(Rcpp_calcESPermCore(alpha, Y_perm, R_perm, sumRanks_i, A_perm, theta_m_i, theta_w_i));
     return rcpp_result_gen;
 END_RCPP
 }
 // Rcpp_extractPermInfo
-List Rcpp_extractPermInfo(std::vector<double>& x, std::vector<double>& y);
+List Rcpp_extractPermInfo(const std::vector<double>& x, const std::vector<double>& y);
 RcppExport SEXP _fast_ssgsea_Rcpp_extractPermInfo(SEXP xSEXP, SEXP ySEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< std::vector<double>& >::type x(xSEXP);
-    Rcpp::traits::input_parameter< std::vector<double>& >::type y(ySEXP);
+    Rcpp::traits::input_parameter< const std::vector<double>& >::type x(xSEXP);
+    Rcpp::traits::input_parameter< const std::vector<double>& >::type y(ySEXP);
     rcpp_result_gen = Rcpp::wrap(Rcpp_extractPermInfo(x, y));
     return rcpp_result_gen;
 END_RCPP
 }
 // Rcpp_calcAPerm
-arma::umat Rcpp_calcAPerm(arma::uvec& end, const int MAX_SET_SIZE, bool check);
+arma::umat Rcpp_calcAPerm(const arma::uvec& end, const int MAX_SET_SIZE, const bool check);
 RcppExport SEXP _fast_ssgsea_Rcpp_calcAPerm(SEXP endSEXP, SEXP MAX_SET_SIZESEXP, SEXP checkSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< arma::uvec& >::type end(endSEXP);
+    Rcpp::traits::input_parameter< const arma::uvec& >::type end(endSEXP);
     Rcpp::traits::input_parameter< const int >::type MAX_SET_SIZE(MAX_SET_SIZESEXP);
-    Rcpp::traits::input_parameter< bool >::type check(checkSEXP);
+    Rcpp::traits::input_parameter< const bool >::type check(checkSEXP);
     rcpp_result_gen = Rcpp::wrap(Rcpp_calcAPerm(end, MAX_SET_SIZE, check));
     return rcpp_result_gen;
 END_RCPP

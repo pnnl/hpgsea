@@ -198,7 +198,7 @@ NULL
 #'
 #' @noRd
 #'
-.Rcpp_calcAPerm <- function(end, MAX_SET_SIZE, check = FALSE) {
+.Rcpp_calcAPerm <- function(end, MAX_SET_SIZE, check) {
     .Call(`_fast_ssgsea_Rcpp_calcAPerm`, end, MAX_SET_SIZE, check)
 }
 

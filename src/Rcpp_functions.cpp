@@ -59,7 +59,7 @@ IntegerVector Rcpp_indexIntegerVector(IntegerVector x, IntegerVector idx) {
 //' @noRd
 //'
 // [[Rcpp::export(.Rcpp_matmult_dense)]]
-arma::mat Rcpp_matmult_dense(arma::mat& X, arma::mat& Y) {
+arma::mat Rcpp_matmult_dense(const arma::mat& X, const arma::mat& Y) {
    arma::mat Z = X * Y;
 
    return Z;
@@ -82,7 +82,7 @@ arma::mat Rcpp_matmult_dense(arma::mat& X, arma::mat& Y) {
 //' @noRd
 //'
 // [[Rcpp::export(.Rcpp_matmult_sparse)]]
-arma::mat Rcpp_matmult_sparse(arma::mat& X, arma::sp_mat& Y) {
+arma::mat Rcpp_matmult_sparse(const arma::mat& X, const arma::sp_mat& Y) {
    arma::mat Z = X * Y;
 
    return Z;
@@ -130,12 +130,12 @@ arma::mat Rcpp_matmult_sparse(arma::mat& X, arma::sp_mat& Y) {
 // [[Rcpp::export(.Rcpp_calcESCore)]]
 arma::mat Rcpp_calcESCore(const double alpha,
                           const int min_size,
-                          arma::mat& Y,
-                          arma::mat& R,
-                          arma::colvec& sumRanks,
-                          arma::sp_mat& A,
-                          arma::mat& M,
-                          arma::mat& W)
+                          const arma::mat& Y,
+                          const arma::mat& R,
+                          const arma::colvec& sumRanks,
+                          const arma::sp_mat& A,
+                          const arma::mat& M,
+                          const arma::mat& W)
 {
    arma::mat RA = R * A;
 
@@ -200,12 +200,12 @@ arma::mat Rcpp_calcESCore(const double alpha,
 //'
 // [[Rcpp::export(.Rcpp_calcESPermCore)]]
 arma::fmat Rcpp_calcESPermCore(const double alpha,
-                               arma::fmat& Y_perm,
-                               arma::fmat& R_perm,
+                               const arma::fmat& Y_perm,
+                               const arma::fmat& R_perm,
                                const double sumRanks_i,
-                               arma::fmat& A_perm,
-                               arma::fvec& theta_m_i,
-                               arma::fvec& theta_w_i) {
+                               const arma::fmat& A_perm,
+                               const arma::fvec& theta_m_i,
+                               const arma::fvec& theta_w_i) {
    // Reciprocals of the size vectors
    arma::fvec m_i_inv = 1.0 / theta_m_i;
    arma::fvec w_i_inv = 1.0 / theta_w_i;
@@ -249,7 +249,7 @@ arma::fmat Rcpp_calcESPermCore(const double alpha,
 //' @author Tyler Sagendorf
 //'
 //' @noRd
-int findFirstPositiveIndex(std::vector<double>& x)
+int findFirstPositiveIndex(const std::vector<double>& x)
 {
    const int SIZE_X = x.size();
 
@@ -302,8 +302,8 @@ int findFirstPositiveIndex(std::vector<double>& x)
 //' @noRd
 //'
 // [[Rcpp::export(.Rcpp_extractPermInfo)]]
-List Rcpp_extractPermInfo(std::vector<double>& x,
-                          std::vector<double>& y)
+List Rcpp_extractPermInfo(const std::vector<double>& x,
+                          const std::vector<double>& y)
 {
    const int SIZE_X = x.size();
    const int SIZE_Y = y.size();
@@ -409,9 +409,9 @@ List Rcpp_extractPermInfo(std::vector<double>& x,
 //' @noRd
 //'
 // [[Rcpp::export(.Rcpp_calcAPerm)]]
-arma::umat Rcpp_calcAPerm(arma::uvec& end,
+arma::umat Rcpp_calcAPerm(const arma::uvec& end,
                           const int MAX_SET_SIZE,
-                          bool check = false)
+                          const bool check)
 {
    const int NCOL = end.size();
    // Matrices are in column-major order, so it is better to fill values by
