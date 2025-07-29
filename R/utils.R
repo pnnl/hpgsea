@@ -105,11 +105,11 @@
 #' @description Create a list of sparse incidence matrices, where the unique
 #'   sets are rows and the unique elements are columns.
 #'
-#' @param x a named list of sets. Each element of the list must be a character
-#'   vector. If any elements have the suffix ";d", they will be separated from
-#'   the rest and placed in the "A_d" incidence matrix.
+#' @param gene_sets a named list of sets. Each element of the list must be a
+#'   character vector. If any elements have the suffix ";d", they will be
+#'   separated from the rest and placed in the "A_d" incidence matrix.
 #' @param background character vector of elements used to filter the elements of
-#'   \code{x}.
+#'   \code{gene_sets}.
 #'
 #' @returns A named list of incidence matrices, each of class \code{"dgCMatrix"}
 #'   with unique elements as rows and unique sets as columns. \code{"A"} is the
@@ -125,20 +125,24 @@
 #' @importFrom Matrix sparseMatrix
 #'
 #' @noRd
-.sparseIncidence <- function(x, background)
+.sparseIncidence <- function(gene_sets, background)
 {
-   if (!is.list(x) || is.null(names(x)))
-      stop("`x` must be a named list of character vectors.")
+   if (!is.list(gene_sets) || is.null(names(gene_sets)))
+      stop("`gene_sets` must be a named list of character vectors.")
 
-   elements <- unlist(x, recursive = FALSE, use.names = FALSE)
+   elements <- unlist(gene_sets,
+                      recursive = FALSE,
+                      use.names = FALSE)
 
    if (!is.vector(elements, mode = "character"))
-      stop("`x` must be a named list of character vectors.")
+      stop("`gene_sets` must be a named list of character vectors.")
 
    # "elements" is a factor, "sets" is not
    dt <- data.table(elements = elements,
                     stringsAsFactors = TRUE)
-   dt[, sets := rep(names(x), lengths(x))]
+
+   dt[, sets := rep(names(gene_sets),
+                    lengths(gene_sets))]
 
    # Determine which elements are expected to be "down", if any
    dt[, direction_down := grepl(";d$", elements, perl = TRUE)]
@@ -166,7 +170,7 @@
    dt <- subset(dt, subset = i != 0L)
 
    if (!nrow(dt))
-      stop("No elements of `gene_sets` are present in `background`.")
+      stop("No elements of `gene_sets` are present in rownames(X).")
 
    unique_sets <- unique(dt[["sets"]])
 

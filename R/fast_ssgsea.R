@@ -121,7 +121,7 @@ fast_ssgsea <- function(X,
 
    # List of one or two sparse incidence matrices. Genes (rows) are sorted
    # alphabetically.
-   A_list <- .sparseIncidence(x = gene_sets,
+   A_list <- .sparseIncidence(gene_sets = gene_sets,
                               background = colnames(X))
 
    A <- A_list[["A"]]
@@ -138,9 +138,9 @@ fast_ssgsea <- function(X,
    Y[NA_idx] <- 0
    R[NA_idx] <- 0
 
-   n <- rowSums(Z)
+   n <- rowSums(Z) # number of nonmissing genes in each sample
 
-   # Sum of the ranks of entries with nonmissing values
+   # Sum of the ranks of genes with nonmissing values
    sumRanks <- n * (n + 1L) / 2L # vector of triangular numbers
 
    # Calculate set size matrices and remove extreme sets
