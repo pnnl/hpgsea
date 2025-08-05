@@ -14,7 +14,7 @@
 {
    if (!is.matrix(X) ||
        !storage.mode(X) %in% c("integer", "double") ||
-       is.null(colnames(X)) ||
+       is.null(rownames(X)) ||
        is.null(colnames(X)))
       stop("`X` must be a numeric matrix with row and column names.")
 
