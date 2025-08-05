@@ -8,9 +8,9 @@ Authors@R:
              email = "tyler.sagendorf@pnnl.gov", 
              role = c("aut", "cre"),
              comment = c(ORCID = "0000-0003-1552-4870"))
-Description: Highly optimized version of Single-Sample Gene Set Enrichment 
-    Analysis (ssGSEA). Supports directional databases such as the 
-    post-translational-modification signatures database (PTMsigDB).
+Description: Highly optimized implementation of Single-Sample Gene Set 
+    Enrichment Analysis (ssGSEA). Supports directional databases such as the 
+    Post-Translational Modification Signatures Database (PTMsigDB).
 License: file LICENSE
 Encoding: UTF-8
 LinkingTo: 

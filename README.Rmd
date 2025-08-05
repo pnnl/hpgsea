@@ -29,7 +29,7 @@ In R (>= 4.0.0), run the following to install.
 if (!require("devtools", quietly = TRUE))
    install.packages("devtools")
 
-devtools::install_github("PNNL-Comp-Mass-Spec/fast.ssgsea")
+devtools::install_github("pnnl/fast.ssgsea")
 ```
 
 ## Usage 
