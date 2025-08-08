@@ -163,14 +163,14 @@
    # prior to calling this function.
    unique_elements <- intersect(unique_elements, background)
 
+   if (length(unique_elements) == 0L)
+      stop("No elements of `gene_sets` are present in rownames(X).")
+
    # Fast character matching (row indices for sparse matrix)
    dt[, i := chmatch(elements, unique_elements, nomatch = 0L)]
 
    # Remove elements not in the background
    dt <- subset(dt, subset = i != 0L)
-
-   if (!nrow(dt))
-      stop("No elements of `gene_sets` are present in rownames(X).")
 
    unique_sets <- unique(dt[["sets"]])
 
@@ -379,11 +379,11 @@
 #' @param R_prime the matrix of row vectors of ranks of each element of
 #'   \code{t(X)}. Missing values have been replaced with 0.
 #' @param sumRanks vector equal to \code{rowSums(R_prime)}.
-#' @param A sparse incidence matrix with genes as rows and gene sets as columns.
-#'   Only those entries for genes expected to be up-regulated or lacking an
-#'   expected direction of change are 1.
+#' @param A sparse incidence matrix with single genes as rows and gene sets as
+#'   columns. Only those entries for genes expected to be up-regulated or
+#'   lacking an expected direction of change are 1.
 #' @param M matrix containing the number of nonmissing values in each set with
-#'   samples as rows and sets as columns.
+#'   samples as rows and gene sets as columns.
 #' @param W matrix containing the number of nonmissing values not in each set
 #'   with the same dimensions as \code{M}.
 #' @param A_d,M_d,W_d like \code{A}, \code{M_d}, and \code{W_d}, but only for
@@ -391,8 +391,8 @@
 #'   these will be \code{NULL}.
 #'
 #' @returns A list containing matrices of enrichment scores with names "ES",
-#'   "ES_u", and "ES_d". Each matrix has \code{nrow(A)} gene sets as rows and
-#'   \code{ncol(Y_prime)} samples as columns. If the sets are not directional,
+#'   "ES_u", and "ES_d". Each matrix has \code{nrow(Y_prime)} samples as rows
+#'   and \code{ncol(A)} gene sets as columns. If the sets are not directional,
 #'   the "ES_u" and "ES_d" matrices will be \code{NULL}.
 #'
 #' @author Tyler Sagendorf
@@ -449,10 +449,10 @@
 #' @param element_indices integer vector of the indices of nonmissing values in
 #'   the sample.
 #' @param seeds_batch integer vector of seeds used to generate the permutations.
-#' @param y_i dense single row matrix of absolute gene-level values from the
-#'   i-th sample raised to the power of \code{alpha}.
-#' @param r_i dense single row matrix of the ranks of the gene-level values for
-#'   the i-th sample.
+#' @param y_i dense row vector of absolute gene-level values from the i-th
+#'   sample raised to the power of \code{alpha}.
+#' @param r_i dense row vector of the ranks of the gene-level values for the
+#'   i-th sample.
 #' @param sumRanks_i sum of the ranks for the i-th sample.
 #' @param A_perm dense permutation incidence matrix. The number of rows is the
 #'   number of unique gene set sizes for the i-th sample. The number of columns
@@ -639,7 +639,7 @@
 #'   same total size can have different numbers of up- and down-regulated genes,
 #'   so those will be treated as separate entries.}
 #'
-#'   \item{"theta_w_i"}{vector of the same length as \code{m.i}. Calculated as
+#'   \item{"theta_w_i"}{vector of the same length as \code{m_i}. Calculated as
 #'   \code{n_i - theta_m_i}.}
 #'
 #'   \item{"A_perm_d"}{dense incidence matrix with the same dimensions as

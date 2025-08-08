@@ -92,27 +92,27 @@ arma::mat Rcpp_matmult_sparse(const arma::mat& X, const arma::sp_mat& Y) {
 //' @title Core of the .calcES R function
 //'
 //' @param alpha numeric (\eqn{\geq 0}); the power to which the absolute values
-//'   of the entries of \code{X} were raised to construct \code{absStat}. If
+//'   of the entries of \code{X} were raised to construct \code{Y}. If
 //'   \code{alpha=0}, computation time may be significantly reduced, though all
 //'   genes in each set will contribute equally.
-//' @param Y absolute values of the matrix \code{X} raised to the power of
+//' @param Y absolute values of the matrix \code{t(X)} raised to the power of
 //'   \code{alpha}. Missing values are then imputed with 0.
-//' @param R matrix of ranks of the values in each column of \code{X}.
+//' @param R matrix of ranks of the values in each row of \code{X}.
 //'   Missing values in \code{X} are assigned a rank of \code{NA}, which are
 //'   then imputed with 0.
 //' @param sumRanks integer vector; the sums of the ranks in each sample. Equal
-//'   to \code{colSums(rankMat)}.
-//' @param A sparse incidence matrix with gene sets as rows and genes as
+//'   to \code{rowSums(R)}.
+//' @param A sparse incidence matrix with single genes as rows and gene sets as
 //'   columns. A value of 1 indicates that the gene is an element of the set,
 //'   while a value of 0 indicates otherwise.
-//' @param M matrix with gene sets as rows and samples as columns, where each
+//' @param M matrix with samples as rows and gene sets as columns, where each
 //'   entry is the number of genes with nonmissing values in each set.
-//' @param W matrix with the same dimensions as \code{m} where each entry is
+//' @param W matrix with the same dimensions as \code{M} where each entry is
 //'   the number of genes with nonmissing values \emph{not} in each set.
 //'
-//' @returns A matrix of real-valued enrichment scores with gene sets as rows
-//'   and samples as columns. May contain missing values if the corresponding
-//'   entry of \code{m} is less than 2.
+//' @returns A matrix of real-valued enrichment scores with samples as rows and
+//'   gene sets as columns. May contain missing values if the corresponding
+//'   entry of \code{M} is less than 2.
 //'
 //' @author Tyler Sagendorf
 //'
@@ -148,7 +148,8 @@ arma::mat Rcpp_calcESCore(const double alpha,
       up = ((R % Y) * A) / (Y * A);
    }
 
-   // Subtract the total sum of ranks in each sample from each row of R * A
+   // Subtract the total sum of ranks in each sample from the corresponding row
+   // of R * A
    RA.each_col() -= sumRanks;
 
    arma::mat down = RA / W;
@@ -167,7 +168,7 @@ arma::mat Rcpp_calcESCore(const double alpha,
 //' @title Core of the .calcESPerm R function
 //'
 //' @param alpha non-negative real value.
-//' @param Y_perm matrix of absolute values of the input matrix \code{X} (see
+//' @param Y_perm matrix of absolute values of the input matrix \code{t(X)} (see
 //'   \code{\link{fast_ssgsea}}) raised to the power \code{alpha}. The number of
 //'   rows is the size of the largest gene set, while the number of columns is
 //'   the number of permutations. Each column is a random sample of values from
