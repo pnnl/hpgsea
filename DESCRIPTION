@@ -1,7 +1,7 @@
 Package: fast.ssgsea
 Type: Package
 Title: Fast Single-Sample Gene Set Enrichment Analysis (ssGSEA)
-Version: 0.1.0.9007
+Version: 0.1.0.9008
 Date: 2025-08-23
 Authors@R: 
       person(given = "Tyler", family = "Sagendorf", 
@@ -22,7 +22,7 @@ Imports:
    data.table,
    dqrng,
    Matrix,
-   Rcpp,
+   Rcpp (>= 1.1.0),
    RcppArmadillo,
    stats
 RoxygenNote: 7.3.2
