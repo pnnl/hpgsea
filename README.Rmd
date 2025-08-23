@@ -1,5 +1,7 @@
 ---
-output: github_document
+output: 
+   github_document:
+      toc: true
 bibliography: references.bib
 link-citations: true
 ---
@@ -127,4 +129,4 @@ knitr::include_graphics("./man/figures/README-figure-2.png")
 ```
 
 
-# References
+## References

@@ -1,4 +1,14 @@
 
+- [fast.ssgsea](#fastssgsea)
+  - [Installation](#installation)
+  - [Usage](#usage)
+    - [Simulate Data](#simulate-data)
+    - [Results](#results)
+    - [Session Information](#session-information)
+  - [Performance](#performance)
+  - [Optimized BLAS Library](#optimized-blas-library)
+  - [References](#references)
+
 # fast.ssgsea
 
 <!-- badges: start -->
@@ -93,7 +103,7 @@ system.time({
 ```
 
     ##    user  system elapsed 
-    ##  28.919   0.482  24.836
+    ##  29.358   0.462  25.176
 
 ``` r
 str(res)
@@ -133,7 +143,7 @@ print(sessionInfo(), locale = FALSE, tzone = FALSE)
     ## loaded via a namespace (and not attached):
     ##  [1] dqrng_0.4.1            digest_0.6.37          RcppArmadillo_14.6.0-1
     ##  [4] fastmap_1.2.0          xfun_0.52              Matrix_1.7-3          
-    ##  [7] lattice_0.22-5         knitr_1.50             htmltools_0.5.8.1     
+    ##  [7] lattice_0.22-7         knitr_1.50             htmltools_0.5.8.1     
     ## [10] rmarkdown_2.29         cli_3.6.5              grid_4.5.1            
     ## [13] data.table_1.17.8      compiler_4.5.1         rstudioapi_0.17.1     
     ## [16] tools_4.5.1            evaluate_1.0.4         Rcpp_1.1.0            
@@ -156,7 +166,7 @@ previous runs.
 
 <div class="figure" style="text-align: center">
 
-<img src="./man/figures/README-figure-1.png" alt="Runtime of fast_ssgsea with A) 1,000 or B) 10,000 permutations. R was linked to the default reference BLAS library, so only a single thread was used."  />
+<img src="./man/figures/README-figure-1.png" alt="Runtime of fast_ssgsea with A) 1,000 or B) 10,000 permutations. R was linked to the default reference BLAS library, so only a single thread was used." width="749" />
 <p class="caption">
 
 Runtime of fast_ssgsea with A) 1,000 or B) 10,000 permutations. R was
@@ -176,7 +186,7 @@ further:
 
 <div class="figure" style="text-align: center">
 
-<img src="./man/figures/README-figure-2.png" alt="Runtime of fast_ssgsea with A) 1,000 or B) 10,000 permutations. R was linked to the optimized OpenBLAS library, and all 12 threads were used."  />
+<img src="./man/figures/README-figure-2.png" alt="Runtime of fast_ssgsea with A) 1,000 or B) 10,000 permutations. R was linked to the optimized OpenBLAS library, and all 12 threads were used." width="749" />
 <p class="caption">
 
 Runtime of fast_ssgsea with A) 1,000 or B) 10,000 permutations. R was
@@ -185,7 +195,7 @@ linked to the optimized OpenBLAS library, and all 12 threads were used.
 
 </div>
 
-# References
+## References
 
 <div id="refs" class="references csl-bib-body hanging-indent"
 entry-spacing="0">
