@@ -14,6 +14,7 @@
 <!-- badges: start -->
 
 [![R-CMD-check](https://github.com/pnnl/fast.ssgsea/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/pnnl/fast.ssgsea/actions/workflows/R-CMD-check.yaml)
+[![Codecov test coverage](https://codecov.io/gh/pnnl/fast.ssgsea/graph/badge.svg)](https://app.codecov.io/gh/pnnl/fast.ssgsea)
 <!-- badges: end -->
 
 `fast.ssgsea` is an R package ([R Core Team 2024](#ref-R-core-team)) for

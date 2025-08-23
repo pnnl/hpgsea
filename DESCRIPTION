@@ -1,7 +1,7 @@
 Package: fast.ssgsea
 Type: Package
 Title: Fast Single-Sample Gene Set Enrichment Analysis (ssGSEA)
-Version: 0.1.0.9004
+Version: 0.1.0.9005
 Date: 2025-08-23
 Authors@R: 
       person(given = "Tyler", family = "Sagendorf", 
