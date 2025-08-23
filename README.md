@@ -25,7 +25,8 @@ Post-Translational Modification Signature Enrichment Analysis (PTM-SEA)
 
 ## Installation
 
-In R (\>= 4.0.0), run the following to install.
+In R (\>= 4.0.0), run the following to install. On Windows, make sure
+[RTools](https://cran.r-project.org/bin/windows/Rtools/) is installed.
 
 ``` r
 if (!require("devtools", quietly = TRUE))
