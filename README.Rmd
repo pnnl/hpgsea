@@ -18,6 +18,7 @@ knitr::opts_chunk$set(
 # fast.ssgsea
 
 <!-- badges: start -->
+[![R-CMD-check](https://github.com/pnnl/fast.ssgsea/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/pnnl/fast.ssgsea/actions/workflows/R-CMD-check.yaml)
 <!-- badges: end -->
 
 `fast.ssgsea` is an R package [@R-core-team] for fast Single-Sample Gene Set Enrichment Analysis (ssGSEA) and Post-Translational Modification Signature Enrichment Analysis (PTM-SEA) [@barbie-systematic-2009; @krug-curated-2019].

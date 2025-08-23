@@ -13,6 +13,7 @@
 
 <!-- badges: start -->
 
+[![R-CMD-check](https://github.com/pnnl/fast.ssgsea/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/pnnl/fast.ssgsea/actions/workflows/R-CMD-check.yaml)
 <!-- badges: end -->
 
 `fast.ssgsea` is an R package ([R Core Team 2024](#ref-R-core-team)) for
