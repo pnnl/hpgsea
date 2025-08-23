@@ -12,10 +12,12 @@
 #' @noRd
 .prepareX <- function(X)
 {
-   if (!is.matrix(X) ||
-       !storage.mode(X) %in% c("integer", "double") ||
-       is.null(rownames(X)) ||
-       is.null(colnames(X)))
+   if (
+      !is.matrix(X) ||
+      !storage.mode(X) %in% c("integer", "double") ||
+      is.null(rownames(X)) ||
+      is.null(colnames(X))
+   )
       stop("`X` must be a numeric matrix with row and column names.")
 
    if (nrow(X) < 3L)
@@ -52,27 +54,33 @@
                             seed = NULL,
                             n_genes)
 {
-   if (!is.vector(alpha, mode = "numeric") ||
-       length(alpha) != 1L ||
-       alpha < 0 ||
-       is.na(alpha) ||
-       is.infinite(alpha))
+   if (
+      !is.vector(alpha, mode = "numeric") ||
+      length(alpha) != 1L ||
+      alpha < 0 ||
+      is.na(alpha) ||
+      is.infinite(alpha)
+   )
       stop("`alpha` must be a single non-negative real number.")
 
-   if (!is.vector(nperm, mode = "numeric") ||
-       length(nperm) != 1L ||
-       is.na(nperm) ||
-       nperm < 0L ||
-       nperm > 1e6L || # arbitrary limit on number of permutations
-       nperm %% 1 != 0) # decimal number
+   if (
+      !is.vector(nperm, mode = "numeric") ||
+      length(nperm) != 1L ||
+      is.na(nperm) ||
+      nperm < 0L ||
+      nperm > 1e6L || # arbitrary limit on number of permutations
+      nperm %% 1 != 0 # decimal number
+   )
       stop("`nperm` must be a whole number between 0 and 1 million.")
 
    # batch_size gets modified later, outside of this function
-   if (!is.vector(batch_size, mode = "numeric") ||
-       length(batch_size) != 1L ||
-       is.na(batch_size) ||
-       batch_size < min(nperm, 1) ||
-       batch_size %% 1 != 0)
+   if (
+      !is.vector(batch_size, mode = "numeric") ||
+      length(batch_size) != 1L ||
+      is.na(batch_size) ||
+      batch_size < min(nperm, 1) ||
+      batch_size %% 1 != 0
+   )
       stop("`batch_size` must be a whole number between 1 and `nperm`.")
 
    batch_size <- min(batch_size, nperm)
@@ -80,22 +88,28 @@
    set.seed(seed) # let set.seed validate the seed
    set.seed(NULL)
 
-   if (!is.vector(min_size, mode = "numeric") ||
-       length(min_size) != 1L ||
-       is.na(min_size) ||
-       min_size < 2L ||
-       min_size >= n_genes ||
-       min_size %% 1 != 0)
+   if (
+      !is.vector(min_size, mode = "numeric") ||
+      length(min_size) != 1L ||
+      is.na(min_size) ||
+      min_size < 2L ||
+      min_size >= n_genes ||
+      min_size %% 1 != 0
+   )
       stop("`min_size` must be >= 2 and < nrow(X).")
 
-   if (!is.vector(adjust_globally, mode = "logical") ||
-       length(adjust_globally) != 1L ||
-       is.na(adjust_globally))
+   if (
+      !is.vector(adjust_globally, mode = "logical") ||
+      length(adjust_globally) != 1L ||
+      is.na(adjust_globally)
+   )
       stop("`adjust_globally` must be TRUE or FALSE.")
 
-   if (!is.vector(sort, mode = "logical") ||
-       length(sort) != 1L ||
-       is.na(sort))
+   if (
+      !is.vector(sort, mode = "logical") ||
+      length(sort) != 1L ||
+      is.na(sort)
+   )
       stop("`sort` must be TRUE or FALSE.")
 }
 
@@ -127,19 +141,26 @@
 #' @noRd
 .sparseIncidence <- function(gene_sets, background)
 {
-   if (!is.list(gene_sets) || is.null(names(gene_sets)))
+   if (
+      !is.list(gene_sets) ||
+      is.null(names(gene_sets))
+   )
       stop("`gene_sets` must be a named list of character vectors.")
 
-   elements <- unlist(gene_sets,
-                      recursive = FALSE,
-                      use.names = FALSE)
+   elements <- unlist(
+      x = gene_sets,
+      recursive = FALSE,
+      use.names = FALSE
+   )
 
    if (!is.vector(elements, mode = "character"))
       stop("`gene_sets` must be a named list of character vectors.")
 
    # "elements" is a factor, "sets" is not
-   dt <- data.table(elements = elements,
-                    stringsAsFactors = TRUE)
+   dt <- data.table(
+      elements = elements,
+      stringsAsFactors = TRUE
+   )
 
    dt[, sets := rep(names(gene_sets),
                     lengths(gene_sets))]
@@ -226,8 +247,10 @@
               "down (suffix \";d\") in the same set.")
    }
 
-   out <- list("A" = A,
-               "A_d" = A_d)
+   out <- list(
+      "A" = A,
+      "A_d" = A_d
+   )
 
    return(out)
 }
@@ -361,11 +384,15 @@
    if (!is.null(A_d))
       W_d <- n - M_d
 
-   out <- c(list("M" = M,
-                 "W" = W,
-                 "M_d" = M_d,
-                 "W_d" = W_d),
-            out)
+   out <- c(
+      list(
+         "M" = M,
+         "W" = W,
+         "M_d" = M_d,
+         "W_d" = W_d
+      ),
+      out # empty, or contains A and A_d
+   )
 
    return(out)
 }
@@ -411,30 +438,36 @@
                     W_d = NULL)
 {
    # Sample by gene set matrix of enrichment scores
-   ES_u <- .Rcpp_calcESCore(alpha,
-                            min_size,
-                            Y_prime,
-                            R_prime,
-                            sumRanks,
-                            A,
-                            M,
-                            W)
+   ES_u <- .Rcpp_calcESCore(
+      alpha,
+      min_size,
+      Y_prime,
+      R_prime,
+      sumRanks,
+      A,
+      M,
+      W
+   )
 
    if (!is.null(A_d)) { # directional database
-      ES_d <- .Rcpp_calcESCore(alpha,
-                               min_size,
-                               Y_prime,
-                               R_prime,
-                               sumRanks,
-                               A_d,
-                               M_d,
-                               W_d)
+      ES_d <- .Rcpp_calcESCore(
+         alpha,
+         min_size,
+         Y_prime,
+         R_prime,
+         sumRanks,
+         A_d,
+         M_d,
+         W_d
+      )
 
       ES <- ES_u - ES_d
 
-      out <- list("ES" = ES,
-                  "ES_u" = ES_u,
-                  "ES_d" = ES_d)
+      out <- list(
+         "ES" = ES,
+         "ES_u" = ES_u,
+         "ES_d" = ES_d
+      )
    } else {
       out <- list("ES" = ES_u)
    }
@@ -503,34 +536,38 @@
       dqsample.int(n = n_elements, size = max_set_size)
    }, integer(max_set_size)) # integer matrix
 
-   dim(perm_indices) <- NULL # convert matrix to vector
+   dim(perm_indices) <- NULL # in-place matrix to vector conversion
 
    # Integer vector of indices of nonmissing values for each permutation
    # (permutations are stacked). Faster than element_indices[perm_indices]
    perm_indices <- .Rcpp_indexIntegerVector(element_indices, perm_indices)
 
-   Y_perm <- .Rcpp_indexNumericVector(y_i, perm_indices)
-   R_perm <- .Rcpp_indexIntegerVector(r_i, perm_indices)
+   Y_perm <- .Rcpp_indexNumericVector(y_i, perm_indices) # Y*
+   R_perm <- .Rcpp_indexIntegerVector(r_i, perm_indices) # R*
 
    # Convert vectors to matrices. The matrices are populated by column.
    dim(Y_perm) <- dim(R_perm) <- c(max_set_size, batch_size_b)
 
-   ES_perm <- .Rcpp_calcESPermCore(alpha,
-                                   Y_perm,
-                                   R_perm,
-                                   sumRanks_i,
-                                   A_perm,
-                                   theta_m_i,
-                                   theta_w_i)
+   ES_perm <- .Rcpp_calcESPermCore(
+      alpha,
+      Y_perm,
+      R_perm,
+      sumRanks_i,
+      A_perm,
+      theta_m_i,
+      theta_w_i
+   )
 
    if (!is.null(A_perm_d)) { # directional sets
-      ES_perm_d <- .Rcpp_calcESPermCore(alpha,
-                                        Y_perm,
-                                        R_perm,
-                                        sumRanks_i,
-                                        A_perm_d,
-                                        theta_m_d_i,
-                                        theta_w_d_i)
+      ES_perm_d <- .Rcpp_calcESPermCore(
+         alpha,
+         Y_perm,
+         R_perm,
+         sumRanks_i,
+         A_perm_d,
+         theta_m_d_i,
+         theta_w_d_i
+      )
 
       # If the number of genes expected to be "up" or "down" in the set is too
       # small, replace the corresponding permutation ES (the entire row) with
@@ -562,8 +599,10 @@
    if (nperm != 0L) {
       n_batches <- ceiling(nperm / batch_size)
 
-      batch_sizes <- c(rep(batch_size, n_batches - 1L),
-                       nperm - batch_size * (n_batches - 1L))
+      batch_sizes <- c(
+         rep(batch_size, n_batches - 1L),
+         nperm - batch_size * (n_batches - 1L)
+      )
 
       batch_id <- rep(seq_len(n_batches), batch_sizes)
 
@@ -603,9 +642,12 @@
    # Do not need to validate x and y, since this function is only used with
    # integer vectors by other internal functions. Note that x * x prevents
    # integer overflow, unlike x ^ 2.
-   x +  ifelse(x < y,
-               y * y,      # y ^ 2 + x
-               x * x + y)  # x ^ 2 + x + y
+   x +
+      ifelse(
+         x < y,
+         y * y,    # y ^ 2 + x
+         x * x + y # x ^ 2 + x + y
+      )
 }
 
 
@@ -695,13 +737,17 @@
 
       max_set_size <- max(unique_set_sizes)
 
-      A_perm_d <- .Rcpp_calcAPerm(end = theta_m_d_i,
-                                  MAX_SET_SIZE = max_set_size,
-                                  check = TRUE)
+      A_perm_d <- .Rcpp_calcAPerm(
+         end = theta_m_d_i,
+         MAX_SET_SIZE = max_set_size,
+         check = TRUE # some theta_m_d_i may be zero
+      )
 
-      A_perm <- .Rcpp_calcAPerm(end = unique_set_sizes,
-                                MAX_SET_SIZE = max_set_size,
-                                check = FALSE)
+      A_perm <- .Rcpp_calcAPerm(
+         end = unique_set_sizes,
+         MAX_SET_SIZE = max_set_size,
+         check = FALSE
+      )
 
       A_perm <- A_perm - A_perm_d
 
@@ -726,9 +772,11 @@
 
       A_perm_d <- NULL
 
-      A_perm <- .Rcpp_calcAPerm(end = theta_m_i,
-                                MAX_SET_SIZE = max_set_size,
-                                check = FALSE)
+      A_perm <- .Rcpp_calcAPerm(
+         end = theta_m_i,
+         MAX_SET_SIZE = max_set_size,
+         check = FALSE
+      )
 
       rep_idx <- match(m_i, theta_m_i)
    }
@@ -895,10 +943,12 @@
    )
 
    if (nperm != 0L) {
-      ## Incidence matrices and other information for permutations
-      A_list_perm <- .permIncidenceMatrix(n_i = n_i,
-                                          m_i = m_i,
-                                          m_d_i = m_d_i)
+      # Incidence matrices and other information for permutations
+      A_list_perm <- .permIncidenceMatrix(
+         n_i = n_i,
+         m_i = m_i,
+         m_d_i = m_d_i
+      )
 
       # Extract list components: rep_idx, A_perm, theta_m_i, theta_w_i,
       # A_perm_d, theta_m_d_i, theta_w_d_i
@@ -909,8 +959,11 @@
 
       setorderv(tab_i, cols = c("rep_idx", "ES"), order = c(1L, 1L))
 
-      ES_ls <- split(x = tab_i[["ES"]],
-                     f = tab_i[["rep_idx"]])
+      ES_ls <- split(
+         x = tab_i[["ES"]],
+         f = tab_i[["rep_idx"]]
+      )
+
       names(ES_ls) <- NULL
 
       # Indices of non-missing values for a particular column
@@ -918,22 +971,26 @@
 
       # Optionally split permutations into batches to reduce memory consumption
       for (b in seq_along(seed_list)) {
-         ES_perm <- .calcESPerm(alpha = alpha,
-                                min_size = min_size,
-                                element_indices = element_indices,
-                                seeds_batch = seed_list[[b]],
-                                y_i = y_i,
-                                r_i = r_i,
-                                sumRanks_i = sumRanks_i,
-                                A_perm = A_perm,
-                                theta_m_i = theta_m_i,
-                                theta_w_i = theta_w_i,
-                                A_perm_d = A_perm_d,
-                                theta_m_d_i = theta_m_d_i,
-                                theta_w_d_i = theta_w_d_i)
+         ES_perm <- .calcESPerm(
+            alpha = alpha,
+            min_size = min_size,
+            element_indices = element_indices,
+            seeds_batch = seed_list[[b]],
+            y_i = y_i,
+            r_i = r_i,
+            sumRanks_i = sumRanks_i,
+            A_perm = A_perm,
+            theta_m_i = theta_m_i,
+            theta_w_i = theta_w_i,
+            A_perm_d = A_perm_d,
+            theta_m_d_i = theta_m_d_i,
+            theta_w_d_i = theta_w_d_i
+         )
 
-         perm_dt <- .extractPermInfo(ES_ls = ES_ls,
-                                     ES_perm = ES_perm)
+         perm_dt <- .extractPermInfo(
+            ES_ls = ES_ls,
+            ES_perm = ES_perm
+         )
 
          # Update summary vectors
          tab_i[, `:=`(

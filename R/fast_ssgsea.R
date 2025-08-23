@@ -110,19 +110,23 @@ fast_ssgsea <- function(X,
    X <- .prepareX(X)
 
    # Validate function parameters
-   .validateParams(alpha = alpha,
-                   nperm = nperm,
-                   batch_size = batch_size,
-                   adjust_globally = adjust_globally,
-                   min_size = min_size,
-                   sort = sort,
-                   seed = seed,
-                   n_genes = ncol(X))
+   .validateParams(
+      alpha = alpha,
+      nperm = nperm,
+      batch_size = batch_size,
+      adjust_globally = adjust_globally,
+      min_size = min_size,
+      sort = sort,
+      seed = seed,
+      n_genes = ncol(X)
+   )
 
    # List of one or two sparse incidence matrices. Genes (rows) are sorted
    # alphabetically.
-   A_list <- .sparseIncidence(gene_sets = gene_sets,
-                              background = colnames(X))
+   A_list <- .sparseIncidence(
+      gene_sets = gene_sets,
+      background = colnames(X)
+   )
 
    A <- A_list[["A"]]
    A_d <- A_list[["A_d"]]
@@ -144,28 +148,32 @@ fast_ssgsea <- function(X,
    sumRanks <- n * (n + 1L) / 2L # vector of triangular numbers
 
    # Calculate set size matrices and remove extreme sets
-   M_list <- .calcSetSize(n = n,
-                          Z_prime = Z[, rownames(A), drop = FALSE], # Z'
-                          A = A,
-                          A_d = A_d,
-                          min_size = min_size)
+   M_list <- .calcSetSize(
+      n = n,
+      Z_prime = Z[, rownames(A), drop = FALSE], # Z'
+      A = A,
+      A_d = A_d,
+      min_size = min_size
+   )
 
    # Extract list components: M, W, M_d, W_d, A (optional), A_d (optional)
    for (name_i in names(M_list))
       assign(name_i, value = M_list[[name_i]])
 
-   # Enrichment score matrices with gene sets as rows and samples as columns
-   ES_list <- .calcES(alpha = alpha,
-                      Y_prime = Y[, rownames(A), drop = FALSE], # Y'
-                      R_prime = R[, rownames(A), drop = FALSE], # R'
-                      sumRanks = sumRanks,
-                      A = A,
-                      M = M,
-                      W = W,
-                      A_d = A_d,
-                      M_d = M_d,
-                      W_d = W_d,
-                      min_size = min_size)
+   # Enrichment score matrices with samples as rows and gene sets as columns
+   ES_list <- .calcES(
+      alpha = alpha,
+      Y_prime = Y[, rownames(A), drop = FALSE], # Y'
+      R_prime = R[, rownames(A), drop = FALSE], # R'
+      sumRanks = sumRanks,
+      A = A,
+      M = M,
+      W = W,
+      A_d = A_d,
+      M_d = M_d,
+      W_d = W_d,
+      min_size = min_size
+   )
 
    ES <- ES_list[["ES"]]
    ES_u <- ES_list[["ES_u"]]
@@ -173,9 +181,11 @@ fast_ssgsea <- function(X,
 
    # Permutations are run in batches to avoid initializing a matrix with nperm
    # columns all at once.
-   seed_list <- .createSeedList(nperm = nperm,
-                                batch_size = batch_size,
-                                seed = seed)
+   seed_list <- .createSeedList(
+      nperm = nperm,
+      batch_size = batch_size,
+      seed = seed
+   )
 
    # List of results for each sample
    tab <- lapply(seq_len(nrow(X)), function(i) {
@@ -201,11 +211,14 @@ fast_ssgsea <- function(X,
       return(tab_i)
    })
 
-   names(tab) <- rownames(X)
-   tab <- .stackResults(tab = tab,
-                        nperm = nperm,
-                        sort = sort,
-                        adjust_globally = adjust_globally)
+   names(tab) <- rownames(X) # sample names
+
+   tab <- .stackResults(
+      tab = tab,
+      nperm = nperm,
+      sort = sort,
+      adjust_globally = adjust_globally
+   )
 
    return(tab)
 }
