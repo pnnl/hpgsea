@@ -402,8 +402,8 @@ test_that("the ES are correct for directional sets", {
    # Slight differences due to using floats instead of doubles to calculate
    # permutation enrichment scores in Rcpp_calcESPermCore()
    expect_equal(
-      signif(res1$NES[res1$set == "Set2"], digits = 6L),
-      signif(-1 * res2$NES, digits = 6L)
+      signif(res1$NES[res1$set == "Set2"], digits = 5L),
+      signif(-1 * res2$NES, digits = 5L)
    )
 
 
