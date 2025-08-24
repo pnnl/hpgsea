@@ -499,8 +499,10 @@
 #'   about genes expected to be "down". These will be \code{NULL} if the gene
 #'   set database is not directional.
 #'
-#' @returns A matrix of permutation ES with \code{nrow(A_perm)} rows and
-#'   \code{batch_size_b} columns.
+#' @returns A list of permutation ES vectors. The length of the list is equal to
+#'   \code{nrow(A_perm)} (number of unique gene set sizes) and each vector has
+#'   length \code{batch_size_b}, which is as most the total number of
+#'   permutations.
 #'
 #' @author Tyler Sagendorf
 #'
@@ -579,7 +581,11 @@
       ES_perm <- ES_perm - ES_perm_d
    }
 
-   return(ES_perm)
+   # Convert matrix to list of vectors
+   ES_perm_ls <- split(x = ES_perm, f = seq_len(nrow(ES_perm)))
+   names(ES_perm_ls) <- NULL
+
+   return(ES_perm_ls)
 }
 
 
@@ -802,10 +808,10 @@
 #'   scores run as a single batch.
 #'
 #' @param ES_ls list of enrichment scores grouped by gene set size.
-#' @param ES_perm integer matrix of permutation ES. The number of rows is equal
-#'   to the length of \code{ES}, while the number of columns is at most the
-#'   total number of permutations: more likely, it is a fraction of the total
-#'   number of permutations. See the \code{batch_size} parameter of
+#' @param ES_perm lis of permutation ES. The length of the list is equal to the
+#'   length of \code{ES}, while the length of each vector is at most the total
+#'   number of permutations: more likely, it is a fraction of the total number
+#'   of permutations. See the \code{batch_size} parameter of
 #'   \code{\link{fast_ssgsea}} for more details.
 #'
 #' @returns A \code{data.table} with 3 columns:
@@ -828,12 +834,12 @@
 #'
 #' @noRd
 .extractPermInfo <- function(ES_ls,
-                             ES_perm)
+                             ES_perm_ls)
 {
    out <- lapply(seq_along(ES_ls), function(i) {
       ES_i <- ES_ls[[i]]
 
-      ES_perm_i <- ES_perm[i, , drop = TRUE]
+      ES_perm_i <- ES_perm_ls[[i]]
 
       out_i <- .Rcpp_extractPermInfo(ES_i, ES_perm_i) # returns list
       class(out_i) <- "data.table"
@@ -971,7 +977,7 @@
 
       # Optionally split permutations into batches to reduce memory consumption
       for (b in seq_along(seed_list)) {
-         ES_perm <- .calcESPerm(
+         ES_perm_ls <- .calcESPerm(
             alpha = alpha,
             min_size = min_size,
             element_indices = element_indices,
@@ -989,7 +995,7 @@
 
          perm_dt <- .extractPermInfo(
             ES_ls = ES_ls,
-            ES_perm = ES_perm
+            ES_perm_ls = ES_perm_ls
          )
 
          # Update summary vectors

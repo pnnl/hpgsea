@@ -3,10 +3,14 @@
   - [Installation](#installation)
   - [Usage](#usage)
     - [Simulate Data](#simulate-data)
-    - [Results](#results)
+    - [Runtime and Results](#runtime-and-results)
     - [Session Information](#session-information)
   - [Performance](#performance)
-  - [Optimized BLAS Library](#optimized-blas-library)
+  - [Switching the BLAS Library](#switching-the-blas-library)
+    - [Linux](#linux)
+    - [macOS](#macos)
+    - [Windows](#windows)
+  - [Additional Steps](#additional-steps)
   - [References](#references)
 
 # fast.ssgsea
@@ -14,7 +18,9 @@
 <!-- badges: start -->
 
 [![R-CMD-check](https://github.com/pnnl/fast.ssgsea/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/pnnl/fast.ssgsea/actions/workflows/R-CMD-check.yaml)
-[![Codecov test coverage](https://codecov.io/gh/pnnl/fast.ssgsea/graph/badge.svg)](https://app.codecov.io/gh/pnnl/fast.ssgsea)
+[![Codecov test
+coverage](https://codecov.io/gh/pnnl/fast.ssgsea/graph/badge.svg)](https://app.codecov.io/gh/pnnl/fast.ssgsea)
+[![DOI](https://zenodo.org/badge/394311897.svg)](https://doi.org/10.5281/zenodo.16783102)
 <!-- badges: end -->
 
 `fast.ssgsea` is an R package ([R Core Team 2024](#ref-R-core-team)) for
@@ -25,14 +31,17 @@ Post-Translational Modification Signature Enrichment Analysis (PTM-SEA)
 
 ## Installation
 
-In R (\>= 4.0.0), run the following to install. On Windows, make sure
-[RTools](https://cran.r-project.org/bin/windows/Rtools/) is installed.
+On Windows, please ensure that
+[RTools](https://cran.r-project.org/bin/windows/Rtools/) is installed;
+this toolchain is needed to compile C++ code.
+
+In R (\>= 4.0.0), install the latest version with
 
 ``` r
-if (!require("devtools", quietly = TRUE))
-   install.packages("devtools")
+if (!require("remotes", quietly = TRUE))
+   install.packages("remotes")
 
-devtools::install_github("pnnl/fast.ssgsea")
+remotes::install_github("pnnl/fast.ssgsea")
 ```
 
 ## Usage
@@ -80,9 +89,10 @@ gene_sets <- lapply(seq_len(n_sets), function(i) {
 names(gene_sets) <- paste0("set", seq_along(gene_sets))
 ```
 
-### Results
+### Runtime and Results
 
-This shows the runtime of `fast_ssgsea` with the reference BLAS library
+This shows the runtime of `fast_ssgsea` with the reference Basic Linear
+Algebra Subprograms (BLAS) library ([Lawson et al. 1979](#ref-blas))
 (single-threaded) running on an AMD Ryzen 5 7600X CPU with a clock speed
 of 4.7 GHz.
 
@@ -106,7 +116,7 @@ system.time({
 ```
 
     ##    user  system elapsed 
-    ##  29.358   0.462  25.176
+    ##  43.005   0.522  37.308
 
 ``` r
 str(res)
@@ -141,7 +151,7 @@ print(sessionInfo(), locale = FALSE, tzone = FALSE)
     ## [1] stats     graphics  grDevices utils     datasets  methods   base     
     ## 
     ## other attached packages:
-    ## [1] fast.ssgsea_0.1.0
+    ## [1] fast.ssgsea_0.1.0.9009
     ## 
     ## loaded via a namespace (and not attached):
     ##  [1] dqrng_0.4.1            digest_0.6.37          RcppArmadillo_14.6.0-1
@@ -179,13 +189,12 @@ was used.
 
 </div>
 
-## Optimized BLAS Library
+## Switching the BLAS Library
 
-Linking R to an optimized Basic Linear Algebra Subprograms (BLAS)
-library ([Lawson et al. 1979](#ref-blas)), such as the open-source
-OpenBLAS library ([Xianyi, Qian, and Yunquan 2012](#ref-openblas-1);
-[Wang et al. 2013](#ref-openblas-2)), can reduce the runtime even
-further:
+Linking R to an external BLAS library, such as the optimized,
+open-source OpenBLAS library ([Xianyi, Qian, and Yunquan
+2012](#ref-openblas-1); [Wang et al. 2013](#ref-openblas-2)), can
+greatly reduce the runtime:
 
 <div class="figure" style="text-align: center">
 
@@ -197,6 +206,72 @@ linked to the optimized OpenBLAS library, and all 12 threads were used.
 </p>
 
 </div>
+
+### Linux
+
+Linux users can follow [these
+instructions](https://docs.posit.co/resources/install-r-source.html#optional-configure-r-to-use-a-different-blas-library)
+from Posit to easily switch the BLAS library.
+
+### macOS
+
+For Macbooks with an Apple Silicon chip (M1-M4), R comes bundled with an
+optimized BLAS library, so no additional work is needed.
+
+### Windows
+
+To install OpenBLAS for R on Windows machines, users may follow [this
+tutorial](https://github.com/david-cortes/R-openblas-in-windows).
+
+## Additional Steps
+
+The runtime can be approximately halved by switching from
+double-precision to single-precision floating point arithmetic for the
+permutation tests; this has a negligible impact on the precision of the
+normalized enrichment scores (NES). Unfortunately, R’s internal BLAS
+library does not support floats (see [this
+issue](https://github.com/RcppCore/RcppArmadillo/issues/197) in
+RcppArmadillo). Since Windows has no default BLAS/LAPACK library, it was
+not possible to implement this in `fast.ssgsea` without complicating the
+installation process or making it impossible for Windows users.
+
+For users looking to implement this change, please follow these
+instructions:
+
+1.  Switch to an external BLAS library, such as OpenBLAS.
+2.  Clone pnnl/fast.ssgsea and open the fast.ssgsea.Rproj file.
+3.  In src/Rcpp_functions.cpp, replace the `Rcpp_calcESPermCore` C++
+    function with the following block of code:
+
+<!-- -->
+
+    arma::fmat Rcpp_calcESPermCore(const double alpha,
+                                   const arma::fmat& Y_perm,
+                                   const arma::fmat& R_perm,
+                                   const double sumRanks_i,
+                                   const arma::fmat& A_perm,
+                                   const arma::fvec& theta_m_i,
+                                   const arma::fvec& theta_w_i)
+    {
+       arma::fvec m_i_inv = 1.0 / theta_m_i;
+       arma::fvec w_i_inv = 1.0 / theta_w_i;
+
+       arma::fmat ES_perm(A_perm.n_rows, Y_perm.n_cols, arma::fill::zeros);
+
+       arma::fmat AR_perm = A_perm * R_perm;
+
+       if (alpha == 0.0) {
+          ES_perm = arma::diagmat(m_i_inv) * AR_perm;
+       } else {
+          ES_perm = (A_perm * (Y_perm % R_perm)) / (A_perm * Y_perm);
+       }
+
+       ES_perm += arma::diagmat(w_i_inv) * (AR_perm - sumRanks_i);
+
+       return ES_perm;
+    }
+
+4.  Build and install `fast.ssgea`.
 
 ## References
 

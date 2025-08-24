@@ -95,7 +95,7 @@ res_list <- lapply(res_list, function(li) {
 # abline(a = 0, b = 1, col = "red")
 
 # Save results for plotting
-saveRDS(object = res_list,
-        file = "simulation/data/ssGSEA_p-value_exploration_data.rds",
-        compress = TRUE,
-        version = 3L)
+saveRDS(
+   object = res_list,
+   file = "simulation/data/ssGSEA_p-value_exploration_data.rds"
+)

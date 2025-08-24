@@ -137,10 +137,6 @@ NULL
 #' @returns A dense matrix of permutation enrichment scores. Rows correspond to
 #'   unique gene set sizes and columns to independent permutations.
 #'
-#' @details This function sacrifices some precision by using floats instead of
-#'   doubles, but the tradeoff is that the runtime is halved. Using floats does
-#'   not appreciably impact the NES or p-values in the final results.
-#'
 #' @author Tyler Sagendorf
 #'
 #' @references Sanderson, C., & Curtin, R. (2016). Armadillo: A template-based

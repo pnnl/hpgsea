@@ -139,22 +139,20 @@ arma::mat Rcpp_calcESCore(const double alpha,
 {
    arma::mat RA = R * A;
 
-   arma::mat up(M.n_rows, M.n_cols, arma::fill::zeros);
+   arma::mat ES(M.n_rows, M.n_cols, arma::fill::zeros);
 
    if (alpha == 0.0) {
-      up = RA / M;
+      ES = RA / M;
    } else {
       // % is Hadamard product, * is dot product, / is Hadamard division
-      up = ((R % Y) * A) / (Y * A);
+      ES = ((R % Y) * A) / (Y * A);
    }
 
    // Subtract the total sum of ranks in each sample from the corresponding row
    // of R * A
    RA.each_col() -= sumRanks;
 
-   arma::mat down = RA / W;
-
-   arma::mat ES = up + down;
+   ES += RA / W;
 
    // If the set has fewer than min_size elements with nonmissing values, the ES
    // will be 0.
@@ -187,10 +185,6 @@ arma::mat Rcpp_calcESCore(const double alpha,
 //' @returns A dense matrix of permutation enrichment scores. Rows correspond to
 //'   unique gene set sizes and columns to independent permutations.
 //'
-//' @details This function sacrifices some precision by using floats instead of
-//'   doubles, but the tradeoff is that the runtime is halved. Using floats does
-//'   not appreciably impact the NES or p-values in the final results.
-//'
 //' @author Tyler Sagendorf
 //'
 //' @references Sanderson, C., & Curtin, R. (2016). Armadillo: A template-based
@@ -200,38 +194,33 @@ arma::mat Rcpp_calcESCore(const double alpha,
 //' @noRd
 //'
 // [[Rcpp::export(.Rcpp_calcESPermCore)]]
-arma::fmat Rcpp_calcESPermCore(const double alpha,
-                               const arma::fmat& Y_perm,
-                               const arma::fmat& R_perm,
-                               const double sumRanks_i,
-                               const arma::fmat& A_perm,
-                               const arma::fvec& theta_m_i,
-                               const arma::fvec& theta_w_i) {
+arma::mat Rcpp_calcESPermCore(const double alpha,
+                              const arma::mat& Y_perm,
+                              const arma::mat& R_perm,
+                              const double sumRanks_i,
+                              const arma::mat& A_perm,
+                              const arma::vec& theta_m_i,
+                              const arma::vec& theta_w_i)
+{
    // Reciprocals of the size vectors
-   arma::fvec m_i_inv = 1.0 / theta_m_i;
-   arma::fvec w_i_inv = 1.0 / theta_w_i;
+   arma::vec m_i_inv = 1.0 / theta_m_i;
+   arma::vec w_i_inv = 1.0 / theta_w_i;
 
-   arma::fmat up_perm(A_perm.n_rows, Y_perm.n_cols, arma::fill::zeros);
+   arma::mat ES_perm(A_perm.n_rows, Y_perm.n_cols, arma::fill::zeros);
 
-   arma::fmat AR_perm = A_perm * R_perm;
+   arma::mat AR_perm = A_perm * R_perm;
 
    if (alpha == 0.0) {
       // Multiply the diagonal matrix of reciprocals of m_j by
       // A_R_perm. Equivalent to dividing each column of
       // A_R_perm by m_j.
-      up_perm = arma::diagmat(m_i_inv) * AR_perm;
+      ES_perm = arma::diagmat(m_i_inv) * AR_perm;
    } else {
       // * is dot product, % is Hadamard product, / is Hadamard division
-      up_perm = (A_perm * (Y_perm % R_perm)) / (A_perm * Y_perm);
+      ES_perm = (A_perm * (Y_perm % R_perm)) / (A_perm * Y_perm);
    }
 
-   // Multiply the diagonal matrix of reciprocals of w_i by the matrix of
-   // negative sums of ranks of genes not in each set. Equivalent to dividing
-   // each column of AR_perm by w_i. down_perm is negative, since sumRanks_i >
-   // AR_perm.
-   arma::fmat down_perm = arma::diagmat(w_i_inv) * (AR_perm - sumRanks_i);
-
-   arma::fmat ES_perm = up_perm + down_perm;
+   ES_perm += arma::diagmat(w_i_inv) * (AR_perm - sumRanks_i);
 
    return ES_perm;
 }
