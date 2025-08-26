@@ -40,7 +40,9 @@ remotes::install_github("pnnl/fast.ssgsea")
 
 ## Usage
 
-The package consists of a single user-facing function, `fast_ssgsea`, that accepts a numeric matrix with genes or other molecules as rows and either samples, contrasts, or some other meaningful representation of the data as columns. A named list of gene sets (more generally, molecular signatures) is also required. Other arguments control the behavior of ssGSEA/PTM-SEA, and they are described in the function documentation.
+The primary function, `fast_ssgsea`, accepts a numeric matrix with genes or other molecules as rows and either samples, contrasts, or some other meaningful representation of the data as columns. A named list of gene sets (more generally, molecular signatures) is also required. Other arguments control the behavior of ssGSEA/PTM-SEA, and they are described in the function documentation.
+
+The package also contains a `read_gmt` function, which reads a Gene Matrix Transposed (GMT) file to construct a named list of gene sets for use with `fast_ssgsea`.
 
 ### Simulate Data
 

@@ -70,3 +70,11 @@ gene_sets <- list(
   "Set1" = gene_set1,
   "Set2" = gene_set2
 )
+
+
+# Path to GMT file used to test read_gmt
+gmt_file <- system.file(
+  "extdata",
+  "h.all.v2025.1.Hs.symbols.gmt.gz",
+  package = "fast.ssgsea"
+)

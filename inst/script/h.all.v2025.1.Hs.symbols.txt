@@ -1,0 +1,8 @@
+# h.all.v2025.1.Hs.symbols.gmt.gz:
+
+The h.all.v2025.1.Hs.symbols.gmt file, which contains the 50 HALLMARK gene sets, was downloaded from v2025.1.Hs of the Molecular Signatures Database (MSigDB): https://data.broadinstitute.org/gsea-msigdb/msigdb/release/2025.1.Hs/. The file was then compressed with R.utils::gzip().
+
+
+# References:
+
+Liberzon, A., Birger, C., Thorvaldsdóttir, H., Ghandi, M., Mesirov, J. P., & Tamayo, P. (2015). The Molecular Signatures Database (MSigDB) hallmark gene set collection. Cell systems, 1(6), 417–425. https://doi.org/10.1016/j.cels.2015.12.004
