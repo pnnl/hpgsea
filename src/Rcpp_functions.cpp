@@ -202,25 +202,21 @@ arma::mat Rcpp_calcESPermCore(const double alpha,
                               const arma::vec& theta_m_i,
                               const arma::vec& theta_w_i)
 {
-   // Reciprocals of the size vectors
-   arma::vec m_i_inv = 1.0 / theta_m_i;
-   arma::vec w_i_inv = 1.0 / theta_w_i;
+   arma::mat AR_perm = A_perm * R_perm;
 
    arma::mat ES_perm(A_perm.n_rows, Y_perm.n_cols, arma::fill::zeros);
 
-   arma::mat AR_perm = A_perm * R_perm;
-
    if (alpha == 0.0) {
-      // Multiply the diagonal matrix of reciprocals of m_j by
-      // A_R_perm. Equivalent to dividing each column of
-      // A_R_perm by m_j.
-      ES_perm = arma::diagmat(m_i_inv) * AR_perm;
+      // Multiply the diagonal matrix of reciprocals of the unique set sizes by
+      // A_R_perm. Equivalent to dividing each column of A_R_perm by the unique
+      // set sizes.
+      ES_perm = arma::diagmat(1.0 / theta_m_i) * AR_perm;
    } else {
       // * is dot product, % is Hadamard product, / is Hadamard division
       ES_perm = (A_perm * (Y_perm % R_perm)) / (A_perm * Y_perm);
    }
 
-   ES_perm += arma::diagmat(w_i_inv) * (AR_perm - sumRanks_i);
+   ES_perm += arma::diagmat(1.0 / theta_w_i) * (AR_perm - sumRanks_i);
 
    return ES_perm;
 }

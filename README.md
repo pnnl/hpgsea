@@ -118,7 +118,7 @@ system.time({
 ```
 
     ##    user  system elapsed 
-    ##  43.614   0.493  37.577
+    ##  43.016   0.459  37.310
 
 ``` r
 str(res)
@@ -153,7 +153,7 @@ print(sessionInfo(), locale = FALSE, tzone = FALSE)
     ## [1] stats     graphics  grDevices utils     datasets  methods   base     
     ## 
     ## other attached packages:
-    ## [1] fast.ssgsea_0.1.0.9010
+    ## [1] fast.ssgsea_0.1.0.9011
     ## 
     ## loaded via a namespace (and not attached):
     ##  [1] dqrng_0.4.1            digest_0.6.37          RcppArmadillo_14.6.0-1
@@ -227,11 +227,15 @@ tutorial](https://github.com/david-cortes/R-openblas-in-windows).
 
 ## Additional Steps
 
-The runtime can be approximately halved by switching from
-double-precision to single-precision floating point arithmetic for the
-permutation tests; this has a negligible impact on the precision of the
-normalized enrichment scores (NES). Unfortunately, R’s internal BLAS
-library does not support floats (see [this
+If using an external BLAS library, the runtime can be reduced by ~1/3 by
+switching from double-precision to single-precision floating point
+arithmetic for the permutation tests. If the BLAS library supports
+multi-threading, the difference in runtime will be negligible, so the
+switch is largely unnecessary. While using floats will slightly affect
+the precision of the normalized enrichment scores (NES), the differences
+are small compared to differences observed from changing the value of
+the `seed` parameter. Unfortunately, R’s internal BLAS library does not
+support floats (see [this
 issue](https://github.com/RcppCore/RcppArmadillo/issues/197) in
 RcppArmadillo). Since Windows has no default BLAS/LAPACK library, it was
 not possible to implement this in `fast.ssgsea` without complicating the
@@ -241,34 +245,33 @@ For users looking to implement this change, please follow these
 instructions:
 
 1.  Switch to an external BLAS library, such as OpenBLAS.
-2.  Clone pnnl/fast.ssgsea and open the fast.ssgsea.Rproj file.
+2.  Clone pnnl/fast.ssgsea (e.g., with
+    `git clone https://github.com/pnnl/fast.ssgsea` in a terminal) and
+    open the fast.ssgsea.Rproj file.
 3.  In src/Rcpp_functions.cpp, replace the `Rcpp_calcESPermCore` C++
     function with the following block of code:
 
 <!-- -->
 
-    arma::fmat Rcpp_calcESPermCore(const double alpha,
+    arma::fmat Rcpp_calcESPermCore(const float alpha,
                                    const arma::fmat& Y_perm,
                                    const arma::fmat& R_perm,
-                                   const double sumRanks_i,
+                                   const float sumRanks_i,
                                    const arma::fmat& A_perm,
                                    const arma::fvec& theta_m_i,
                                    const arma::fvec& theta_w_i)
     {
-       arma::fvec m_i_inv = 1.0 / theta_m_i;
-       arma::fvec w_i_inv = 1.0 / theta_w_i;
+       arma::fmat AR_perm = A_perm * R_perm;
 
        arma::fmat ES_perm(A_perm.n_rows, Y_perm.n_cols, arma::fill::zeros);
 
-       arma::fmat AR_perm = A_perm * R_perm;
-
-       if (alpha == 0.0) {
-          ES_perm = arma::diagmat(m_i_inv) * AR_perm;
+       if (alpha == 0.0f) {
+          ES_perm = arma::diagmat(1.0f / theta_m_i) * AR_perm;
        } else {
           ES_perm = (A_perm * (Y_perm % R_perm)) / (A_perm * Y_perm);
        }
 
-       ES_perm += arma::diagmat(w_i_inv) * (AR_perm - sumRanks_i);
+       ES_perm += arma::diagmat(1.0f / theta_w_i) * (AR_perm - sumRanks_i);
 
        return ES_perm;
     }
