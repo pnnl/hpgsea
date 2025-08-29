@@ -10,29 +10,31 @@
 #' @author Tyler Sagendorf
 #'
 #' @noRd
-.prepareX <- function(X)
-{
-   if (
-      !is.matrix(X) ||
+.prepareX <- function(X) {
+  if (
+    !is.matrix(X) ||
       !storage.mode(X) %in% c("integer", "double") ||
       is.null(rownames(X)) ||
       is.null(colnames(X))
-   )
-      stop("`X` must be a numeric matrix with row and column names.")
+  ) {
+    stop("`X` must be a numeric matrix with row and column names.")
+  }
 
-   if (nrow(X) < 3L)
-      stop("Matrix `X` must have at least 3 rows.")
+  if (nrow(X) < 3L) {
+    stop("Matrix `X` must have at least 3 rows.")
+  }
 
-   if (any(colSums(!is.na(X)) < 3L))
-      stop("Matrix `X` must have at least 3 nonmissing values in each column.")
+  if (any(colSums(!is.na(X)) < 3L)) {
+    stop("Matrix `X` must have at least 3 nonmissing values in each column.")
+  }
 
-   # Sort genes alphabetically to deal with ties later
-   X <- X[sort(rownames(X)), , drop = FALSE]
-   storage.mode(X) <- "numeric" # necessary for certain C++ functions
+  # Sort genes alphabetically to deal with ties later
+  X <- X[sort(rownames(X)), , drop = FALSE]
+  storage.mode(X) <- "numeric" # necessary for certain C++ functions
 
-   X <- t(X)
+  X <- t(X)
 
-   return(X)
+  return(X)
 }
 
 
@@ -52,65 +54,70 @@
                             min_size = 2L,
                             sort = TRUE,
                             seed = NULL,
-                            n_genes)
-{
-   if (
-      !is.vector(alpha, mode = "numeric") ||
+                            n_genes) {
+  if (
+    !is.vector(alpha, mode = "numeric") ||
       length(alpha) != 1L ||
       alpha < 0 ||
       is.na(alpha) ||
       is.infinite(alpha)
-   )
-      stop("`alpha` must be a single non-negative real number.")
+  ) {
+    stop("`alpha` must be a single non-negative real number.")
+  }
 
-   if (
-      !is.vector(nperm, mode = "numeric") ||
+  if (
+    !is.vector(nperm, mode = "numeric") ||
       length(nperm) != 1L ||
       is.na(nperm) ||
       nperm < 0L ||
       nperm > 1e6L || # arbitrary limit on number of permutations
       nperm %% 1 != 0 # decimal number
-   )
-      stop("`nperm` must be a whole number between 0 and 1 million.")
+  ) {
+    stop("`nperm` must be a whole number between 0 and 1 million.")
+  }
 
-   # batch_size gets modified later, outside of this function
-   if (
-      !is.vector(batch_size, mode = "numeric") ||
+  # batch_size gets modified later, outside of this function
+  if (
+    !is.vector(batch_size, mode = "numeric") ||
       length(batch_size) != 1L ||
       is.na(batch_size) ||
       batch_size < min(nperm, 1) ||
       batch_size %% 1 != 0
-   )
-      stop("`batch_size` must be a whole number between 1 and `nperm`.")
+  ) {
+    stop("`batch_size` must be a whole number between 1 and `nperm`.")
+  }
 
-   batch_size <- min(batch_size, nperm)
+  batch_size <- min(batch_size, nperm)
 
-   set.seed(seed) # let set.seed validate the seed
-   set.seed(NULL)
+  set.seed(seed) # let set.seed validate the seed
+  set.seed(NULL)
 
-   if (
-      !is.vector(min_size, mode = "numeric") ||
+  if (
+    !is.vector(min_size, mode = "numeric") ||
       length(min_size) != 1L ||
       is.na(min_size) ||
       min_size < 2L ||
       min_size >= n_genes ||
       min_size %% 1 != 0
-   )
-      stop("`min_size` must be >= 2 and < nrow(X).")
+  ) {
+    stop("`min_size` must be >= 2 and < nrow(X).")
+  }
 
-   if (
-      !is.vector(adjust_globally, mode = "logical") ||
+  if (
+    !is.vector(adjust_globally, mode = "logical") ||
       length(adjust_globally) != 1L ||
       is.na(adjust_globally)
-   )
-      stop("`adjust_globally` must be TRUE or FALSE.")
+  ) {
+    stop("`adjust_globally` must be TRUE or FALSE.")
+  }
 
-   if (
-      !is.vector(sort, mode = "logical") ||
+  if (
+    !is.vector(sort, mode = "logical") ||
       length(sort) != 1L ||
       is.na(sort)
-   )
-      stop("`sort` must be TRUE or FALSE.")
+  ) {
+    stop("`sort` must be TRUE or FALSE.")
+  }
 }
 
 
@@ -139,120 +146,127 @@
 #' @importFrom Matrix sparseMatrix
 #'
 #' @noRd
-.sparseIncidence <- function(gene_sets, background)
-{
-   if (
-      !is.list(gene_sets) ||
+.sparseIncidence <- function(gene_sets, background) {
+  if (
+    !is.list(gene_sets) ||
       is.null(names(gene_sets))
-   )
-      stop("`gene_sets` must be a named list of character vectors.")
+  ) {
+    stop("`gene_sets` must be a named list of character vectors.")
+  }
 
-   elements <- unlist(
-      x = gene_sets,
-      recursive = FALSE,
-      use.names = FALSE
-   )
+  elements <- unlist(
+    x = gene_sets,
+    recursive = FALSE,
+    use.names = FALSE
+  )
 
-   if (!is.vector(elements, mode = "character"))
-      stop("`gene_sets` must be a named list of character vectors.")
+  if (!is.vector(elements, mode = "character")) {
+    stop("`gene_sets` must be a named list of character vectors.")
+  }
 
-   # "elements" is a factor, "sets" is not
-   dt <- data.table(
-      elements = elements,
-      stringsAsFactors = TRUE
-   )
+  # "elements" is a factor, "sets" is not
+  dt <- data.table(
+    elements = elements,
+    stringsAsFactors = TRUE
+  )
 
-   dt[, sets := rep(names(gene_sets),
-                    lengths(gene_sets))]
+  dt[, sets := rep(
+    names(gene_sets),
+    lengths(gene_sets)
+  )]
 
-   # Determine which elements are expected to be "down", if any
-   dt[, direction_down := grepl(";d$", elements, perl = TRUE)]
+  # Determine which elements are expected to be "down", if any
+  dt[, direction_down := grepl(";d$", elements, perl = TRUE)]
 
-   # Strip information about direction of change. This may reduce the number of
-   # levels if an element is both "up" and "down": "gene;u" and "gene;d" become
-   # "gene".
-   levels(dt$elements) <- sub(";[ud]{1}$", "", levels(dt$elements))
+  # Strip information about direction of change. This may reduce the number of
+  # levels if an element is both "up" and "down": "gene;u" and "gene;d" become
+  # "gene".
+  levels(dt$elements) <- sub(";[ud]{1}$", "", levels(dt$elements))
 
-   # Do not chain with previous line, since the number of levels may change.
-   unique_elements <- levels(dt$elements)
+  # Do not chain with previous line, since the number of levels may change.
+  unique_elements <- levels(dt$elements)
 
-   # Convert to characters to use chmatch()
-   dt[, elements := as.character.factor(elements)]
+  # Convert to characters to use chmatch()
+  dt[, elements := as.character.factor(elements)]
 
-   # Only need to check those elements of the background that overlap with the
-   # elements of x. No need to validate background, since it gets validated
-   # prior to calling this function.
-   unique_elements <- intersect(unique_elements, background)
+  # Only need to check those elements of the background that overlap with the
+  # elements of x. No need to validate background, since it gets validated
+  # prior to calling this function.
+  unique_elements <- intersect(unique_elements, background)
 
-   if (length(unique_elements) == 0L)
-      stop("No elements of `gene_sets` are present in rownames(X).")
+  if (length(unique_elements) == 0L) {
+    stop("No elements of `gene_sets` are present in rownames(X).")
+  }
 
-   # Fast character matching (row indices for sparse matrix)
-   dt[, i := chmatch(elements, unique_elements, nomatch = 0L)]
+  # Fast character matching (row indices for sparse matrix)
+  dt[, i := chmatch(elements, unique_elements, nomatch = 0L)]
 
-   # Remove elements not in the background
-   dt <- subset(dt, subset = i != 0L)
+  # Remove elements not in the background
+  dt <- subset(dt, subset = i != 0L)
 
-   unique_sets <- unique(dt[["sets"]])
+  unique_sets <- unique(dt[["sets"]])
 
-   # Column indices for sparse matrix
-   dt[, j := chmatch(sets, unique_sets)]
+  # Column indices for sparse matrix
+  dt[, j := chmatch(sets, unique_sets)]
 
-   dim_names <- list(unique_elements, unique_sets)
-   dims <- lengths(dim_names)
+  dim_names <- list(unique_elements, unique_sets)
+  dims <- lengths(dim_names)
 
-   # Keep genes expected to be "up"
-   dt_u <- subset(dt, subset = direction_down == FALSE)
+  # Keep genes expected to be "up"
+  dt_u <- subset(dt, subset = direction_down == FALSE)
 
-   # Incidence matrix where a 1 indicates that the element is in the set. If x
-   # is a directional database, then A will only contain elements that are
-   # expected to be "up".
-   A <- sparseMatrix(
-      i = dt_u[["i"]],
-      j = dt_u[["j"]],
+  # Incidence matrix where a 1 indicates that the element is in the set. If x
+  # is a directional database, then A will only contain elements that are
+  # expected to be "up".
+  A <- sparseMatrix(
+    i = dt_u[["i"]],
+    j = dt_u[["j"]],
+    x = 1,
+    dims = dims,
+    dimnames = dim_names,
+    check = FALSE,
+    use.last.ij = FALSE
+  )
+
+  # In the unlikely event where an element appears multiple times in the same
+  # set, some values of A will be > 1. Replace all values with 1. Could also
+  # use the use.last.ij parameter in sparseMatrix(), but this is faster.
+  attr(A, which = "x") <- rep(1, length(attr(A, which = "x")))
+
+  A_d <- NULL # default
+
+  if (nrow(dt_u) < nrow(dt)) {
+    dt_d <- subset(dt, subset = direction_down == TRUE)
+
+    # Incidence matrix where a 1 indicates that a feature is expected to be
+    # down in the set.
+    A_d <- sparseMatrix(
+      i = dt_d[["i"]],
+      j = dt_d[["j"]],
       x = 1,
       dims = dims,
       dimnames = dim_names,
       check = FALSE,
       use.last.ij = FALSE
-   )
+    )
 
-   # In the unlikely event where an element appears multiple times in the same
-   # set, some values of A will be > 1. Replace all values with 1. Could also
-   # use the use.last.ij parameter in sparseMatrix(), but this is faster.
-   attr(A, which = "x") <- rep(1, length(attr(A, which = "x")))
+    attr(A_d, which = "x") <- rep(1, length(attr(A_d, which = "x")))
 
-   A_d <- NULL # default
-
-   if (nrow(dt_u) < nrow(dt)) {
-      dt_d <- subset(dt, subset = direction_down == TRUE)
-
-      # Incidence matrix where a 1 indicates that a feature is expected to be
-      # down in the set.
-      A_d <- sparseMatrix(
-         i = dt_d[["i"]],
-         j = dt_d[["j"]],
-         x = 1,
-         dims = dims,
-         dimnames = dim_names,
-         check = FALSE,
-         use.last.ij = FALSE
+    # The Hadamard product A * A.d should be a matrix of zeros
+    if (length(attr(A * A_d, which = "x"))) {
+      stop(
+        "Elements can not be both up (suffix \";u\") and ",
+        "down (suffix \";d\") in the same set."
       )
+    }
+  }
 
-      attr(A_d, which = "x") <- rep(1, length(attr(A_d, which = "x")))
+  out <- list(
+    "A" = A,
+    "A_d" = A_d
+  )
 
-      # The Hadamard product A * A.d should be a matrix of zeros
-      if (length(attr(A * A_d, which = "x")))
-         stop("Elements can not be both up (suffix \";u\") and ",
-              "down (suffix \";d\") in the same set.")
-   }
-
-   out <- list(
-      "A" = A,
-      "A_d" = A_d
-   )
-
-   return(out)
+  return(out)
 }
 
 
@@ -267,20 +281,19 @@
 #' @importFrom data.table frank
 #'
 #' @noRd
-.calcRankMatrix <- function(X)
-{
-   R <- apply(X, 1L, function(sample_i) {
-      # Columns of X and rows of A are sorted alphabetically. In the case of
-      # ties, the largest rank is assigned to the first gene alphabetically.
-      frank(sample_i, ties.method = "last", na.last = "keep")
-   }, simplify = FALSE)
+.calcRankMatrix <- function(X) {
+  R <- apply(X, 1L, function(sample_i) {
+    # Columns of X and rows of A are sorted alphabetically. In the case of
+    # ties, the largest rank is assigned to the first gene alphabetically.
+    frank(sample_i, ties.method = "last", na.last = "keep")
+  }, simplify = FALSE)
 
-   R <- do.call(what = rbind, args = R)
-   colnames(R) <- colnames(X) # apply(, 1L, ) drops colnames
+  R <- do.call(what = rbind, args = R)
+  colnames(R) <- colnames(X) # apply(, 1L, ) drops colnames
 
-   storage.mode(R) <- "numeric"
+  storage.mode(R) <- "numeric"
 
-   return(R)
+  return(R)
 }
 
 
@@ -329,72 +342,77 @@
                          Z_prime,
                          A,
                          A_d = NULL,
-                         min_size = 2L)
-{
-   # Matrix with samples as rows and genes as columns. Elements are the number
-   # of genes in each set with nonmissing values in the sample.
-   M <- .Rcpp_matmult_sparse(Z_prime, A) # Z'A
-   M[M < min_size] <- 0L
+                         min_size = 2L) {
+  # Matrix with samples as rows and genes as columns. Elements are the number
+  # of genes in each set with nonmissing values in the sample.
+  M <- .Rcpp_matmult_sparse(Z_prime, A) # Z'A
+  M[M < min_size] <- 0L
 
-   # Identify sets with too few or too many genes in at least one sample
-   extreme_sets_M <- apply(M, 2L, function(m_j) {
-      any(m_j == 0L | m_j == n)
-   })
+  # Identify sets with too few or too many genes in at least one sample
+  extreme_sets_M <- apply(M, 2L, function(m_j) {
+    any(m_j == 0L | m_j == n)
+  })
 
-   if (!is.null(A_d)) {
-      M_d <- .Rcpp_matmult_sparse(Z_prime, A_d)
-      M_d[M_d < min_size] <- 0L
+  if (!is.null(A_d)) {
+    M_d <- .Rcpp_matmult_sparse(Z_prime, A_d)
+    M_d[M_d < min_size] <- 0L
 
-      extreme_sets_M_d <- apply(M_d, 2L, function(m_d_j) {
-         any(m_d_j == 0L | m_d_j == n)
-      })
+    extreme_sets_M_d <- apply(M_d, 2L, function(m_d_j) {
+      any(m_d_j == 0L | m_d_j == n)
+    })
 
-      extreme_sets <- which(extreme_sets_M & extreme_sets_M_d)
-   } else {
-      M_d <- W_d <- NULL
+    extreme_sets <- which(extreme_sets_M & extreme_sets_M_d)
+  } else {
+    M_d <- W_d <- NULL
 
-      extreme_sets <- which(extreme_sets_M)
-   }
+    extreme_sets <- which(extreme_sets_M)
+  }
 
-   if (length(extreme_sets)) {
-      # If any sets are extreme, check if they are all extreme.
-      if (length(extreme_sets) == ncol(A))
-         stop("All sets in `gene_sets` contain fewer than `min_size` genes ",
-              "with nonmissing values or consist of all genes with nonmissing ",
-              "values in at least one sample.")
+  if (length(extreme_sets)) {
+    # If any sets are extreme, check if they are all extreme.
+    if (length(extreme_sets) == ncol(A)) {
+      stop(
+        "All sets in `gene_sets` contain fewer than `min_size` genes ",
+        "with nonmissing values or consist of all genes with nonmissing ",
+        "values in at least one sample."
+      )
+    }
 
-      # Remove extreme sets
-      A <- A[, -extreme_sets, drop = FALSE]
-      M <- M[, -extreme_sets, drop = FALSE]
+    # Remove extreme sets
+    A <- A[, -extreme_sets, drop = FALSE]
+    M <- M[, -extreme_sets, drop = FALSE]
 
-      if (!is.null(A_d)) {
-         A_d <- A_d[, -extreme_sets, drop = FALSE]
-         M_d <- M_d[, -extreme_sets, drop = FALSE]
-      }
+    if (!is.null(A_d)) {
+      A_d <- A_d[, -extreme_sets, drop = FALSE]
+      M_d <- M_d[, -extreme_sets, drop = FALSE]
+    }
 
-      out <- list("A" = A,
-                  "A_d" = A_d)
-   } else {
-      out <- list() # no need to update A and A_d
-   }
+    out <- list(
+      "A" = A,
+      "A_d" = A_d
+    )
+  } else {
+    out <- list() # no need to update A and A_d
+  }
 
-   # Number of genes not in each set with nonmissing values
-   W <- n - M
+  # Number of genes not in each set with nonmissing values
+  W <- n - M
 
-   if (!is.null(A_d))
-      W_d <- n - M_d
+  if (!is.null(A_d)) {
+    W_d <- n - M_d
+  }
 
-   out <- c(
-      list(
-         "M" = M,
-         "W" = W,
-         "M_d" = M_d,
-         "W_d" = W_d
-      ),
-      out # empty, or contains A and A_d
-   )
+  out <- c(
+    list(
+      "M" = M,
+      "W" = W,
+      "M_d" = M_d,
+      "W_d" = W_d
+    ),
+    out # empty, or contains A and A_d
+  )
 
-   return(out)
+  return(out)
 }
 
 
@@ -435,44 +453,43 @@
                     W,
                     A_d = NULL,
                     M_d = NULL,
-                    W_d = NULL)
-{
-   # Sample by gene set matrix of enrichment scores
-   ES_u <- .Rcpp_calcESCore(
+                    W_d = NULL) {
+  # Sample by gene set matrix of enrichment scores
+  ES_u <- .Rcpp_calcESCore(
+    alpha,
+    min_size,
+    Y_prime,
+    R_prime,
+    sumRanks,
+    A,
+    M,
+    W
+  )
+
+  if (!is.null(A_d)) { # directional database
+    ES_d <- .Rcpp_calcESCore(
       alpha,
       min_size,
       Y_prime,
       R_prime,
       sumRanks,
-      A,
-      M,
-      W
-   )
+      A_d,
+      M_d,
+      W_d
+    )
 
-   if (!is.null(A_d)) { # directional database
-      ES_d <- .Rcpp_calcESCore(
-         alpha,
-         min_size,
-         Y_prime,
-         R_prime,
-         sumRanks,
-         A_d,
-         M_d,
-         W_d
-      )
+    ES <- ES_u - ES_d
 
-      ES <- ES_u - ES_d
+    out <- list(
+      "ES" = ES,
+      "ES_u" = ES_u,
+      "ES_d" = ES_d
+    )
+  } else {
+    out <- list("ES" = ES_u)
+  }
 
-      out <- list(
-         "ES" = ES,
-         "ES_u" = ES_u,
-         "ES_d" = ES_d
-      )
-   } else {
-      out <- list("ES" = ES_u)
-   }
-
-   return(out)
+  return(out)
 }
 
 
@@ -521,71 +538,66 @@
                         theta_w_i,
                         A_perm_d = NULL,
                         theta_m_d_i = NULL,
-                        theta_w_d_i = NULL)
-{
-   max_set_size <- ncol(A_perm)
+                        theta_w_d_i = NULL) {
+  max_set_size <- ncol(A_perm)
 
-   n_elements <- length(element_indices) # number of nonmissing values
+  n_elements <- length(element_indices) # number of nonmissing values
 
-   batch_size_b <- length(seeds_batch)
+  batch_size_b <- length(seeds_batch)
 
-   # Integer matrix of indices ranging from 1 to the number of nonmissing values
-   # (n_elements). Each column is a different permutation. The number of rows is
-   # equal to the size of the largest gene set.
-   perm_indices <- vapply(seq_len(batch_size_b), function(p) {
-      dqset.seed(seeds_batch[p])
+  # Integer matrix of indices ranging from 1 to the number of nonmissing values
+  # (n_elements). Each column is a different permutation. The number of rows is
+  # equal to the size of the largest gene set.
+  perm_indices <- vapply(seq_len(batch_size_b), function(p) {
+    dqset.seed(seeds_batch[p])
 
-      dqsample.int(n = n_elements, size = max_set_size)
-   }, integer(max_set_size)) # integer matrix
+    dqsample.int(n = n_elements, size = max_set_size)
+  }, integer(max_set_size)) # integer matrix
 
-   dim(perm_indices) <- NULL # in-place matrix to vector conversion
+  dim(perm_indices) <- NULL # in-place matrix to vector conversion
 
-   # Integer vector of indices of nonmissing values for each permutation
-   # (permutations are stacked). Faster than element_indices[perm_indices]
-   perm_indices <- .Rcpp_indexIntegerVector(element_indices, perm_indices)
+  # Integer vector of indices of nonmissing values for each permutation
+  # (permutations are stacked). Faster than element_indices[perm_indices]
+  perm_indices <- .Rcpp_indexIntegerVector(element_indices, perm_indices)
 
-   Y_perm <- .Rcpp_indexNumericVector(y_i, perm_indices) # Y*
-   R_perm <- .Rcpp_indexIntegerVector(r_i, perm_indices) # R*
+  Y_perm <- .Rcpp_indexNumericVector(y_i, perm_indices) # Y*
+  R_perm <- .Rcpp_indexIntegerVector(r_i, perm_indices) # R*
 
-   # Convert vectors to matrices. The matrices are populated by column.
-   dim(Y_perm) <- dim(R_perm) <- c(max_set_size, batch_size_b)
+  # Convert vectors to matrices. The matrices are populated by column.
+  dim(Y_perm) <- dim(R_perm) <- c(max_set_size, batch_size_b)
 
-   ES_perm <- .Rcpp_calcESPermCore(
+  ES_perm <- .Rcpp_calcESPermCore(
+    alpha,
+    Y_perm,
+    R_perm,
+    sumRanks_i,
+    A_perm,
+    theta_m_i,
+    theta_w_i
+  )
+
+  if (!is.null(A_perm_d)) { # directional sets
+    ES_perm_d <- .Rcpp_calcESPermCore(
       alpha,
       Y_perm,
       R_perm,
       sumRanks_i,
-      A_perm,
-      theta_m_i,
-      theta_w_i
-   )
+      A_perm_d,
+      theta_m_d_i,
+      theta_w_d_i
+    )
 
-   if (!is.null(A_perm_d)) { # directional sets
-      ES_perm_d <- .Rcpp_calcESPermCore(
-         alpha,
-         Y_perm,
-         R_perm,
-         sumRanks_i,
-         A_perm_d,
-         theta_m_d_i,
-         theta_w_d_i
-      )
+    # If the number of genes expected to be "up" or "down" in the set is too
+    # small, replace the corresponding permutation ES (the entire row) with
+    # zero. The final ES will only depend on the "up" or "down" ES. Gene sets
+    # were previously filtered so both halves of the ES will not be set to 0.
+    ES_perm[theta_m_i < min_size, ] <- 0
+    ES_perm_d[theta_m_d_i < min_size, ] <- 0L
 
-      # If the number of genes expected to be "up" or "down" in the set is too
-      # small, replace the corresponding permutation ES (the entire row) with
-      # zero. The final ES will only depend on the "up" or "down" ES. Gene sets
-      # were previously filtered so both halves of the ES will not be set to 0.
-      ES_perm[theta_m_i < min_size, ] <- 0
-      ES_perm_d[theta_m_d_i < min_size, ] <- 0L
+    ES_perm <- ES_perm - ES_perm_d
+  }
 
-      ES_perm <- ES_perm - ES_perm_d
-   }
-
-   # Convert matrix to list of vectors
-   ES_perm_ls <- split(x = ES_perm, f = seq_len(nrow(ES_perm)))
-   names(ES_perm_ls) <- NULL
-
-   return(ES_perm_ls)
+  return(ES_perm)
 }
 
 
@@ -600,29 +612,28 @@
 #' @noRd
 .createSeedList <- function(nperm = 1000L,
                             batch_size = 1000L,
-                            seed = NULL)
-{
-   if (nperm != 0L) {
-      n_batches <- ceiling(nperm / batch_size)
+                            seed = NULL) {
+  if (nperm != 0L) {
+    n_batches <- ceiling(nperm / batch_size)
 
-      batch_sizes <- c(
-         rep(batch_size, n_batches - 1L),
-         nperm - batch_size * (n_batches - 1L)
-      )
+    batch_sizes <- c(
+      rep(batch_size, n_batches - 1L),
+      nperm - batch_size * (n_batches - 1L)
+    )
 
-      batch_id <- rep(seq_len(n_batches), batch_sizes)
+    batch_id <- rep(seq_len(n_batches), batch_sizes)
 
-      # Seeds for permutations
-      set.seed(seed)
-      seeds <- sample.int(n = 1e7L, size = nperm)
+    # Seeds for permutations
+    set.seed(seed)
+    seeds <- sample.int(n = 1e7L, size = nperm)
 
-      seed_list <- split(x = seeds, f = batch_id)
-      names(seed_list) <- NULL
-   } else {
-      seed_list <- NULL
-   }
+    seed_list <- split(x = seeds, f = batch_id)
+    names(seed_list) <- NULL
+  } else {
+    seed_list <- NULL
+  }
 
-   return(seed_list)
+  return(seed_list)
 }
 
 
@@ -643,17 +654,16 @@
 #'   Conference. \url{http://szudzik.com/ElegantPairing.pdf}
 #'
 #' @noRd
-.szudzikPairing <- function(x, y)
-{
-   # Do not need to validate x and y, since this function is only used with
-   # integer vectors by other internal functions. Note that x * x prevents
-   # integer overflow, unlike x ^ 2.
-   x +
-      ifelse(
-         x < y,
-         y * y,    # y ^ 2 + x
-         x * x + y # x ^ 2 + x + y
-      )
+.szudzikPairing <- function(x, y) {
+  # Do not need to validate x and y, since this function is only used with
+  # integer vectors by other internal functions. Note that x * x prevents
+  # integer overflow, unlike x ^ 2.
+  x +
+    ifelse(
+      x < y,
+      y * y, # y ^ 2 + x
+      x * x + y # x ^ 2 + x + y
+    )
 }
 
 
@@ -715,90 +725,89 @@
 #' @noRd
 .permIncidenceMatrix <- function(n_i,
                                  m_i,
-                                 m_d_i = NULL)
-{
-   # Permutations only need to be generated for each unique set size.
-   if (!is.null(m_d_i)) {
-      # Include up and down elements or A_perm and A_perm_d may have
-      # different dimensions.
-      unique_size_mat <- unique(cbind(m_i, m_d_i))
+                                 m_d_i = NULL) {
+  # Permutations only need to be generated for each unique set size.
+  if (!is.null(m_d_i)) {
+    # Include up and down elements or A_perm and A_perm_d may have
+    # different dimensions.
+    unique_size_mat <- unique(cbind(m_i, m_d_i))
 
-      # Number of genes expected to be up-regulated in each set. May not be
-      # unique.
-      theta_m_i <- unique_size_mat[, 1L]
+    # Number of genes expected to be up-regulated in each set. May not be
+    # unique.
+    theta_m_i <- unique_size_mat[, 1L]
 
-      # Number of genes not expected to be up-regulated. May not be unique.
-      theta_w_i <- n_i - theta_m_i
+    # Number of genes not expected to be up-regulated. May not be unique.
+    theta_w_i <- n_i - theta_m_i
 
-      # Number of genes expected to be down-regulated in each set. May not be
-      # unique.
-      theta_m_d_i <- unique_size_mat[, 2L]
+    # Number of genes expected to be down-regulated in each set. May not be
+    # unique.
+    theta_m_d_i <- unique_size_mat[, 2L]
 
-      # Number of genes not expected to be down-regulated. May not be unique.
-      theta_w_d_i <- n_i - theta_m_d_i
+    # Number of genes not expected to be down-regulated. May not be unique.
+    theta_w_d_i <- n_i - theta_m_d_i
 
-      # Combine up and down set sizes to get the total number of genes in each
-      # set. May not be unique.
-      unique_set_sizes <- theta_m_i + theta_m_d_i
+    # Combine up and down set sizes to get the total number of genes in each
+    # set. May not be unique.
+    unique_set_sizes <- theta_m_i + theta_m_d_i
 
-      max_set_size <- max(unique_set_sizes)
+    max_set_size <- max(unique_set_sizes)
 
-      A_perm_d <- .Rcpp_calcAPerm(
-         end = theta_m_d_i,
-         MAX_SET_SIZE = max_set_size,
-         check = TRUE # some theta_m_d_i may be zero
-      )
+    A_perm_d <- .Rcpp_calcAPerm(
+      end = theta_m_d_i,
+      MAX_SET_SIZE = max_set_size,
+      check = TRUE # some theta_m_d_i may be zero
+    )
 
-      A_perm <- .Rcpp_calcAPerm(
-         end = unique_set_sizes,
-         MAX_SET_SIZE = max_set_size,
-         check = FALSE
-      )
+    A_perm <- .Rcpp_calcAPerm(
+      end = unique_set_sizes,
+      MAX_SET_SIZE = max_set_size,
+      check = FALSE
+    )
 
-      A_perm <- A_perm - A_perm_d
+    A_perm <- A_perm - A_perm_d
 
-      # Each unique pair of entries in m_i and m_d_i are converted to a unique
-      # integer. The same is done for each pair of entries in theta_m_i and
-      # theta_m_d_i. Then, a vector is generated that maps each (m_i, m_d_i)
-      # pair to the unique (theta_m_i, theta_m_d_i) pairs.
-      rep_idx <- match(
-         .szudzikPairing(m_i, m_d_i),
-         .szudzikPairing(theta_m_i, theta_m_d_i)
-      )
-   } else {
-      # Unique number of genes in each set
-      theta_m_i <- unique(m_i)
+    # Each unique pair of entries in m_i and m_d_i are converted to a unique
+    # integer. The same is done for each pair of entries in theta_m_i and
+    # theta_m_d_i. Then, a vector is generated that maps each (m_i, m_d_i)
+    # pair to the unique (theta_m_i, theta_m_d_i) pairs.
+    rep_idx <- match(
+      x = .szudzikPairing(m_i, m_d_i),
+      table = .szudzikPairing(theta_m_i, theta_m_d_i)
+    )
+  } else {
+    # Unique number of genes in each set
+    theta_m_i <- unique(m_i)
 
-      # Unique number of genes not in each set
-      theta_w_i <- n_i - theta_m_i
+    # Unique number of genes not in each set
+    theta_w_i <- n_i - theta_m_i
 
-      theta_m_d_i <- theta_w_d_i <- NULL
+    theta_m_d_i <- theta_w_d_i <- NULL
 
-      max_set_size <- max(theta_m_i)
+    max_set_size <- max(theta_m_i)
 
-      A_perm_d <- NULL
+    A_perm_d <- NULL
 
-      A_perm <- .Rcpp_calcAPerm(
-         end = theta_m_i,
-         MAX_SET_SIZE = max_set_size,
-         check = FALSE
-      )
+    A_perm <- .Rcpp_calcAPerm(
+      end = theta_m_i,
+      MAX_SET_SIZE = max_set_size,
+      check = FALSE
+    )
 
-      rep_idx <- match(m_i, theta_m_i)
-   }
+    rep_idx <- match(x = m_i, table = theta_m_i)
+  }
 
-   out <- list(
-      "rep_idx" = rep_idx,
-      "A_perm" = A_perm,
-      "theta_m_i" = theta_m_i,
-      "theta_w_i" = theta_w_i,
-      # These may be NULL
-      "A_perm_d" = A_perm_d,
-      "theta_m_d_i" = theta_m_d_i,
-      "theta_w_d_i" = theta_w_d_i
-   )
+  out <- list(
+    "rep_idx" = rep_idx,
+    "A_perm" = A_perm,
+    "theta_m_i" = theta_m_i,
+    "theta_w_i" = theta_w_i,
+    # These may be NULL
+    "A_perm_d" = A_perm_d,
+    "theta_m_d_i" = theta_m_d_i,
+    "theta_w_d_i" = theta_w_d_i
+  )
 
-   return(out)
+  return(out)
 }
 
 
@@ -834,22 +843,21 @@
 #'
 #' @noRd
 .extractPermInfo <- function(ES_ls,
-                             ES_perm_ls)
-{
-   out <- lapply(seq_along(ES_ls), function(i) {
-      ES_i <- ES_ls[[i]]
+                             ES_perm) {
+  out <- lapply(seq_along(ES_ls), function(i) {
+    ES_i <- ES_ls[[i]]
 
-      ES_perm_i <- ES_perm_ls[[i]]
+    ES_perm_i <- ES_perm[i, , drop = TRUE]
 
-      out_i <- .Rcpp_extractPermInfo(ES_i, ES_perm_i) # returns list
-      class(out_i) <- "data.table"
+    out_i <- .Rcpp_extractPermInfo(ES_i, ES_perm_i) # returns list
+    class(out_i) <- "data.table"
 
-      return(out_i)
-   })
+    return(out_i)
+  })
 
-   out <- rbindlist(out)
+  out <- rbindlist(out)
 
-   return(out)
+  return(out)
 }
 
 
@@ -932,91 +940,92 @@
                               sets,
                               ES_i,
                               ES_u_i,
-                              ES_d_i)
-{
-   # This will store the results for a single sample
-   tab_i <- data.table(
-      set = sets,
-      set_size = m_i,
-      ES = ES_i,
-      # Initialize vectors of 0's. These 3 vectors will be updated using the
-      # results from each batch of permutations.
-      n_same_sign = rep(0L, length(ES_i)),
-      n_as_extreme = rep(0L, length(ES_i)),
-      sum_ES_perm = rep(0, length(ES_i)),
-      row_order = seq_along(ES_i),
-      stringsAsFactors = FALSE
-   )
+                              ES_d_i) {
+  # This will store the results for a single sample
+  tab_i <- data.table(
+    set = sets,
+    set_size = m_i,
+    ES = ES_i,
+    # Initialize vectors of 0's. These 3 vectors will be updated using the
+    # results from each batch of permutations.
+    n_same_sign = rep(0L, length(ES_i)),
+    n_as_extreme = rep(0L, length(ES_i)),
+    sum_ES_perm = rep(0, length(ES_i)),
+    row_order = seq_along(ES_i),
+    stringsAsFactors = FALSE
+  )
 
-   if (nperm != 0L) {
-      # Incidence matrices and other information for permutations
-      A_list_perm <- .permIncidenceMatrix(
-         n_i = n_i,
-         m_i = m_i,
-         m_d_i = m_d_i
+  if (nperm != 0L) {
+    # Incidence matrices and other information for permutations
+    A_list_perm <- .permIncidenceMatrix(
+      n_i = n_i,
+      m_i = m_i,
+      m_d_i = m_d_i
+    )
+
+    # Extract list components: rep_idx, A_perm, theta_m_i, theta_w_i,
+    # A_perm_d, theta_m_d_i, theta_w_d_i
+    for (name_i in names(A_list_perm)) {
+      assign(x = name_i, value = A_list_perm[[name_i]])
+    }
+
+    tab_i[, rep_idx := rep_idx]
+
+    setorderv(x = tab_i, cols = c("rep_idx", "ES"), order = c(1L, 1L))
+
+    ES_ls <- split(
+      x = tab_i[["ES"]],
+      f = tab_i[["rep_idx"]]
+    )
+
+    names(ES_ls) <- NULL
+
+    # Indices of non-missing values for a particular column
+    element_indices <- which(r_i != 0L)
+
+    # Optionally split permutations into batches to reduce memory consumption
+    for (b in seq_along(seed_list)) {
+      ES_perm <- .calcESPerm(
+        alpha = alpha,
+        min_size = min_size,
+        element_indices = element_indices,
+        seeds_batch = seed_list[[b]],
+        y_i = y_i,
+        r_i = r_i,
+        sumRanks_i = sumRanks_i,
+        A_perm = A_perm,
+        theta_m_i = theta_m_i,
+        theta_w_i = theta_w_i,
+        A_perm_d = A_perm_d,
+        theta_m_d_i = theta_m_d_i,
+        theta_w_d_i = theta_w_d_i
       )
 
-      # Extract list components: rep_idx, A_perm, theta_m_i, theta_w_i,
-      # A_perm_d, theta_m_d_i, theta_w_d_i
-      for (name_i in names(A_list_perm))
-         assign(x = name_i, value = A_list_perm[[name_i]])
-
-      tab_i[, rep_idx := rep_idx]
-
-      setorderv(tab_i, cols = c("rep_idx", "ES"), order = c(1L, 1L))
-
-      ES_ls <- split(
-         x = tab_i[["ES"]],
-         f = tab_i[["rep_idx"]]
+      perm_dt <- .extractPermInfo(
+        ES_ls = ES_ls,
+        ES_perm = ES_perm
       )
 
-      names(ES_ls) <- NULL
-
-      # Indices of non-missing values for a particular column
-      element_indices <- which(r_i != 0L)
-
-      # Optionally split permutations into batches to reduce memory consumption
-      for (b in seq_along(seed_list)) {
-         ES_perm_ls <- .calcESPerm(
-            alpha = alpha,
-            min_size = min_size,
-            element_indices = element_indices,
-            seeds_batch = seed_list[[b]],
-            y_i = y_i,
-            r_i = r_i,
-            sumRanks_i = sumRanks_i,
-            A_perm = A_perm,
-            theta_m_i = theta_m_i,
-            theta_w_i = theta_w_i,
-            A_perm_d = A_perm_d,
-            theta_m_d_i = theta_m_d_i,
-            theta_w_d_i = theta_w_d_i
-         )
-
-         perm_dt <- .extractPermInfo(
-            ES_ls = ES_ls,
-            ES_perm_ls = ES_perm_ls
-         )
-
-         # Update summary vectors
-         tab_i[, `:=`(
-            n_same_sign = n_same_sign + perm_dt[["n_same_sign_b"]],
-            n_as_extreme = n_as_extreme + perm_dt[["n_as_extreme_b"]],
-            sum_ES_perm = sum_ES_perm + perm_dt[["sum_ES_perm_b"]]
-         )]
-      } # end permutation batching
-   } # end permutations
-
-   setorderv(tab_i, cols = "row_order", order = 1L) # original row order
-
-   if (!is.null(m_d_i))
+      # Update summary vectors
       tab_i[, `:=`(
-         set_size = set_size + m_d_i,
-         ES_u = ES_u_i,
-         ES_d = ES_d_i
+        n_same_sign = n_same_sign + perm_dt[["n_same_sign_b"]],
+        n_as_extreme = n_as_extreme + perm_dt[["n_as_extreme_b"]],
+        sum_ES_perm = sum_ES_perm + perm_dt[["sum_ES_perm_b"]]
       )]
+    } # end permutation batching
+  } # end permutations
 
-   return(tab_i)
+  setorderv(tab_i, cols = "row_order", order = 1L) # original row order
+
+  if (!is.null(m_d_i)) {
+    tab_i[, `:=`(
+      set_size = set_size + m_d_i,
+      ES_u = ES_u_i,
+      ES_d = ES_d_i
+    )]
+  }
+
+  return(tab_i)
 }
 
 
@@ -1080,50 +1089,56 @@
 .stackResults <- function(tab,
                           nperm = 1000L,
                           sort = TRUE,
-                          adjust_globally = FALSE)
-{
-   sample_names <- names(tab)
-   tab <- rbindlist(tab, idcol = "sample")
+                          adjust_globally = FALSE) {
+  sample_names <- names(tab)
+  tab <- rbindlist(tab, idcol = "sample")
 
-   tab[, `:=`(
-      sample = factor(sample, levels = sample_names),
-      set_size = as.integer(set_size),
-      NES = ES / (sum_ES_perm / n_same_sign),
-      p_value = (n_as_extreme + 1L) / (n_same_sign + 1L)
-   )]
+  tab[, `:=`(
+    sample = factor(sample, levels = sample_names),
+    set_size = as.integer(set_size),
+    NES = ES / (sum_ES_perm / n_same_sign),
+    p_value = (n_as_extreme + 1L) / (n_same_sign + 1L)
+  )]
 
-   tab[n_same_sign == 0L, # only happens when nperm is very small
-       `:=`(NES = NA_real_,
-            p_value = NA_real_)]
+  tab[
+    n_same_sign == 0L, # only happens when nperm is very small
+    `:=`(
+      NES = NA_real_,
+      p_value = NA_real_
+    )
+  ]
 
-   if (nperm == 0L) {
-      tab[, `:=`(n_same_sign = NA_integer_,
-                 n_as_extreme = NA_integer_,
-                 p_value = NA_real_)]
-   } else if (sort) {
-      setorderv(tab, cols = c("sample", "p_value"), order = c(1L, 1L))
-   }
+  if (nperm == 0L) {
+    tab[, `:=`(
+      n_same_sign = NA_integer_,
+      n_as_extreme = NA_integer_,
+      p_value = NA_real_
+    )]
+  } else if (sort) {
+    setorderv(x = tab, cols = c("sample", "p_value"), order = c(1L, 1L))
+  }
 
-   if (adjust_globally) {
-      tab[, adj_p_value := p.adjust(p_value, method = "BH")]
-   } else {
-      tab[, adj_p_value := p.adjust(p_value, method = "BH"),
-          by = sample]
-   }
+  if (adjust_globally) {
+    tab[, adj_p_value := p.adjust(p_value, method = "BH")]
+  } else {
+    tab[, adj_p_value := p.adjust(p_value, method = "BH"), by = sample]
+  }
 
-   # Reorder/select columns
-   keep_cols <- intersect(
-      c("sample", "set", "set_size",
-        "ES_u", "ES_d", "ES", "NES",
-        "n_same_sign", "n_as_extreme",
-        "p_value", "adj_p_value"),
-      colnames(tab)
-   )
+  # Reorder/select columns
+  keep_cols <- intersect(
+    c(
+      "sample", "set", "set_size",
+      "ES_u", "ES_d", "ES", "NES",
+      "n_same_sign", "n_as_extreme",
+      "p_value", "adj_p_value"
+    ),
+    colnames(tab)
+  )
 
-   tab <- tab[, keep_cols, with = FALSE]
+  tab <- tab[, keep_cols, with = FALSE]
 
-   # Convert to data.frame
-   tab <- as.data.frame(tab)
+  # Convert to data.frame
+  tab <- as.data.frame(tab)
 
-   return(tab)
+  return(tab)
 }

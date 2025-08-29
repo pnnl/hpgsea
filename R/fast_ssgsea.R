@@ -104,121 +104,121 @@ fast_ssgsea <- function(X,
                         adjust_globally = FALSE,
                         min_size = 2L,
                         sort = TRUE,
-                        seed = NULL)
-{
-   # Validate X, sort genes alphabetically, and transpose
-   X <- .prepareX(X)
+                        seed = NULL) {
+  # Validate X, sort genes alphabetically, and transpose
+  X <- .prepareX(X)
 
-   # Validate function parameters
-   .validateParams(
+  # Validate function parameters
+  .validateParams(
+    alpha = alpha,
+    nperm = nperm,
+    batch_size = batch_size,
+    adjust_globally = adjust_globally,
+    min_size = min_size,
+    sort = sort,
+    seed = seed,
+    n_genes = ncol(X)
+  )
+
+  # List of one or two sparse incidence matrices. Genes (rows) are sorted
+  # alphabetically.
+  A_list <- .sparseIncidence(
+    gene_sets = gene_sets,
+    background = colnames(X)
+  )
+
+  A <- A_list[["A"]]
+  A_d <- A_list[["A_d"]]
+
+  Y <- abs(X)^alpha
+  R <- .calcRankMatrix(X = X)
+
+  # Avoid propagating NA's when multiplying matrices later
+  Z <- !is.na(X)
+  storage.mode(Z) <- "numeric"
+
+  NA_idx <- which(Z == 0)
+  Y[NA_idx] <- 0
+  R[NA_idx] <- 0
+
+  n <- rowSums(Z) # number of nonmissing genes in each sample
+
+  # Sum of the ranks of genes with nonmissing values
+  sumRanks <- n * (n + 1L) / 2L # vector of triangular numbers
+
+  # Calculate set size matrices and remove extreme sets
+  M_list <- .calcSetSize(
+    n = n,
+    Z_prime = Z[, rownames(A), drop = FALSE], # Z'
+    A = A,
+    A_d = A_d,
+    min_size = min_size
+  )
+
+  # Extract list components: M, W, M_d, W_d, A (optional), A_d (optional)
+  for (name_i in names(M_list)) {
+    assign(name_i, value = M_list[[name_i]])
+  }
+
+  # Enrichment score matrices with samples as rows and gene sets as columns
+  ES_list <- .calcES(
+    alpha = alpha,
+    Y_prime = Y[, rownames(A), drop = FALSE], # Y'
+    R_prime = R[, rownames(A), drop = FALSE], # R'
+    sumRanks = sumRanks,
+    A = A,
+    M = M,
+    W = W,
+    A_d = A_d,
+    M_d = M_d,
+    W_d = W_d,
+    min_size = min_size
+  )
+
+  ES <- ES_list[["ES"]]
+  ES_u <- ES_list[["ES_u"]]
+  ES_d <- ES_list[["ES_d"]]
+
+  # Permutations are run in batches to avoid initializing a matrix with nperm
+  # columns all at once.
+  seed_list <- .createSeedList(
+    nperm = nperm,
+    batch_size = batch_size,
+    seed = seed
+  )
+
+  # List of results for each sample
+  tab <- lapply(seq_len(nrow(X)), function(i) {
+    # Calculate permutation ES and generate table of results
+    tab_i <- .makeResultsTable(
       alpha = alpha,
       nperm = nperm,
-      batch_size = batch_size,
-      adjust_globally = adjust_globally,
       min_size = min_size,
-      sort = sort,
-      seed = seed,
-      n_genes = ncol(X)
-   )
+      seed_list = seed_list,
+      y_i = Y[i, , drop = TRUE],
+      r_i = R[i, , drop = TRUE],
+      n_i = n[i],
+      sumRanks_i = sumRanks[i],
+      m_i = M[i, , drop = TRUE],
+      m_d_i = M_d[i, , drop = TRUE], # may be NULL
+      sets = colnames(A),
+      ES_i = ES[i, , drop = TRUE],
+      # These may be NULL
+      ES_u_i = ES_u[i, , drop = TRUE],
+      ES_d_i = ES_d[i, , drop = TRUE]
+    )
 
-   # List of one or two sparse incidence matrices. Genes (rows) are sorted
-   # alphabetically.
-   A_list <- .sparseIncidence(
-      gene_sets = gene_sets,
-      background = colnames(X)
-   )
+    return(tab_i)
+  })
 
-   A <- A_list[["A"]]
-   A_d <- A_list[["A_d"]]
+  names(tab) <- rownames(X) # sample names
 
-   Y <- abs(X) ^ alpha
-   R <- .calcRankMatrix(X = X)
+  tab <- .stackResults(
+    tab = tab,
+    nperm = nperm,
+    sort = sort,
+    adjust_globally = adjust_globally
+  )
 
-   # Avoid propagating NA's when multiplying matrices later
-   Z <- !is.na(X)
-   storage.mode(Z) <- "numeric"
-
-   NA_idx <- which(Z == 0)
-   Y[NA_idx] <- 0
-   R[NA_idx] <- 0
-
-   n <- rowSums(Z) # number of nonmissing genes in each sample
-
-   # Sum of the ranks of genes with nonmissing values
-   sumRanks <- n * (n + 1L) / 2L # vector of triangular numbers
-
-   # Calculate set size matrices and remove extreme sets
-   M_list <- .calcSetSize(
-      n = n,
-      Z_prime = Z[, rownames(A), drop = FALSE], # Z'
-      A = A,
-      A_d = A_d,
-      min_size = min_size
-   )
-
-   # Extract list components: M, W, M_d, W_d, A (optional), A_d (optional)
-   for (name_i in names(M_list))
-      assign(name_i, value = M_list[[name_i]])
-
-   # Enrichment score matrices with samples as rows and gene sets as columns
-   ES_list <- .calcES(
-      alpha = alpha,
-      Y_prime = Y[, rownames(A), drop = FALSE], # Y'
-      R_prime = R[, rownames(A), drop = FALSE], # R'
-      sumRanks = sumRanks,
-      A = A,
-      M = M,
-      W = W,
-      A_d = A_d,
-      M_d = M_d,
-      W_d = W_d,
-      min_size = min_size
-   )
-
-   ES <- ES_list[["ES"]]
-   ES_u <- ES_list[["ES_u"]]
-   ES_d <- ES_list[["ES_d"]]
-
-   # Permutations are run in batches to avoid initializing a matrix with nperm
-   # columns all at once.
-   seed_list <- .createSeedList(
-      nperm = nperm,
-      batch_size = batch_size,
-      seed = seed
-   )
-
-   # List of results for each sample
-   tab <- lapply(seq_len(nrow(X)), function(i) {
-      # Calculate permutation ES and generate table of results
-      tab_i <- .makeResultsTable(
-         alpha = alpha,
-         nperm = nperm,
-         min_size = min_size,
-         seed_list = seed_list,
-         y_i = Y[i, ],
-         r_i = R[i, ],
-         n_i = n[i],
-         sumRanks_i = sumRanks[i],
-         m_i = M[i, ],
-         m_d_i = M_d[i, ], # may be NULL
-         sets = colnames(A),
-         ES_i = ES[i, ],
-         # These may be NULL
-         ES_u_i = ES_u[i, ],
-         ES_d_i = ES_d[i, ]
-      )
-
-      return(tab_i)
-   })
-
-   names(tab) <- rownames(X) # sample names
-
-   tab <- .stackResults(
-      tab = tab,
-      nperm = nperm,
-      sort = sort,
-      adjust_globally = adjust_globally
-   )
-
-   return(tab)
+  return(tab)
 }

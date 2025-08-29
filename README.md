@@ -68,10 +68,12 @@ samples <- paste0("sample", seq_len(n_samples))
 
 ## Simulate matrix of sample gene expression values
 set.seed(9001L)
-X <- matrix(data = rnorm(n = n_genes * n_samples),
-            nrow = n_genes,
-            ncol = n_samples,
-            dimnames = list(genes, samples))
+X <- matrix(
+  data = rnorm(n = n_genes * n_samples),
+  nrow = n_genes,
+  ncol = n_samples,
+  dimnames = list(genes, samples)
+)
 
 ## Simulate list of gene sets
 n_sets <- 20000L # number of gene sets
@@ -83,8 +85,8 @@ n_reps <- ceiling(n_sets / size_range)
 set_sizes <- rep(max_size:min_size, times = n_reps)[seq_len(n_sets)]
 
 gene_sets <- lapply(seq_len(n_sets), function(i) {
-   set.seed(i)
-   sample(x = genes, size = set_sizes[i])
+  set.seed(i)
+  sample(x = genes, size = set_sizes[i])
 })
 names(gene_sets) <- paste0("set", seq_along(gene_sets))
 ```
@@ -101,22 +103,22 @@ library(fast.ssgsea)
 
 # Runtime (elapsed time)
 system.time({
-   res <- fast_ssgsea(
-      X = X,
-      gene_sets = gene_sets,
-      alpha = 1,
-      nperm = 1000L,
-      batch_size = 1000L,
-      adjust_globally = FALSE,
-      min_size = min_size,
-      sort = TRUE,
-      seed = 0L
-   )
+  res <- fast_ssgsea(
+    X = X,
+    gene_sets = gene_sets,
+    alpha = 1,
+    nperm = 1000L,
+    batch_size = 1000L,
+    adjust_globally = FALSE,
+    min_size = min_size,
+    sort = TRUE,
+    seed = 0L
+  )
 })
 ```
 
     ##    user  system elapsed 
-    ##  43.005   0.522  37.308
+    ##  43.614   0.493  37.577
 
 ``` r
 str(res)
@@ -151,11 +153,11 @@ print(sessionInfo(), locale = FALSE, tzone = FALSE)
     ## [1] stats     graphics  grDevices utils     datasets  methods   base     
     ## 
     ## other attached packages:
-    ## [1] fast.ssgsea_0.1.0.9009
+    ## [1] fast.ssgsea_0.1.0.9010
     ## 
     ## loaded via a namespace (and not attached):
     ##  [1] dqrng_0.4.1            digest_0.6.37          RcppArmadillo_14.6.0-1
-    ##  [4] fastmap_1.2.0          xfun_0.52              Matrix_1.7-3          
+    ##  [4] fastmap_1.2.0          xfun_0.53              Matrix_1.7-3          
     ##  [7] lattice_0.22-7         knitr_1.50             htmltools_0.5.8.1     
     ## [10] rmarkdown_2.29         cli_3.6.5              grid_4.5.1            
     ## [13] data.table_1.17.8      compiler_4.5.1         rstudioapi_0.17.1     

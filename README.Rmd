@@ -8,10 +8,10 @@ link-citations: true
 
 ```{r include=FALSE}
 knitr::opts_chunk$set(
-   fig.align = 'center', 
-   fig.height = 5.55, 
-   fig.width = 7.8, 
-   dpi = 300
+  fig.align = "center",
+  fig.height = 5.55,
+  fig.width = 7.8,
+  dpi = 300
 )
 ```
 
@@ -55,10 +55,12 @@ samples <- paste0("sample", seq_len(n_samples))
 
 ## Simulate matrix of sample gene expression values
 set.seed(9001L)
-X <- matrix(data = rnorm(n = n_genes * n_samples),
-            nrow = n_genes,
-            ncol = n_samples,
-            dimnames = list(genes, samples))
+X <- matrix(
+  data = rnorm(n = n_genes * n_samples),
+  nrow = n_genes,
+  ncol = n_samples,
+  dimnames = list(genes, samples)
+)
 
 ## Simulate list of gene sets
 n_sets <- 20000L # number of gene sets
@@ -70,8 +72,8 @@ n_reps <- ceiling(n_sets / size_range)
 set_sizes <- rep(max_size:min_size, times = n_reps)[seq_len(n_sets)]
 
 gene_sets <- lapply(seq_len(n_sets), function(i) {
-   set.seed(i)
-   sample(x = genes, size = set_sizes[i])
+  set.seed(i)
+  sample(x = genes, size = set_sizes[i])
 })
 names(gene_sets) <- paste0("set", seq_along(gene_sets))
 ```
@@ -85,17 +87,17 @@ library(fast.ssgsea)
 
 # Runtime (elapsed time)
 system.time({
-   res <- fast_ssgsea(
-      X = X,
-      gene_sets = gene_sets,
-      alpha = 1,
-      nperm = 1000L,
-      batch_size = 1000L,
-      adjust_globally = FALSE,
-      min_size = min_size,
-      sort = TRUE,
-      seed = 0L
-   )
+  res <- fast_ssgsea(
+    X = X,
+    gene_sets = gene_sets,
+    alpha = 1,
+    nperm = 1000L,
+    batch_size = 1000L,
+    adjust_globally = FALSE,
+    min_size = min_size,
+    sort = TRUE,
+    seed = 0L
+  )
 })
 
 str(res)

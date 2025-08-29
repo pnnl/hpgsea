@@ -4,6 +4,8 @@ test_that("Szudzik pairing function is correctly specified", {
 
   out <- .szudzikPairing(x, y)
 
-  expect_identical(object = out,
-                   expected = c(26L, 18L, 15L, 22L, 31L))
+  expect_identical(
+    object = out,
+    expected = c(26L, 18L, 15L, 22L, 31L)
+  )
 })
