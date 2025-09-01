@@ -2,7 +2,7 @@ library(fast.ssgsea)
 
 source("simulation/scripts/function-generate_data.R")
 
-for_comparison <- FALSE
+for_comparison <- TRUE
 openblas <- grepl("openblas", sessionInfo()["BLAS"])
 
 ## Parameter combinations ----
@@ -57,17 +57,23 @@ time_df <- lapply(seq_len(3L), function(j) { # 3 replicates
     X_i <- li[["X"]]
     gene_sets_i <- li[["gene_sets"]]
 
-    elapsed_time <- system.time({
-      fast_ssgsea(
-        X = X_i,
-        gene_sets = gene_sets_i,
-        alpha = row_i[["alpha"]],
-        nperm = row_i[["nperm"]],
-        batch_size = 1000L, # default
-        min_size = row_i[["minSetSize"]],
-        seed = 0L
-      )
-    })["elapsed"]
+    tic <- Sys.time()
+
+    . <- fast_ssgsea(
+      X = X_i,
+      gene_sets = gene_sets_i,
+      alpha = row_i[["alpha"]],
+      nperm = row_i[["nperm"]],
+      batch_size = 1000L, # default
+      min_size = row_i[["minSetSize"]],
+      seed = 0L
+    )
+
+    toc <- Sys.time()
+
+    elapsed_time <- as.numeric(
+      difftime(toc, tic, units = "secs")
+    )
 
     message("  ", hms::as_hms(elapsed_time))
 

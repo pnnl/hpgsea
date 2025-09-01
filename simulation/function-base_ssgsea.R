@@ -71,12 +71,18 @@ base_ssgsea <- function(X,
   suppressMessages({
     invisible(
       capture.output({ # do not print messages to console
-        elapsed_time <- system.time({
-          ls <- do.call(
-            what = ssGSEA2::run_ssGSEA2,
-            args = args_list
-          )
-        })["elapsed"]
+        tic <- Sys.time()
+
+        ls <- do.call(
+          what = ssGSEA2::run_ssGSEA2,
+          args = args_list
+        )
+
+        toc <- Sys.time()
+
+        elapsed_time <- as.numeric(
+          difftime(toc, tic, units = "secs")
+        )
       })
     )
   })
