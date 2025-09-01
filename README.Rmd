@@ -19,7 +19,6 @@ knitr::opts_chunk$set(
 
 <!-- badges: start -->
 [![R-CMD-check](https://github.com/pnnl/fast.ssgsea/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/pnnl/fast.ssgsea/actions/workflows/R-CMD-check.yaml)
-[![Codecov test coverage](https://codecov.io/gh/pnnl/fast.ssgsea/graph/badge.svg)](https://app.codecov.io/gh/pnnl/fast.ssgsea)
 [![DOI](https://zenodo.org/badge/394311897.svg)](https://doi.org/10.5281/zenodo.16783102)
 <!-- badges: end -->
 
