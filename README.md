@@ -1,6 +1,9 @@
 
 - [fast.ssgsea](#fastssgsea)
   - [Installation](#installation)
+    - [macOS](#macos)
+    - [Windows](#windows)
+    - [Install](#install)
   - [Usage](#usage)
     - [Simulate Data](#simulate-data)
     - [Runtime and Results](#runtime-and-results)
@@ -8,9 +11,9 @@
   - [Performance](#performance)
   - [Switching the BLAS Library](#switching-the-blas-library)
     - [Linux](#linux)
-    - [macOS](#macos)
-    - [Windows](#windows)
-  - [Additional Steps](#additional-steps)
+    - [macOS](#macos-1)
+    - [Windows](#windows-1)
+  - [Further Improvements](#further-improvements)
   - [References](#references)
 
 # fast.ssgsea
@@ -27,23 +30,6 @@ Post-Translational Modification Signature Enrichment Analysis (PTM-SEA)
 ([Barbie et al. 2009](#ref-barbie-systematic-2009); [Krug et al.
 2019](#ref-krug-curated-2019)).
 
-## Installation
-
-On Windows, please ensure that
-[RTools](https://cran.r-project.org/bin/windows/Rtools/) is installed;
-this toolchain is needed to compile C++ code.
-
-In R (\>= 4.0.0), install the latest version with
-
-``` r
-if (!require("remotes", quietly = TRUE))
-   install.packages("remotes")
-
-remotes::install_github("pnnl/fast.ssgsea")
-```
-
-## Usage
-
 The primary function, `fast_ssgsea`, accepts a numeric matrix with genes
 or other molecules as rows and either samples, contrasts, or some other
 meaningful representation of the data as columns. A named list of gene
@@ -54,6 +40,40 @@ in the function documentation.
 The package also contains a `read_gmt` function, which reads a Gene
 Matrix Transposed (GMT) file to construct a named list of gene sets for
 use with `fast_ssgsea`.
+
+## Installation
+
+R version 4.0.0 or greater is required to install `fast.ssgsea`.
+
+It may be possible to get `fast.ssgsea` to work with older versions of R
+by cloning the repository, changing the minimum R version in the
+DESCRIPTION (e.g., to `>= 3.6.0`), and rebuilding the package, but users
+should do so at their own risk.
+
+### macOS
+
+A macOS binary is provided in the [latest
+release](https://github.com/pnnl/fast.ssgsea/releases). Users looking to
+build and install the development version of `fast.ssgsea` must have the
+Xcode developer tools from Apple and a FORTRAN compiler installed. See
+<https://mac.r-project.org/tools/> for instructions.
+
+### Windows
+
+No Windows binary is available, so
+[Rtools](https://cran.r-project.org/bin/windows/Rtools/) must be
+installed to compile C++ code.
+
+### Install
+
+The development version of `fast.ssgsea` can be installed with
+
+``` r
+# install.packages("pak")
+pak::pak("pnnl/fast.ssgsea")
+```
+
+## Usage
 
 ### Simulate Data
 
@@ -119,7 +139,7 @@ system.time({
 ```
 
     ##    user  system elapsed 
-    ##  42.876   0.453  37.231
+    ##  42.945   0.472  37.272
 
 ``` r
 str(res)
@@ -154,11 +174,11 @@ print(sessionInfo(), locale = FALSE, tzone = FALSE)
     ## [1] stats     graphics  grDevices utils     datasets  methods   base     
     ## 
     ## other attached packages:
-    ## [1] fast.ssgsea_0.1.0.9014
+    ## [1] fast.ssgsea_0.1.0.9015
     ## 
     ## loaded via a namespace (and not attached):
-    ##  [1] dqrng_0.4.1            digest_0.6.37          RcppArmadillo_14.6.0-1
-    ##  [4] fastmap_1.2.0          xfun_0.53              Matrix_1.7-3          
+    ##  [1] dqrng_0.4.1            digest_0.6.37          RcppArmadillo_14.6.3-1
+    ##  [4] fastmap_1.2.0          xfun_0.53              Matrix_1.7-4          
     ##  [7] lattice_0.22-7         knitr_1.50             htmltools_0.5.8.1     
     ## [10] rmarkdown_2.29         cli_3.6.5              grid_4.5.1            
     ## [13] data.table_1.17.8      compiler_4.5.1         rstudioapi_0.17.1     
@@ -182,30 +202,29 @@ previous runs.
 
 <div class="figure" style="text-align: center">
 
-<img src="./man/figures/README-figure-1.png" alt="Runtime of fast_ssgsea with A) 1,000 or B) 10,000 permutations. R was linked to the default reference BLAS library, so only a single thread was used." width="749" />
+<img src="./man/figures/README-figure-1.png" alt="Runtime of fast_ssgsea with A) 1,000 or B) 10,000 permutations. R was linked to the reference BLAS library, so only a single thread was used." width="749" />
 <p class="caption">
 
 Runtime of fast_ssgsea with A) 1,000 or B) 10,000 permutations. R was
-linked to the default reference BLAS library, so only a single thread
-was used.
+linked to the reference BLAS library, so only a single thread was used.
 </p>
 
 </div>
 
 ## Switching the BLAS Library
 
-Linking R to an external BLAS library, such as the optimized,
-open-source OpenBLAS library ([Xianyi, Qian, and Yunquan
-2012](#ref-openblas-1); [Wang et al. 2013](#ref-openblas-2)), can
-greatly reduce the runtime:
+Linking R to an external BLAS, such as the optimized, open-source
+OpenBLAS library ([Xianyi, Qian, and Yunquan 2012](#ref-openblas-1);
+[Wang et al. 2013](#ref-openblas-2)), can greatly reduce the runtime
+(though it may affect precision):
 
 <div class="figure" style="text-align: center">
 
-<img src="./man/figures/README-figure-2.png" alt="Runtime of fast_ssgsea with A) 1,000 or B) 10,000 permutations. R was linked to the optimized OpenBLAS library, and all 12 threads were used." width="749" />
+<img src="./man/figures/README-figure-2.png" alt="Runtime of fast_ssgsea with A) 1,000 or B) 10,000 permutations. R was linked to OpenBLAS, and all 12 threads were used." width="749" />
 <p class="caption">
 
 Runtime of fast_ssgsea with A) 1,000 or B) 10,000 permutations. R was
-linked to the optimized OpenBLAS library, and all 12 threads were used.
+linked to OpenBLAS, and all 12 threads were used.
 </p>
 
 </div>
@@ -218,39 +237,41 @@ from Posit to easily switch the BLAS library.
 
 ### macOS
 
-For Macbooks with an Apple Silicon chip (M1-M4), R comes bundled with an
-optimized BLAS library, so no additional work is needed.
+For Mac computers with an Apple Silicon chip (M1 and beyond), follow
+[these
+instructions](https://cran.r-project.org/bin/macosx/RMacOSX-FAQ.html#Which-BLAS-is-used-and-how-can-it-be-changed_003f)
+to switch to Apple’s optimized BLAS library.
 
 ### Windows
 
-To install OpenBLAS for R on Windows machines, users may follow [this
+To install OpenBLAS for R on Windows, users may follow [this
 tutorial](https://github.com/david-cortes/R-openblas-in-windows).
 
-## Additional Steps
+## Further Improvements
 
 If using an external BLAS library, the runtime can be reduced by ~1/3 by
 switching from double-precision to single-precision floating point
-arithmetic for the permutation tests. If the BLAS library supports
+arithmetic for the permutation tests. If the BLAS supports
 multi-threading, the difference in runtime will be negligible, so the
 switch is largely unnecessary. While using floats will slightly affect
 the precision of the normalized enrichment scores (NES), the differences
 are small compared to differences observed from changing the value of
-the `seed` parameter. Unfortunately, R’s internal BLAS library does not
-support floats (see [this
-issue](https://github.com/RcppCore/RcppArmadillo/issues/197) in
-RcppArmadillo). Since Windows has no default BLAS/LAPACK library, it was
-not possible to implement this in `fast.ssgsea` without complicating the
-installation process or making it impossible for Windows users.
+the `seed` parameter. Unfortunately, the R BLAS does not support floats
+(see [this issue](https://github.com/RcppCore/RcppArmadillo/issues/197)
+in RcppArmadillo). Since Windows has no default BLAS/LAPACK library, it
+was not possible to implement this in `fast.ssgsea` without complicating
+the installation process or making it impossible for Windows users.
 
 For users looking to implement this change, please follow these
 instructions:
 
-1.  Switch to an external BLAS library, such as OpenBLAS.
+1.  Link R to an external BLAS library, such as OpenBLAS. Verify success
+    by examining the result of `sessionInfo()["BLAS"]`.
 2.  Clone pnnl/fast.ssgsea (e.g., with
     `git clone https://github.com/pnnl/fast.ssgsea` in a terminal) and
     open the fast.ssgsea.Rproj file.
 3.  In src/Rcpp_functions.cpp, replace the `Rcpp_calcESPermCore` C++
-    function with the following block of code:
+    function with the following:
 
 <!-- -->
 

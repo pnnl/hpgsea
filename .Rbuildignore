@@ -8,3 +8,4 @@
 ^.*\.bib$
 ^DISCLAIMER$
 ^\.github$
+^NEWS\.md$
