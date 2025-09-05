@@ -124,7 +124,7 @@
 #' @title Create Sparse Incidence Matrices
 #'
 #' @description Create a list of sparse incidence matrices, where the unique
-#'   sets are rows and the unique elements are columns.
+#'   elements are rows and the unique sets are columns.
 #'
 #' @param gene_sets a named list of sets. Each element of the list must be a
 #'   character vector. If any elements have the suffix ";d", they will be
@@ -965,9 +965,7 @@
 
     # Extract list components: rep_idx, A_perm, theta_m_i, theta_w_i,
     # A_perm_d, theta_m_d_i, theta_w_d_i
-    for (name_i in names(A_list_perm)) {
-      assign(x = name_i, value = A_list_perm[[name_i]])
-    }
+    list2env(x = A_list_perm, envir = environment())
 
     tab_i[, rep_idx := rep_idx]
 

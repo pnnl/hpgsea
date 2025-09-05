@@ -127,8 +127,7 @@ fast_ssgsea <- function(X,
     background = colnames(X)
   )
 
-  A <- A_list[["A"]]
-  A_d <- A_list[["A_d"]]
+  list2env(x = A_list, envir = environment()) # A, A_d
 
   Y <- abs(X)^alpha
   R <- .calcRankMatrix(X = X)
@@ -156,9 +155,7 @@ fast_ssgsea <- function(X,
   )
 
   # Extract list components: M, W, M_d, W_d, A (optional), A_d (optional)
-  for (name_i in names(M_list)) {
-    assign(name_i, value = M_list[[name_i]])
-  }
+  list2env(x = M_list, envir = environment())
 
   # Enrichment score matrices with samples as rows and gene sets as columns
   ES_list <- .calcES(
@@ -175,9 +172,8 @@ fast_ssgsea <- function(X,
     min_size = min_size
   )
 
-  ES <- ES_list[["ES"]]
-  ES_u <- ES_list[["ES_u"]]
-  ES_d <- ES_list[["ES_d"]]
+  # Extract matrices ES, ES_u, and ES_d
+  list2env(x = ES_list, envir = environment())
 
   # Permutations are run in batches to avoid initializing a matrix with nperm
   # columns all at once.
