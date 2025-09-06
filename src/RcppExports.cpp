@@ -95,14 +95,14 @@ BEGIN_RCPP
 END_RCPP
 }
 // Rcpp_extractPermInfo
-List Rcpp_extractPermInfo(const std::vector<double>& x, const std::vector<double>& y);
-RcppExport SEXP _fast_ssgsea_Rcpp_extractPermInfo(SEXP xSEXP, SEXP ySEXP) {
+List Rcpp_extractPermInfo(const List ES_ls, const NumericMatrix& ES_perm);
+RcppExport SEXP _fast_ssgsea_Rcpp_extractPermInfo(SEXP ES_lsSEXP, SEXP ES_permSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const std::vector<double>& >::type x(xSEXP);
-    Rcpp::traits::input_parameter< const std::vector<double>& >::type y(ySEXP);
-    rcpp_result_gen = Rcpp::wrap(Rcpp_extractPermInfo(x, y));
+    Rcpp::traits::input_parameter< const List >::type ES_ls(ES_lsSEXP);
+    Rcpp::traits::input_parameter< const NumericMatrix& >::type ES_perm(ES_permSEXP);
+    rcpp_result_gen = Rcpp::wrap(Rcpp_extractPermInfo(ES_ls, ES_perm));
     return rcpp_result_gen;
 END_RCPP
 }

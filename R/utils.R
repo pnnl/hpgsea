@@ -142,7 +142,7 @@
 #'
 #' @author Tyler Sagendorf
 #'
-#' @importFrom data.table data.table := chmatch
+#' @importFrom data.table data.table := chmatch setattr
 #' @importFrom Matrix sparseMatrix
 #'
 #' @noRd
@@ -170,7 +170,7 @@
     stringsAsFactors = TRUE
   )
 
-  dt[, sets := rep(
+  dt[, sets := rep.int(
     names(gene_sets),
     lengths(gene_sets)
   )]
@@ -181,10 +181,10 @@
   # Strip information about direction of change. This may reduce the number of
   # levels if an element is both "up" and "down": "gene;u" and "gene;d" become
   # "gene".
-  levels(dt$elements) <- sub(";[ud]{1}$", "", levels(dt$elements))
+  setattr(dt$elements, "levels", sub(";[ud]{1}$", "", levels(dt[["elements"]])))
 
   # Do not chain with previous line, since the number of levels may change.
-  unique_elements <- levels(dt$elements)
+  unique_elements <- levels(dt[["elements"]])
 
   # Convert to characters to use chmatch()
   dt[, elements := as.character.factor(elements)]
@@ -202,9 +202,9 @@
   dt[, i := chmatch(elements, unique_elements, nomatch = 0L)]
 
   # Remove elements not in the background
-  dt <- subset(dt, subset = i != 0L)
+  dt <- dt[i != 0L]
 
-  unique_sets <- unique(dt[["sets"]])
+  unique_sets <- unique.default(dt[["sets"]])
 
   # Column indices for sparse matrix
   dt[, j := chmatch(sets, unique_sets)]
@@ -213,7 +213,7 @@
   dims <- lengths(dim_names)
 
   # Keep genes expected to be "up"
-  dt_u <- subset(dt, subset = direction_down == FALSE)
+  dt_u <- dt[direction_down == FALSE]
 
   # Incidence matrix where a 1 indicates that the element is in the set. If x
   # is a directional database, then A will only contain elements that are
@@ -231,12 +231,12 @@
   # In the unlikely event where an element appears multiple times in the same
   # set, some values of A will be > 1. Replace all values with 1. Could also
   # use the use.last.ij parameter in sparseMatrix(), but this is faster.
-  attr(A, which = "x") <- rep(1, length(attr(A, which = "x")))
+  attr(A, which = "x") <- rep.int(1, length(attr(A, which = "x")))
 
   A_d <- NULL # default
 
   if (nrow(dt_u) < nrow(dt)) {
-    dt_d <- subset(dt, subset = direction_down == TRUE)
+    dt_d <- dt[direction_down == TRUE]
 
     # Incidence matrix where a 1 indicates that a feature is expected to be
     # down in the set.
@@ -250,7 +250,7 @@
       use.last.ij = FALSE
     )
 
-    attr(A_d, which = "x") <- rep(1, length(attr(A_d, which = "x")))
+    attr(A_d, which = "x") <- rep.int(1, length(attr(A_d, which = "x")))
 
     # The Hadamard product A * A.d should be a matrix of zeros
     if (length(attr(A * A_d, which = "x"))) {
@@ -617,11 +617,11 @@
     n_batches <- ceiling(nperm / batch_size)
 
     batch_sizes <- c(
-      rep(batch_size, n_batches - 1L),
+      rep.int(batch_size, n_batches - 1L),
       nperm - batch_size * (n_batches - 1L)
     )
 
-    batch_id <- rep(seq_len(n_batches), batch_sizes)
+    batch_id <- rep.int(seq_len(n_batches), batch_sizes)
 
     # Seeds for permutations
     set.seed(seed)
@@ -684,7 +684,7 @@
 #' \describe{
 #'   \item{"rep_idx"}{a vector with length \eqn{\geq} \code{ncol(A_perm)} that
 #'   maps each row of \code{A_perm} to the corresponding entry of \code{m_i}.
-#'   This is used by \code{.extractPermInfo}.}
+#'   This is used by \code{.makeResultsTable}.}
 #'
 #'   \item{"A_perm"}{dense incidence matrix where the number of rows is the
 #'   number of unique gene set sizes and the number of columns is the size of
@@ -811,56 +811,6 @@
 }
 
 
-#' @title Extract Information from a Permutation Enrichment Score Matrix
-#'
-#' @description Extract information from a matrix of permutation enrichment
-#'   scores run as a single batch.
-#'
-#' @param ES_ls list of enrichment scores grouped by gene set size.
-#' @param ES_perm lis of permutation ES. The length of the list is equal to the
-#'   length of \code{ES}, while the length of each vector is at most the total
-#'   number of permutations: more likely, it is a fraction of the total number
-#'   of permutations. See the \code{batch_size} parameter of
-#'   \code{\link{fast_ssgsea}} for more details.
-#'
-#' @returns A \code{data.table} with 3 columns:
-#'
-#' \describe{
-#'   \item{"n_same_sign_b"}{integer; the number of permutation ES in each
-#'   row of \code{ES_perm} with the same sign as the corresponding ES in
-#'   \code{ES}.}
-#'   \item{"n_as_extreme_b"}{integer; the number of permutation ES in
-#'   each row of \code{ES_perm} that were at least as extreme as the
-#'   corresponding ES in \code{ES}. At most \code{"n_same_sign_b"}.}
-#'   \item{"sum_ES_perm_b"}{integer; the sum of the absolute values of the
-#'   permutation ES that have the same sign as the corresponding ES in
-#'   \code{ES}.}
-#' }
-#'
-#' @author Tyler Sagendorf
-#'
-#' @importFrom data.table data.table := setorderv rbindlist
-#'
-#' @noRd
-.extractPermInfo <- function(ES_ls,
-                             ES_perm) {
-  out <- lapply(seq_along(ES_ls), function(i) {
-    ES_i <- ES_ls[[i]]
-
-    ES_perm_i <- ES_perm[i, , drop = TRUE]
-
-    out_i <- .Rcpp_extractPermInfo(ES_i, ES_perm_i) # returns list
-    class(out_i) <- "data.table"
-
-    return(out_i)
-  })
-
-  out <- rbindlist(out)
-
-  return(out)
-}
-
-
 #' @title Generate ssGSEA Results Table for a Single Sample
 #'
 #' @inheritParams fast_ssgsea
@@ -924,7 +874,7 @@
 #'
 #' @author Tyler Sagendorf
 #'
-#' @importFrom data.table data.table := setorderv
+#' @importFrom data.table data.table := setorderv rbindlist
 #'
 #' @noRd
 .makeResultsTable <- function(alpha = 1,
@@ -948,9 +898,9 @@
     ES = ES_i,
     # Initialize vectors of 0's. These 3 vectors will be updated using the
     # results from each batch of permutations.
-    n_same_sign = rep(0L, length(ES_i)),
-    n_as_extreme = rep(0L, length(ES_i)),
-    sum_ES_perm = rep(0, length(ES_i)),
+    n_same_sign = rep.int(0L, length(ES_i)),
+    n_as_extreme = rep.int(0L, length(ES_i)),
+    sum_ES_perm = rep.int(0, length(ES_i)),
     row_order = seq_along(ES_i),
     stringsAsFactors = FALSE
   )
@@ -999,10 +949,12 @@
         theta_w_d_i = theta_w_d_i
       )
 
-      perm_dt <- .extractPermInfo(
+      perm_dt <- .Rcpp_extractPermInfo(
         ES_ls = ES_ls,
         ES_perm = ES_perm
       )
+
+      perm_dt <- rbindlist(perm_dt)
 
       # Update summary vectors
       tab_i[, `:=`(

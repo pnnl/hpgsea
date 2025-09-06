@@ -1,20 +1,26 @@
 test_that("All values are 0 when signs mismatch", {
   x <- c(0, 2, 4.5, 6.7, 12)
   y <- c(-10, -8, -6, -2)
+  dim(y) <- c(1L, length(y))
 
   expected <- list(
     "n_same_sign_b" = rep(0L, 5L),
     "n_as_extreme_b" = rep(0L, 5L),
     "sum_ES_perm_b" = rep(0, 5L)
   )
-  actual <- .Rcpp_extractPermInfo(x, y)
+  actual <- as.list(
+    .Rcpp_extractPermInfo(list(x), y)[[1L]]
+  )
 
   expect_identical(expected, actual)
 
   x <- c(-14, -10.8, -6, -4, -0.1)
   y <- c(0, 3, 5, 8.2, 1, 4, 2, 2)
+  dim(y) <- c(1L, length(y))
 
-  actual <- .Rcpp_extractPermInfo(x, y)
+  actual <- as.list(
+    .Rcpp_extractPermInfo(list(x), y)[[1L]]
+  )
 
   expect_identical(expected, actual)
 })
@@ -23,6 +29,7 @@ test_that("All values are 0 when signs mismatch", {
 test_that("Positive results are correct", {
   x <- c(1, 2.2, 4.5, 7, 12)
   y <- c(4.5, -11.2, 2.8, -13, -2, 4.7, 8, 10, 6.1)
+  dim(y) <- c(1L, length(y))
 
   expected <- list(
     "n_same_sign_b" = rep(6L, 5L),
@@ -30,8 +37,9 @@ test_that("Positive results are correct", {
     "sum_ES_perm_b" = rep(sum(y[y >= 0]), 5L)
   )
 
-  actual <- .Rcpp_extractPermInfo(x, y)
-
+  actual <- as.list(
+    .Rcpp_extractPermInfo(list(x), y)[[1L]]
+  )
   expect_identical(expected, actual)
 })
 
@@ -39,6 +47,7 @@ test_that("Positive results are correct", {
 test_that("Negative results are correct", {
   x <- rev(-c(1, 2.2, 4.5, 7, 12))
   y <- c(4.5, -11.2, 2.8, -13, -2, 4.7, 8, 10, 6.1)
+  dim(y) <- c(1L, length(y))
 
   expected <- list(
     "n_same_sign_b" = rep(3L, 5L),
@@ -46,7 +55,9 @@ test_that("Negative results are correct", {
     "sum_ES_perm_b" = rep(-sum(y[y < 0]), 5L)
   )
 
-  actual <- .Rcpp_extractPermInfo(x, y)
+  actual <- as.list(
+    .Rcpp_extractPermInfo(list(x), y)[[1L]]
+  )
 
   expect_identical(expected, actual)
 })
@@ -55,6 +66,7 @@ test_that("Negative results are correct", {
 test_that("Mixed sign results are correct", {
   x <- c(-12, -8, -6, -4, 0, 1, 5, 20)
   y <- sample(c(-10, -8, -7, -4, -3, 0, 1, 4, 5, 7, 8, 15))
+  dim(y) <- c(1L, length(y))
 
   expected <- list(
     "n_same_sign_b" = rep(c(5L, 7L), each = 4L),
@@ -62,7 +74,9 @@ test_that("Mixed sign results are correct", {
     "sum_ES_perm_b" = rep(c(32, 40), each = 4L)
   )
 
-  actual <- .Rcpp_extractPermInfo(x, y)
+  actual <- as.list(
+    .Rcpp_extractPermInfo(list(x), y)[[1L]]
+  )
 
   expect_identical(expected, actual)
 })

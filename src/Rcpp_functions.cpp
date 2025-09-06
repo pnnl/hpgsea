@@ -1,5 +1,5 @@
-// [[Rcpp::depends(RcppArmadillo)]]
 #include <RcppArmadillo.h>
+// [[Rcpp::depends(RcppArmadillo)]]
 #include <vector>
 
 using namespace Rcpp;
@@ -235,8 +235,7 @@ arma::mat Rcpp_calcESPermCore(const double alpha,
 //' @author Tyler Sagendorf
 //'
 //' @noRd
-int findFirstPositiveIndex(const std::vector<double>& x)
-{
+int findFirstPositiveIndex(const std::vector<double>& x) {
    const int SIZE_X = x.size();
 
    int low = 0;
@@ -267,10 +266,9 @@ int findFirstPositiveIndex(const std::vector<double>& x)
 //' @param x sorted vector of true enrichment scores. Missing values not
 //'   allowed.
 //' @param y vector of permutation enrichment scores (not necessarily sorted).
-//'   All values may be missing.
 //'
-//' @returns A named list with 3 components, each vectors with length
-//'   `length(x)`:
+//' @returns A named list with 3 components, each vectors with the same length
+//'   as x:
 //'
 //' \describe{
 //'   \item{"n_same_sign_b"}{integer vector; the number of permutation ES in
@@ -286,11 +284,8 @@ int findFirstPositiveIndex(const std::vector<double>& x)
 //' @author Tyler Sagendorf
 //'
 //' @noRd
-//'
-// [[Rcpp::export(.Rcpp_extractPermInfo)]]
-List Rcpp_extractPermInfo(const std::vector<double>& x,
-                          const std::vector<double>& y)
-{
+List extractPermInfoInternal(const std::vector<double>& x,
+                             const std::vector<double>& y) {
    const int SIZE_X = x.size();
    const int SIZE_Y = y.size();
 
@@ -374,7 +369,60 @@ List Rcpp_extractPermInfo(const std::vector<double>& x,
       Named("sum_ES_perm_b") = sum_ES_perm
    );
 
+   // Convert list to data.table to stack with rbindlist later
+   out.attr("class") = CharacterVector::create("data.table");
+
    return out;
+}
+
+
+//' @title Extract Information from a Permutation Enrichment Score Matrix
+//'
+//' @description Extract information from a matrix of permutation enrichment
+//'   scores run as a single batch.
+//'
+//' @param ES_ls list of sorted true enrichment scores grouped by gene set size.
+//' @param ES_perm matrix of permutation ES. The number of rows is equal to the
+//'   length of \code{ES_ls}, while the number of columns is at most the total
+//'   number of permutations: more likely, it is a fraction of the total number
+//'   of permutations. See the \code{batch_size} parameter of
+//'   \code{\link{fast_ssgsea}} for more details.
+//'
+//' @returns A list of \code{data.table} objects, each with 3 columns:
+//'
+//' \describe{
+//'   \item{"n_same_sign_b"}{integer; the number of permutation ES in each
+//'   row of \code{ES_perm} with the same sign as the corresponding ES in
+//'   \code{ES}.}
+//'   \item{"n_as_extreme_b"}{integer; the number of permutation ES in
+//'   each row of \code{ES_perm} that were at least as extreme as the
+//'   corresponding ES in \code{ES}. At most \code{"n_same_sign_b"}.}
+//'   \item{"sum_ES_perm_b"}{integer; the sum of the absolute values of the
+//'   permutation ES that have the same sign as the corresponding ES in
+//'   \code{ES}.}
+//' }
+//'
+//' @author Tyler Sagendorf
+//'
+//' @noRd
+//'
+// [[Rcpp::export(.Rcpp_extractPermInfo)]]
+List Rcpp_extractPermInfo(const List ES_ls, const NumericMatrix& ES_perm) {
+  const int N = ES_ls.size();
+
+  List out(N);
+
+  NumericVector temp(ES_perm.ncol(), 0.0); // the size doesn't change
+
+  for (int i = 0; i < N; i++) {
+    // Extract i-th row of ES_perm
+    temp = ES_perm(i, _);
+    std::vector<double> ES_perm_i(temp.begin(), temp.end());
+
+    out[i] = extractPermInfoInternal(ES_ls[i], ES_perm_i);
+  }
+
+  return out;
 }
 
 
@@ -397,8 +445,7 @@ List Rcpp_extractPermInfo(const std::vector<double>& x,
 // [[Rcpp::export(.Rcpp_calcAPerm)]]
 arma::umat Rcpp_calcAPerm(const arma::uvec& end,
                           const int MAX_SET_SIZE,
-                          const bool check)
-{
+                          const bool check) {
    const int NCOL = end.size();
    // Matrices are in column-major order, so it is better to fill values by
    // column and then take the transpose at the end.

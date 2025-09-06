@@ -16,6 +16,31 @@
 #' @noRd
 NULL
 
+#' @title Extract Information About Permutation Enrichment Scores
+#'
+#' @param x sorted vector of true enrichment scores. Missing values not
+#'   allowed.
+#' @param y vector of permutation enrichment scores (not necessarily sorted).
+#'
+#' @returns A named list with 3 components, each vectors with the same length
+#'   as x:
+#'
+#' \describe{
+#'   \item{"n_same_sign_b"}{integer vector; the number of permutation ES in
+#'   \code{y} with the same sign as the corresponding ES in \code{x}.}
+#'   \item{"n_as_extreme_b"}{integer vector; the number of permutation ES in
+#'   \code{y} that were at least as extreme as the corresponding ES in
+#'   \code{x}. At most \code{NSameSign.b}.}
+#'   \item{"sum_ES_perm_b"}{numeric vector; the absolute value of the sum of
+#'   the permutation ES in \code{y} that have the same sign as the
+#'   corresponding ES in \code{x}.}
+#' }
+#'
+#' @author Tyler Sagendorf
+#'
+#' @noRd
+NULL
+
 #' @title Fast Vector Indexing
 #'
 #' @param x a numeric or integer vecctor.
@@ -149,33 +174,38 @@ NULL
     .Call(`_fast_ssgsea_Rcpp_calcESPermCore`, alpha, Y_perm, R_perm, sumRanks_i, A_perm, theta_m_i, theta_w_i)
 }
 
-#' @title Extract Information About Permutation Enrichment Scores
+#' @title Extract Information from a Permutation Enrichment Score Matrix
 #'
-#' @param x sorted vector of true enrichment scores. Missing values not
-#'   allowed.
-#' @param y vector of permutation enrichment scores (not necessarily sorted).
-#'   All values may be missing.
+#' @description Extract information from a matrix of permutation enrichment
+#'   scores run as a single batch.
 #'
-#' @returns A named list with 3 components, each vectors with length
-#'   `length(x)`:
+#' @param ES_ls list of sorted true enrichment scores grouped by gene set size.
+#' @param ES_perm matrix of permutation ES. The number of rows is equal to the
+#'   length of \code{ES_ls}, while the number of columns is at most the total
+#'   number of permutations: more likely, it is a fraction of the total number
+#'   of permutations. See the \code{batch_size} parameter of
+#'   \code{\link{fast_ssgsea}} for more details.
+#'
+#' @returns A list of \code{data.table} objects, each with 3 columns:
 #'
 #' \describe{
-#'   \item{"n_same_sign_b"}{integer vector; the number of permutation ES in
-#'   \code{y} with the same sign as the corresponding ES in \code{x}.}
-#'   \item{"n_as_extreme_b"}{integer vector; the number of permutation ES in
-#'   \code{y} that were at least as extreme as the corresponding ES in
-#'   \code{x}. At most \code{NSameSign.b}.}
-#'   \item{"sum_ES_perm_b"}{numeric vector; the absolute value of the sum of
-#'   the permutation ES in \code{y} that have the same sign as the
-#'   corresponding ES in \code{x}.}
+#'   \item{"n_same_sign_b"}{integer; the number of permutation ES in each
+#'   row of \code{ES_perm} with the same sign as the corresponding ES in
+#'   \code{ES}.}
+#'   \item{"n_as_extreme_b"}{integer; the number of permutation ES in
+#'   each row of \code{ES_perm} that were at least as extreme as the
+#'   corresponding ES in \code{ES}. At most \code{"n_same_sign_b"}.}
+#'   \item{"sum_ES_perm_b"}{integer; the sum of the absolute values of the
+#'   permutation ES that have the same sign as the corresponding ES in
+#'   \code{ES}.}
 #' }
 #'
 #' @author Tyler Sagendorf
 #'
 #' @noRd
 #'
-.Rcpp_extractPermInfo <- function(x, y) {
-    .Call(`_fast_ssgsea_Rcpp_extractPermInfo`, x, y)
+.Rcpp_extractPermInfo <- function(ES_ls, ES_perm) {
+    .Call(`_fast_ssgsea_Rcpp_extractPermInfo`, ES_ls, ES_perm)
 }
 
 #' @title Generate a dense incidence matrix for permutation testing
