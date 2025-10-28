@@ -213,7 +213,16 @@
   dims <- lengths(dim_names)
 
   # Keep genes expected to be "up"
-  dt_u <- dt[direction_down == FALSE]
+  if (any(dt[["direction_down"]])) {
+    stop(
+      "fast_ssgsea does not currently support directional databases. ",
+      "This will be fixed in a future update."
+    )
+
+    dt_u <- dt[direction_down == FALSE]
+  } else {
+    dt_u <- dt
+  }
 
   # Incidence matrix where a 1 indicates that the element is in the set. If x
   # is a directional database, then A will only contain elements that are
@@ -533,13 +542,16 @@
                         y_i,
                         r_i,
                         sumRanks_i,
-                        A_perm,
                         theta_m_i,
                         theta_w_i,
-                        A_perm_d = NULL,
                         theta_m_d_i = NULL,
                         theta_w_d_i = NULL) {
-  max_set_size <- ncol(A_perm)
+  # max_set_size <- ncol(A_perm)
+  if (is.null(theta_m_d_i)) {
+    max_set_size <- max(theta_m_i)
+  } else {
+    max_set_size <- max(theta_m_i + theta_m_d_i)
+  }
 
   n_elements <- length(element_indices) # number of nonmissing values
 
@@ -571,18 +583,16 @@
     Y_perm,
     R_perm,
     sumRanks_i,
-    A_perm,
     theta_m_i,
     theta_w_i
   )
 
-  if (!is.null(A_perm_d)) { # directional sets
+  if (!is.null(theta_m_d_i)) { # directional sets
     ES_perm_d <- .Rcpp_calcESPermCore(
       alpha,
       Y_perm,
       R_perm,
       sumRanks_i,
-      A_perm_d,
       theta_m_d_i,
       theta_w_d_i
     )
@@ -787,22 +797,22 @@
 
     A_perm_d <- NULL
 
-    A_perm <- .Rcpp_calcAPerm(
-      end = theta_m_i,
-      MAX_SET_SIZE = max_set_size,
-      check = FALSE
-    )
+    # A_perm <- .Rcpp_calcAPerm(
+    #   end = theta_m_i,
+    #   MAX_SET_SIZE = max_set_size,
+    #   check = FALSE
+    # )
 
     rep_idx <- match(x = m_i, table = theta_m_i)
   }
 
   out <- list(
     "rep_idx" = rep_idx,
-    "A_perm" = A_perm,
+    # "A_perm" = A_perm,
     "theta_m_i" = theta_m_i,
     "theta_w_i" = theta_w_i,
     # These may be NULL
-    "A_perm_d" = A_perm_d,
+    # "A_perm_d" = A_perm_d,
     "theta_m_d_i" = theta_m_d_i,
     "theta_w_d_i" = theta_w_d_i
   )
@@ -895,6 +905,7 @@
   tab_i <- data.table(
     set = sets,
     set_size = m_i,
+    m_d_i = m_d_i,
     ES = ES_i,
     # Initialize vectors of 0's. These 3 vectors will be updated using the
     # results from each batch of permutations.
@@ -905,6 +916,16 @@
     stringsAsFactors = FALSE
   )
 
+  setorderv(
+    x = tab_i,
+    cols = c("set_size", "ES", "row_order"),
+    order = c(1L, 1L, 1L)
+  )
+
+  # Reordered
+  m_i <- tab_i[["set_size"]]
+  m_d_i <- tab_i[["m_d_i"]]
+
   if (nperm != 0L) {
     # Incidence matrices and other information for permutations
     A_list_perm <- .permIncidenceMatrix(
@@ -913,13 +934,11 @@
       m_d_i = m_d_i
     )
 
-    # Extract list components: rep_idx, A_perm, theta_m_i, theta_w_i,
-    # A_perm_d, theta_m_d_i, theta_w_d_i
+    # Extract list components: rep_idx, theta_m_i, theta_w_i, theta_m_d_i,
+    # theta_w_d_i
     list2env(x = A_list_perm, envir = environment())
 
     tab_i[, rep_idx := rep_idx]
-
-    setorderv(x = tab_i, cols = c("rep_idx", "ES"), order = c(1L, 1L))
 
     ES_ls <- split(
       x = tab_i[["ES"]],
@@ -941,10 +960,8 @@
         y_i = y_i,
         r_i = r_i,
         sumRanks_i = sumRanks_i,
-        A_perm = A_perm,
         theta_m_i = theta_m_i,
         theta_w_i = theta_w_i,
-        A_perm_d = A_perm_d,
         theta_m_d_i = theta_m_d_i,
         theta_w_d_i = theta_w_d_i
       )
@@ -954,7 +971,7 @@
         ES_perm = ES_perm
       )
 
-      perm_dt <- rbindlist(perm_dt)
+      perm_dt <- rbindlist(perm_dt, use.names = FALSE)
 
       # Update summary vectors
       tab_i[, `:=`(

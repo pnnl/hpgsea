@@ -2,7 +2,7 @@ library(fast.ssgsea)
 
 source("simulation/scripts/function-generate_data.R")
 
-for_comparison <- TRUE
+for_comparison <- FALSE
 openblas <- grepl("openblas", sessionInfo()["BLAS"])
 
 ## Parameter combinations ----
