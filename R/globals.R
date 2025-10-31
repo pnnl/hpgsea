@@ -1,11 +1,15 @@
 utils::globalVariables(
   c(
+    "A",
+    "A_d",
     "adj_p_value",
     "A_perm",
     "A_perm_d",
     "direction_down",
     "ES",
+    "ES_d",
     "ES_idx",
+    "ES_u",
     "i",
     "j",
     "M",

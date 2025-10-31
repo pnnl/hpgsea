@@ -78,8 +78,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // Rcpp_calcESPermCore
-arma::mat Rcpp_calcESPermCore(const double alpha, const arma::mat& Y_perm, const arma::mat& R_perm, const double sumRanks_i, const arma::mat& A_perm, const arma::vec& theta_m_i, const arma::vec& theta_w_i);
-RcppExport SEXP _fast_ssgsea_Rcpp_calcESPermCore(SEXP alphaSEXP, SEXP Y_permSEXP, SEXP R_permSEXP, SEXP sumRanks_iSEXP, SEXP A_permSEXP, SEXP theta_m_iSEXP, SEXP theta_w_iSEXP) {
+arma::mat Rcpp_calcESPermCore(const double alpha, const arma::mat& Y_perm, const arma::mat& R_perm, const double sumRanks_i, const arma::uvec& theta_m_i, const arma::vec& theta_w_i);
+RcppExport SEXP _fast_ssgsea_Rcpp_calcESPermCore(SEXP alphaSEXP, SEXP Y_permSEXP, SEXP R_permSEXP, SEXP sumRanks_iSEXP, SEXP theta_m_iSEXP, SEXP theta_w_iSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -87,22 +87,21 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const arma::mat& >::type Y_perm(Y_permSEXP);
     Rcpp::traits::input_parameter< const arma::mat& >::type R_perm(R_permSEXP);
     Rcpp::traits::input_parameter< const double >::type sumRanks_i(sumRanks_iSEXP);
-    Rcpp::traits::input_parameter< const arma::mat& >::type A_perm(A_permSEXP);
-    Rcpp::traits::input_parameter< const arma::vec& >::type theta_m_i(theta_m_iSEXP);
+    Rcpp::traits::input_parameter< const arma::uvec& >::type theta_m_i(theta_m_iSEXP);
     Rcpp::traits::input_parameter< const arma::vec& >::type theta_w_i(theta_w_iSEXP);
-    rcpp_result_gen = Rcpp::wrap(Rcpp_calcESPermCore(alpha, Y_perm, R_perm, sumRanks_i, A_perm, theta_m_i, theta_w_i));
+    rcpp_result_gen = Rcpp::wrap(Rcpp_calcESPermCore(alpha, Y_perm, R_perm, sumRanks_i, theta_m_i, theta_w_i));
     return rcpp_result_gen;
 END_RCPP
 }
 // Rcpp_extractPermInfo
-List Rcpp_extractPermInfo(const std::vector<double>& x, const std::vector<double>& y);
-RcppExport SEXP _fast_ssgsea_Rcpp_extractPermInfo(SEXP xSEXP, SEXP ySEXP) {
+List Rcpp_extractPermInfo(const List ES_ls, const NumericMatrix& ES_perm);
+RcppExport SEXP _fast_ssgsea_Rcpp_extractPermInfo(SEXP ES_lsSEXP, SEXP ES_permSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const std::vector<double>& >::type x(xSEXP);
-    Rcpp::traits::input_parameter< const std::vector<double>& >::type y(ySEXP);
-    rcpp_result_gen = Rcpp::wrap(Rcpp_extractPermInfo(x, y));
+    Rcpp::traits::input_parameter< const List >::type ES_ls(ES_lsSEXP);
+    Rcpp::traits::input_parameter< const NumericMatrix& >::type ES_perm(ES_permSEXP);
+    rcpp_result_gen = Rcpp::wrap(Rcpp_extractPermInfo(ES_ls, ES_perm));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -126,7 +125,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_fast_ssgsea_Rcpp_matmult_dense", (DL_FUNC) &_fast_ssgsea_Rcpp_matmult_dense, 2},
     {"_fast_ssgsea_Rcpp_matmult_sparse", (DL_FUNC) &_fast_ssgsea_Rcpp_matmult_sparse, 2},
     {"_fast_ssgsea_Rcpp_calcESCore", (DL_FUNC) &_fast_ssgsea_Rcpp_calcESCore, 8},
-    {"_fast_ssgsea_Rcpp_calcESPermCore", (DL_FUNC) &_fast_ssgsea_Rcpp_calcESPermCore, 7},
+    {"_fast_ssgsea_Rcpp_calcESPermCore", (DL_FUNC) &_fast_ssgsea_Rcpp_calcESPermCore, 6},
     {"_fast_ssgsea_Rcpp_extractPermInfo", (DL_FUNC) &_fast_ssgsea_Rcpp_extractPermInfo, 2},
     {"_fast_ssgsea_Rcpp_calcAPerm", (DL_FUNC) &_fast_ssgsea_Rcpp_calcAPerm, 3},
     {NULL, NULL, 0}

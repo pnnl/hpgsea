@@ -1,5 +1,5 @@
-// [[Rcpp::depends(RcppArmadillo)]]
 #include <RcppArmadillo.h>
+// [[Rcpp::depends(RcppArmadillo)]]
 #include <vector>
 
 using namespace Rcpp;
@@ -18,7 +18,9 @@ using namespace Rcpp;
 //' @noRd
 //'
 // [[Rcpp::export(.Rcpp_indexNumericVector)]]
-NumericVector Rcpp_indexNumericVector(NumericVector x, IntegerVector idx) {
+NumericVector Rcpp_indexNumericVector(NumericVector x,
+                                      IntegerVector idx)
+{
    int n = idx.size();
 
    NumericVector out(n);
@@ -31,7 +33,9 @@ NumericVector Rcpp_indexNumericVector(NumericVector x, IntegerVector idx) {
 }
 
 // [[Rcpp::export(.Rcpp_indexIntegerVector)]]
-IntegerVector Rcpp_indexIntegerVector(IntegerVector x, IntegerVector idx) {
+IntegerVector Rcpp_indexIntegerVector(IntegerVector x,
+                                      IntegerVector idx)
+{
    int n = idx.size();
 
    IntegerVector out(n);
@@ -59,10 +63,12 @@ IntegerVector Rcpp_indexIntegerVector(IntegerVector x, IntegerVector idx) {
 //' @noRd
 //'
 // [[Rcpp::export(.Rcpp_matmult_dense)]]
-arma::mat Rcpp_matmult_dense(const arma::mat& X, const arma::mat& Y) {
-   arma::mat Z = X * Y;
+arma::mat Rcpp_matmult_dense(const arma::mat& X,
+                             const arma::mat& Y)
+{
+  arma::mat Z = X * Y;
 
-   return Z;
+  return Z;
 }
 
 
@@ -82,10 +88,12 @@ arma::mat Rcpp_matmult_dense(const arma::mat& X, const arma::mat& Y) {
 //' @noRd
 //'
 // [[Rcpp::export(.Rcpp_matmult_sparse)]]
-arma::mat Rcpp_matmult_sparse(const arma::mat& X, const arma::sp_mat& Y) {
-   arma::mat Z = X * Y;
+arma::mat Rcpp_matmult_sparse(const arma::mat& X,
+                              const arma::sp_mat& Y)
+{
+  arma::mat Z = X * Y;
 
-   return Z;
+  return Z;
 }
 
 
@@ -163,6 +171,117 @@ arma::mat Rcpp_calcESCore(const double alpha,
 }
 
 
+// arma::vec segmented_sum(const arma::vec& y,
+//                         const arma::uword N,
+//                         const arma::uvec& start,
+//                         const arma::uvec& end)
+// {
+//   arma::vec out(N, arma::fill::zeros);
+//
+//   // Compute the first sum outside of the loop so it can be used in the loop
+//   out.at(0) = arma::sum(
+//     y.subvec(start.at(0), end.at(0))
+//   );
+//
+//   for (arma::uword j = 1; j < N; j++) {
+//     // out is a cumulative sum
+//     out.at(j) = arma::sum(
+//       y.subvec(start.at(j), end.at(j))
+//     ) + out.at(j - 1); // (end.at(j) == end.at(j - 1) ? 0.0 : out.at(j - 1));
+//   }
+//
+//   return out;
+// }
+
+
+// arma::mat binary_matmult(const arma::uvec set_sizes,
+//                          const arma::mat Y)
+// {
+//   const arma::uword NCOL = Y.n_cols;
+//   const arma::uword NROW = set_sizes.size();
+//
+//   // Define start and end positions to sum a window of Y column values
+//   arma::uvec start(NROW, arma::fill::zeros);
+//
+//   if (NROW != 1) {
+//     start.subvec(1, NROW - 1) = set_sizes.subvec(0, NROW - 2);
+//   }
+//
+//   const arma::uvec end = set_sizes - 1;
+//
+//   arma::mat out(NROW, NCOL, arma::fill::zeros);
+//
+//   for (arma::uword j = 0; j < NCOL; j++) {
+//     out.unsafe_col(j) = segmented_sum(Y.unsafe_col(j), NROW, start, end);
+//   }
+//
+//   return out;
+// }
+
+
+//' @title Multiplication of an unseen binary matrix and real-valued matrix
+//'
+//' @description Compute the product of an unseen binary and real-valued matrix
+//'   when the binary matrix is in a specific format. See details.
+//'
+//' @param set_sizes integer vector of unique set sizes, sorted in ascending
+//'   order.
+//' @param Y real-valued matrix. The number of rows is equal to
+//'   \code{max(set_sizes)}.
+//'
+//' @details The set_sizes vector acts as a stand-in for the unseen binary
+//'   matrix, which has the following characteristics:
+//'
+//'   1. The first `set_sizes[i]` elements of the i-th row are all 1 and the
+//'   remaining entries of that row are 0.
+//'
+//'   2. If the i-th row has n ones, then the i + 1 row will have at least (n +
+//'   1) ones.
+//'
+//'   3. All elements of the last row are 1.
+//'
+//' @author Tyler Sagendorf
+//'
+//' @references Sanderson, C., & Curtin, R. (2016). Armadillo: A template-based
+//'   C++ library for linear algebra. The Journal of Open Source Software, 1(2),
+//'   26. \url{https://doi.org/10.21105/joss.00026}
+//'
+//' @noRd
+arma::mat binary_matmult(const arma::uvec set_sizes,
+                         const arma::mat Y)
+{
+  const arma::uword NCOL = Y.n_cols;
+  const arma::uword NROW = set_sizes.size();
+  const arma::uword last_col = NCOL - 1;
+
+  // Define start and end positions to sum a window of Y column values
+  arma::uvec start(NROW, arma::fill::zeros);
+
+  if (NROW != 1) {
+    start.subvec(1, NROW - 1) = set_sizes.subvec(0, NROW - 2);
+  }
+
+  const arma::uvec end = set_sizes - 1;
+
+  arma::mat out(NROW, NCOL, arma::fill::zeros);
+
+  out.row(0) = arma::sum(
+    // first row, first col, last row, last col
+    Y.submat(start.at(0), 0, end.at(0), last_col)
+  );
+
+  for (arma::uword i = 1; i < NROW; i++) {
+    out.row(i) = arma::sum(
+      Y.submat(start.at(i), 0, end.at(i), last_col),
+      0 // sum submatrix by column. sum returns a row vector
+    ) +
+      out.row(i - 1); // cumulative sum
+  }
+
+  return out;
+}
+
+
 //' @title Core of the .calcESPerm R function
 //'
 //' @param alpha non-negative real value.
@@ -198,22 +317,23 @@ arma::mat Rcpp_calcESPermCore(const double alpha,
                               const arma::mat& Y_perm,
                               const arma::mat& R_perm,
                               const double sumRanks_i,
-                              const arma::mat& A_perm,
-                              const arma::vec& theta_m_i,
+                              const arma::uvec& theta_m_i,
                               const arma::vec& theta_w_i)
 {
-   arma::mat AR_perm = A_perm * R_perm;
+   arma::mat AR_perm = binary_matmult(theta_m_i, R_perm);
 
-   arma::mat ES_perm(A_perm.n_rows, Y_perm.n_cols, arma::fill::zeros);
+   arma::mat ES_perm = AR_perm;
 
    if (alpha == 0.0) {
       // Multiply the diagonal matrix of reciprocals of the unique set sizes by
       // A_R_perm. Equivalent to dividing each column of A_R_perm by the unique
       // set sizes.
-      ES_perm = arma::diagmat(1.0 / theta_m_i) * AR_perm;
+      // ES_perm = AR_perm;
+      ES_perm.each_col() /= arma::conv_to<arma::vec>::from(theta_m_i);
    } else {
-      // * is dot product, % is Hadamard product, / is Hadamard division
-      ES_perm = (A_perm * (Y_perm % R_perm)) / (A_perm * Y_perm);
+      // % is Hadamard product, / is Hadamard division
+      ES_perm = binary_matmult(theta_m_i, Y_perm % R_perm) /
+        binary_matmult(theta_m_i, Y_perm);
    }
 
    ES_perm += arma::diagmat(1.0 / theta_w_i) * (AR_perm - sumRanks_i);
@@ -267,10 +387,9 @@ int findFirstPositiveIndex(const std::vector<double>& x)
 //' @param x sorted vector of true enrichment scores. Missing values not
 //'   allowed.
 //' @param y vector of permutation enrichment scores (not necessarily sorted).
-//'   All values may be missing.
 //'
-//' @returns A named list with 3 components, each vectors with length
-//'   `length(x)`:
+//' @returns A named list with 3 components, each vectors with the same length
+//'   as x:
 //'
 //' \describe{
 //'   \item{"n_same_sign_b"}{integer vector; the number of permutation ES in
@@ -286,10 +405,8 @@ int findFirstPositiveIndex(const std::vector<double>& x)
 //' @author Tyler Sagendorf
 //'
 //' @noRd
-//'
-// [[Rcpp::export(.Rcpp_extractPermInfo)]]
-List Rcpp_extractPermInfo(const std::vector<double>& x,
-                          const std::vector<double>& y)
+List extractPermInfoInternal(const std::vector<double>& x,
+                             const std::vector<double>& y)
 {
    const int SIZE_X = x.size();
    const int SIZE_Y = y.size();
@@ -312,7 +429,7 @@ List Rcpp_extractPermInfo(const std::vector<double>& x,
 
    // Index of the first positive element of x. If all elements are negative,
    // returns x.size().
-   int x_pos_index = findFirstPositiveIndex(x);
+   const int x_pos_index = findFirstPositiveIndex(x);
 
    int i = 0; // index for values of x
 
@@ -348,7 +465,7 @@ List Rcpp_extractPermInfo(const std::vector<double>& x,
    }
 
    // Number of positive values of y
-   int n_pos_y = SIZE_Y - n_neg_y;
+   const int n_pos_y = SIZE_Y - n_neg_y;
 
    // Use the number of negative y and the absolute value of the sum of the
    // negative y for the results of all negative x.
@@ -374,7 +491,62 @@ List Rcpp_extractPermInfo(const std::vector<double>& x,
       Named("sum_ES_perm_b") = sum_ES_perm
    );
 
+   // Convert list to data.table to stack with rbindlist later
+   out.attr("class") = CharacterVector::create("data.table");
+
    return out;
+}
+
+
+//' @title Extract Information from a Permutation Enrichment Score Matrix
+//'
+//' @description Extract information from a matrix of permutation enrichment
+//'   scores run as a single batch.
+//'
+//' @param ES_ls list of sorted true enrichment scores grouped by gene set size.
+//' @param ES_perm matrix of permutation ES. The number of rows is equal to the
+//'   length of \code{ES_ls}, while the number of columns is at most the total
+//'   number of permutations: more likely, it is a fraction of the total number
+//'   of permutations. See the \code{batch_size} parameter of
+//'   \code{\link{fast_ssgsea}} for more details.
+//'
+//' @returns A list of \code{data.table} objects, each with 3 columns:
+//'
+//' \describe{
+//'   \item{"n_same_sign_b"}{integer; the number of permutation ES in each
+//'   row of \code{ES_perm} with the same sign as the corresponding ES in
+//'   \code{ES}.}
+//'   \item{"n_as_extreme_b"}{integer; the number of permutation ES in
+//'   each row of \code{ES_perm} that were at least as extreme as the
+//'   corresponding ES in \code{ES}. At most \code{"n_same_sign_b"}.}
+//'   \item{"sum_ES_perm_b"}{integer; the sum of the absolute values of the
+//'   permutation ES that have the same sign as the corresponding ES in
+//'   \code{ES}.}
+//' }
+//'
+//' @author Tyler Sagendorf
+//'
+//' @noRd
+//'
+// [[Rcpp::export(.Rcpp_extractPermInfo)]]
+List Rcpp_extractPermInfo(const List ES_ls,
+                          const NumericMatrix& ES_perm)
+{
+  const int N = ES_ls.size();
+
+  List out(N);
+
+  NumericVector temp(ES_perm.ncol(), 0.0); // the size doesn't change
+
+  for (int i = 0; i < N; i++) {
+    // Extract i-th row of ES_perm (is there a better way?)
+    temp = ES_perm(i, _);
+    std::vector<double> ES_perm_i(temp.begin(), temp.end());
+
+    out[i] = extractPermInfoInternal(ES_ls[i], ES_perm_i);
+  }
+
+  return out;
 }
 
 
@@ -400,6 +572,7 @@ arma::umat Rcpp_calcAPerm(const arma::uvec& end,
                           const bool check)
 {
    const int NCOL = end.size();
+
    // Matrices are in column-major order, so it is better to fill values by
    // column and then take the transpose at the end.
    arma::umat A_perm(MAX_SET_SIZE, NCOL, arma::fill::zeros);
