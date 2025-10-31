@@ -19,12 +19,13 @@ knitr::opts_chunk$set(
 
 <!-- badges: start -->
 [![R-CMD-check](https://github.com/pnnl/fast.ssgsea/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/pnnl/fast.ssgsea/actions/workflows/R-CMD-check.yaml)
-[![DOI](https://zenodo.org/badge/394311897.svg)](https://doi.org/10.5281/zenodo.16783102)
 <!-- badges: end -->
 
-`fast.ssgsea` is an R package [@R-core-team] for fast Single-Sample Gene Set Enrichment Analysis (ssGSEA) and Post-Translational Modification Signature Enrichment Analysis (PTM-SEA) [@barbie-systematic-2009; @krug-curated-2019].
+`fast.ssgsea` is an R package [@R-core-team] for fast gene permutation Gene Set Enrichment Analysis (GSEA) and Post-Translational Modification Signature Enrichment Analysis (PTM-SEA) [@subramanian-gene-2005; @krug-curated-2019].
 
-The primary function, `fast_ssgsea`, accepts a numeric matrix with genes or other molecules as rows and either samples, contrasts, or some other meaningful representation of the data as columns. A named list of gene sets (more generally, molecular signatures) is also required. Other arguments control the behavior of ssGSEA/PTM-SEA, and they are described in the function documentation.
+**NOTE:** Support for directional databases, such as PTMsigDB, is broken starting with version 0.1.0.9018. Until this is fixed, PTM-SEA is not supported.
+
+The primary function, `fast_ssgsea`, accepts a numeric matrix with genes or other molecules as rows and either samples, contrasts, or some other meaningful representation of the data as columns. A named list of gene sets (more generally, molecular signatures) is also required. Other arguments control the behavior of GSEA/PTM-SEA, and they are described in the function documentation.
 
 The package also contains a `read_gmt` function, which reads a Gene Matrix Transposed (GMT) file to construct a named list of gene sets for use with `fast_ssgsea`.
 
@@ -56,11 +57,11 @@ pak::pak("pnnl/fast.ssgsea")
 
 ### Simulate Data
 
-We will simulate a matrix with 10,000 genes as rows and 100 samples as columns. Then, we generate 20,000 gene sets by randomly sampling between 10 and 500 genes from the matrix row names.
+We will simulate a matrix with 10,000 genes as rows and one column. Then, we generate 20,000 gene sets by randomly sampling between 5 and 1,000 genes.
 
 ```{r simulate-data}
 n_genes <- 10000L # number of genes
-n_samples <- 100L # number of samples
+n_samples <- 1L # number of samples (>= 1)
 genes <- paste0("gene", seq_len(n_genes))
 samples <- paste0("sample", seq_len(n_samples))
 
@@ -91,7 +92,7 @@ names(gene_sets) <- paste0("set", seq_along(gene_sets))
 
 ### Runtime and Results
 
-This shows the runtime of `fast_ssgsea` running on an AMD Ryzen 5 7600X CPU with a clock speed of 4.7 GHz.
+This shows the runtime of `fast_ssgsea` running on an AMD Ryzen 5 7600X CPU with a clock speed of 4.7 GHz. A total of 10,000 permutations were used to calculate p-values and normalized enrichment scores (NES).
 
 ```{r time-results}
 library(fast.ssgsea)
@@ -102,11 +103,8 @@ system.time({
     X = X,
     gene_sets = gene_sets,
     alpha = 1,
-    nperm = 1000L,
-    batch_size = 1000L,
-    adjust_globally = FALSE,
+    nperm = 10000L, # default is 1000
     min_size = min_size,
-    sort = TRUE,
     seed = 0L
   )
 })
@@ -123,14 +121,13 @@ print(sessionInfo(), locale = FALSE, tzone = FALSE)
 
 ## Performance
 
-The `fast.ssgsea` R package utilizes linear algebra and ideas from Fast Gene Set Enrichment Analysis [@korotkevich-fast-2021] to greatly reduce the runtime of gene permutation GSEA and PTM-SEA.
+The `fast.ssgsea` R package utilizes linear algebra and ideas from Fast Gene Set Enrichment Analysis [@korotkevich-fast-2021] to greatly reduce the runtime.
 
-Tests were performed on a desktop computer with an AMD Ryzen 5 7600X CPU (6 cores, 12 threads) at 4.7 GHz. Different combinations of the number of samples, gene sets, maximum gene set size, number of permutations, and value of the $\alpha$ parameter (the weighting exponent) were tested in a random order (3 replicates each) to minimize the influence of previous runs.
+Tests were performed on a desktop computer with an AMD Ryzen 5 7600X CPU (6 cores, 12 threads) at 4.7 GHz. Different combinations of the number of gene sets, maximum gene set size, number of permutations, and value of the $\alpha$ parameter (the weighting exponent) were tested in a random order (3 replicates each) to minimize the influence of previous runs.
 
 ```{r, echo=FALSE}
-fig_cap <- "Runtime of fast_ssgsea with A) 1,000 or B) 10,000 permutations."
+fig_cap <- "Runtime of fast_ssgsea with A) 10,000, B) 100,000, or C) 1,000,000 permutations."
 ```
-
 
 ```{r, echo=FALSE, fig.cap=fig_cap}
 knitr::include_graphics("./man/figures/README-figure-1.png")

@@ -16,20 +16,23 @@
 <!-- badges: start -->
 
 [![R-CMD-check](https://github.com/pnnl/fast.ssgsea/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/pnnl/fast.ssgsea/actions/workflows/R-CMD-check.yaml)
-[![DOI](https://zenodo.org/badge/394311897.svg)](https://doi.org/10.5281/zenodo.16783102)
 <!-- badges: end -->
 
 `fast.ssgsea` is an R package ([R Core Team 2024](#ref-R-core-team)) for
-fast Single-Sample Gene Set Enrichment Analysis (ssGSEA) and
+fast gene permutation Gene Set Enrichment Analysis (GSEA) and
 Post-Translational Modification Signature Enrichment Analysis (PTM-SEA)
-([Barbie et al. 2009](#ref-barbie-systematic-2009); [Krug et al.
+([Subramanian et al. 2005](#ref-subramanian-gene-2005); [Krug et al.
 2019](#ref-krug-curated-2019)).
+
+**NOTE:** Support for directional databases, such as PTMsigDB, is broken
+starting with version 0.1.0.9018. Until this is fixed, PTM-SEA is not
+supported.
 
 The primary function, `fast_ssgsea`, accepts a numeric matrix with genes
 or other molecules as rows and either samples, contrasts, or some other
 meaningful representation of the data as columns. A named list of gene
 sets (more generally, molecular signatures) is also required. Other
-arguments control the behavior of ssGSEA/PTM-SEA, and they are described
+arguments control the behavior of GSEA/PTM-SEA, and they are described
 in the function documentation.
 
 The package also contains a `read_gmt` function, which reads a Gene
@@ -72,13 +75,13 @@ pak::pak("pnnl/fast.ssgsea")
 
 ### Simulate Data
 
-We will simulate a matrix with 10,000 genes as rows and 100 samples as
-columns. Then, we generate 20,000 gene sets by randomly sampling between
-10 and 500 genes from the matrix row names.
+We will simulate a matrix with 10,000 genes as rows and one column.
+Then, we generate 20,000 gene sets by randomly sampling between 5 and
+1,000 genes.
 
 ``` r
 n_genes <- 10000L # number of genes
-n_samples <- 100L # number of samples
+n_samples <- 1L # number of samples (>= 1)
 genes <- paste0("gene", seq_len(n_genes))
 samples <- paste0("sample", seq_len(n_samples))
 
@@ -110,7 +113,8 @@ names(gene_sets) <- paste0("set", seq_along(gene_sets))
 ### Runtime and Results
 
 This shows the runtime of `fast_ssgsea` running on an AMD Ryzen 5 7600X
-CPU with a clock speed of 4.7 GHz.
+CPU with a clock speed of 4.7 GHz. A total of 10,000 permutations were
+used to calculate p-values and normalized enrichment scores (NES).
 
 ``` r
 library(fast.ssgsea)
@@ -121,33 +125,30 @@ system.time({
     X = X,
     gene_sets = gene_sets,
     alpha = 1,
-    nperm = 1000L,
-    batch_size = 1000L,
-    adjust_globally = FALSE,
+    nperm = 10000L, # default is 1000
     min_size = min_size,
-    sort = TRUE,
     seed = 0L
   )
 })
 ```
 
     ##    user  system elapsed 
-    ##  15.572   1.352   9.120
+    ##   2.655   0.820   3.001
 
 ``` r
 str(res)
 ```
 
-    ## 'data.frame':    2000000 obs. of  9 variables:
-    ##  $ sample      : Factor w/ 100 levels "sample1","sample2",..: 1 1 1 1 1 1 1 1 1 1 ...
-    ##  $ set         : chr  "set4576" "set12526" "set11427" "set9645" ...
-    ##  $ set_size    : int  409 427 530 320 320 977 519 517 511 841 ...
-    ##  $ ES          : num  929 861 693 1043 898 ...
-    ##  $ NES         : num  4.4 4.13 3.72 4.22 3.64 ...
-    ##  $ n_same_sign : int  544 539 536 534 534 525 521 521 521 520 ...
-    ##  $ n_as_extreme: int  0 0 0 0 0 0 0 0 0 0 ...
-    ##  $ p_value     : num  0.00183 0.00185 0.00186 0.00187 0.00187 ...
-    ##  $ adj_p_value : num  0.838 0.838 0.838 0.838 0.838 ...
+    ## 'data.frame':    20000 obs. of  9 variables:
+    ##  $ sample      : Factor w/ 1 level "sample1": 1 1 1 1 1 1 1 1 1 1 ...
+    ##  $ set         : chr  "set5945" "set18791" "set19084" "set16136" ...
+    ##  $ set_size    : int  36 138 841 801 45 749 761 450 706 163 ...
+    ##  $ ES          : num  2688 -1866 698 709 2333 ...
+    ##  $ NES         : num  3.9 -5.33 4.65 4.61 3.8 ...
+    ##  $ n_same_sign : int  5049 4962 5226 5210 5058 4799 4784 4771 5200 5080 ...
+    ##  $ n_as_extreme: int  0 0 1 1 1 1 1 1 2 2 ...
+    ##  $ p_value     : num  0.000198 0.000201 0.000383 0.000384 0.000395 ...
+    ##  $ adj_p_value : num  0.937 0.937 0.937 0.937 0.937 ...
 
 ### Session Information
 
@@ -167,7 +168,7 @@ print(sessionInfo(), locale = FALSE, tzone = FALSE)
     ## [1] stats     graphics  grDevices utils     datasets  methods   base     
     ## 
     ## other attached packages:
-    ## [1] fast.ssgsea_0.1.0.9017
+    ## [1] fast.ssgsea_0.1.0.9018
     ## 
     ## loaded via a namespace (and not attached):
     ##  [1] dqrng_0.4.1            digest_0.6.37          RcppArmadillo_15.0.2-2
@@ -182,22 +183,22 @@ print(sessionInfo(), locale = FALSE, tzone = FALSE)
 
 The `fast.ssgsea` R package utilizes linear algebra and ideas from Fast
 Gene Set Enrichment Analysis ([Korotkevich et al.
-2021](#ref-korotkevich-fast-2021)) to greatly reduce the runtime of gene
-permutation GSEA and PTM-SEA.
+2021](#ref-korotkevich-fast-2021)) to greatly reduce the runtime.
 
 Tests were performed on a desktop computer with an AMD Ryzen 5 7600X CPU
 (6 cores, 12 threads) at 4.7 GHz. Different combinations of the number
-of samples, gene sets, maximum gene set size, number of permutations,
-and value of the $\alpha$ parameter (the weighting exponent) were tested
-in a random order (3 replicates each) to minimize the influence of
-previous runs.
+of gene sets, maximum gene set size, number of permutations, and value
+of the $\alpha$ parameter (the weighting exponent) were tested in a
+random order (3 replicates each) to minimize the influence of previous
+runs.
 
 <div class="figure" style="text-align: center">
 
-<img src="./man/figures/README-figure-1.png" alt="Runtime of fast_ssgsea with A) 1,000 or B) 10,000 permutations." width="749" />
+<img src="./man/figures/README-figure-1.png" alt="Runtime of fast_ssgsea with A) 10,000, B) 100,000, or C) 1,000,000 permutations." width="648" />
 <p class="caption">
 
-Runtime of fast_ssgsea with A) 1,000 or B) 10,000 permutations.
+Runtime of fast_ssgsea with A) 10,000, B) 100,000, or C) 1,000,000
+permutations.
 </p>
 
 </div>
@@ -206,15 +207,6 @@ Runtime of fast_ssgsea with A) 1,000 or B) 10,000 permutations.
 
 <div id="refs" class="references csl-bib-body hanging-indent"
 entry-spacing="0">
-
-<div id="ref-barbie-systematic-2009" class="csl-entry">
-
-Barbie, David A., Pablo Tamayo, Jesse S. Boehm, So Young Kim, Susan E.
-Moody, Ian F. Dunn, Anna C. Schinzel, et al. 2009. “Systematic RNA
-Interference Reveals That Oncogenic KRAS-Driven Cancers Require TBK1.”
-*Nature* 462 (7269): 108–12. <https://doi.org/10.1038/nature08460>.
-
-</div>
 
 <div id="ref-korotkevich-fast-2021" class="csl-entry">
 
@@ -238,6 +230,17 @@ Proteomics* 18 (3): 576–93. <https://doi.org/10.1074/mcp.TIR118.000943>.
 R Core Team. 2024. *R: A Language and Environment for Statistical
 Computing*. Vienna, Austria: R Foundation for Statistical Computing.
 <https://www.R-project.org/>.
+
+</div>
+
+<div id="ref-subramanian-gene-2005" class="csl-entry">
+
+Subramanian, Aravind, Pablo Tamayo, Vamsi K. Mootha, Sayan Mukherjee,
+Benjamin L. Ebert, Michael A. Gillette, Amanda Paulovich, et al. 2005.
+“Gene Set Enrichment Analysis: A Knowledge-Based Approach for
+Interpreting Genome-Wide Expression Profiles.” *Proceedings of the
+National Academy of Sciences* 102 (43): 15545–50.
+<https://doi.org/10.1073/pnas.0506580102>.
 
 </div>
 
