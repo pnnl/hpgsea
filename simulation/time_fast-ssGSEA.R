@@ -2,33 +2,16 @@ library(fast.ssgsea)
 
 source("simulation/scripts/function-generate_data.R")
 
-for_comparison <- FALSE
-openblas <- grepl("openblas", sessionInfo()["BLAS"])
-
-## Parameter combinations ----
-if (for_comparison) {
-  ## For comparison with ssGSEA-base
-  param_list <- list(
-    "nGenes" = 1e4L,
-    "nSamples" = c(20L, 30L),
-    "minSetSize" = 10L,
-    "maxSetSize" = c(500L, 1000L),
-    "nSets" = c(1e3L, 2e3L),
-    "nperm" = c(1e3L, 2e3L),
-    "alpha" = c(0, 1)
-  )
-} else {
-  ## Extreme combinations to showcase speed of fast-ssGSEA
-  param_list <- list(
-    "nGenes" = 1e4L,
-    "nSamples" = 1L,
-    "minSetSize" = 10L,
-    "maxSetSize" = c(500L, 1000L),
-    "nSets" = c(1e3L, 1e4L, 5e4L),
-    "nperm" = c(1e4L, 1e5L, 1e6L),
-    "alpha" = c(0, 1)
-  )
-}
+# Parameter combinations ----
+param_list <- list(
+  "nGenes" = 1e4L,
+  "nSamples" = 1L,
+  "minSetSize" = 10L,
+  "maxSetSize" = c(500L, 1000L),
+  "nSets" = c(1e3L, 1e4L, 5e4L),
+  "nperm" = c(1e4L, 1e5L, 1e6L),
+  "alpha" = c(0, 1)
+)
 
 comb_df <- expand.grid(param_list)
 
@@ -59,7 +42,7 @@ time_df <- lapply(seq_len(3L), function(j) { # 3 replicates
 
     tic <- Sys.time()
 
-    . <- fast_ssgsea(
+    res <- fast_ssgsea(
       X = X_i,
       gene_sets = gene_sets_i,
       alpha = row_i[["alpha"]],
@@ -75,6 +58,8 @@ time_df <- lapply(seq_len(3L), function(j) { # 3 replicates
       difftime(toc, tic, units = "secs")
     )
 
+    rm(list = "res")
+
     message("  ", hms::as_hms(elapsed_time))
 
     comb_df_j[i, "elapsed_time"] <- elapsed_time
@@ -86,56 +71,11 @@ time_df <- lapply(seq_len(3L), function(j) { # 3 replicates
 time_df <- do.call(what = rbind, args = time_df)
 
 # Save results
-if (openblas) {
-  if (for_comparison) {
-    ## First param_list, OpenBLAS
-    saveRDS(
-      object = time_df,
-      file = file.path(
-        "simulation",
-        "data",
-        "fast-ssGSEA_timing_results_OpenBLAS_for_comparison.rds"
-      ),
-      compress = TRUE,
-      version = 3L
-    )
-  } else {
-    ## Second param_list, OpenBLAS
-    saveRDS(
-      object = time_df,
-      file = file.path(
-        "simulation",
-        "data",
-        "fast-ssGSEA_timing_results_OpenBLAS.rds"
-      ),
-      compress = TRUE,
-      version = 3L
-    )
-  }
-} else {
-  if (for_comparison) {
-    ## First param_list, reference BLAS
-    saveRDS(
-      object = time_df,
-      file = file.path(
-        "simulation",
-        "data",
-        "fast-ssGSEA_timing_results_BLAS_for_comparison.rds"
-      ),
-      compress = TRUE,
-      version = 3L
-    )
-  } else {
-    ## Second param_list, reference BLAS
-    saveRDS(
-      object = time_df,
-      file = file.path(
-        "simulation",
-        "data",
-        "fast-ssGSEA_timing_results_BLAS.rds"
-      ),
-      compress = TRUE,
-      version = 3L
-    )
-  }
-}
+saveRDS(
+  object = time_df,
+  file = file.path(
+    "simulation",
+    "data",
+    "fast-ssGSEA_timing_results.rds"
+  )
+)

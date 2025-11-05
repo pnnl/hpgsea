@@ -35,8 +35,8 @@ genes/molecules in each set will contribute equally.}
 calculate the normalized enrichment scores (NES) and p-values.}
 
 \item{batch_size}{integer (\eqn{\gg 1} and \eqn{\leq} \code{nperm}); the
-maximum number of permutations run as a single batch. Smaller values will
-significantly decrease memory usage and slightly increase runtime.}
+maximum number of permutations run as a single batch. It is not recommended
+to change this.}
 
 \item{adjust_globally}{logical; whether p-values from different columns of
 \code{X} should be adjusted together. Default is \code{FALSE}.}

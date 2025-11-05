@@ -201,10 +201,14 @@
   # Fast character matching (row indices for sparse matrix)
   dt[, i := chmatch(elements, unique_elements, nomatch = 0L)]
 
-  # Remove elements not in the background
-  dt <- dt[i != 0L]
+  if (any(dt[["i"]] == 0L)) {
+    # Remove elements not in the background
+    dt <- dt[i != 0L]
 
-  unique_sets <- unique.default(dt[["sets"]])
+    unique_sets <- unique.default(dt[["sets"]])
+  } else {
+    unique_sets <- names(gene_sets)
+  }
 
   # Column indices for sparse matrix
   dt[, j := chmatch(sets, unique_sets)]
@@ -214,11 +218,6 @@
 
   # Keep genes expected to be "up"
   if (any(dt[["direction_down"]])) {
-    stop(
-      "fast_ssgsea does not currently support directional databases. ",
-      "This will be fixed in a future update."
-    )
-
     dt_u <- dt[direction_down == FALSE]
   } else {
     dt_u <- dt
@@ -513,9 +512,6 @@
 #' @param r_i dense row vector of the ranks of the gene-level values for the
 #'   i-th sample.
 #' @param sumRanks_i sum of the ranks for the i-th sample.
-#' @param A_perm dense permutation incidence matrix. The number of rows is the
-#'   number of unique gene set sizes for the i-th sample. The number of columns
-#'   is \code{length(seeds_batch)}.
 #' @param theta_m_i vector of unique number of genes with nonmissing values in
 #'   each set for the i-th sample.
 #' @param theta_w_i vector of unique number of genes with nonmissing values not
@@ -537,6 +533,7 @@
 #' @noRd
 .calcESPerm <- function(alpha = 1,
                         min_size,
+                        max_set_size,
                         element_indices,
                         seeds_batch,
                         y_i,
@@ -546,13 +543,6 @@
                         theta_w_i,
                         theta_m_d_i = NULL,
                         theta_w_d_i = NULL) {
-  # max_set_size <- ncol(A_perm)
-  if (is.null(theta_m_d_i)) {
-    max_set_size <- max(theta_m_i)
-  } else {
-    max_set_size <- max(theta_m_i + theta_m_d_i)
-  }
-
   n_elements <- length(element_indices) # number of nonmissing values
 
   batch_size_b <- length(seeds_batch)
@@ -560,10 +550,10 @@
   # Integer matrix of indices ranging from 1 to the number of nonmissing values
   # (n_elements). Each column is a different permutation. The number of rows is
   # equal to the size of the largest gene set.
-  perm_indices <- vapply(seq_len(batch_size_b), function(p) {
-    dqset.seed(seeds_batch[p])
+  perm_indices <- vapply(seeds_batch, function(seed_p) {
+    dqset.seed(seed_p)
 
-    dqsample.int(n = n_elements, size = max_set_size)
+    dqsample.int(n_elements, max_set_size, FALSE)
   }, integer(max_set_size)) # integer matrix
 
   dim(perm_indices) <- NULL # in-place matrix to vector conversion
@@ -578,33 +568,27 @@
   # Convert vectors to matrices. The matrices are populated by column.
   dim(Y_perm) <- dim(R_perm) <- c(max_set_size, batch_size_b)
 
-  ES_perm <- .Rcpp_calcESPermCore(
-    alpha,
-    Y_perm,
-    R_perm,
-    sumRanks_i,
-    theta_m_i,
-    theta_w_i
-  )
-
   if (!is.null(theta_m_d_i)) { # directional sets
-    ES_perm_d <- .Rcpp_calcESPermCore(
+    ES_perm <- .Rcpp_calcESPerm_dir(
       alpha,
       Y_perm,
       R_perm,
       sumRanks_i,
+      theta_m_i,
+      theta_w_i,
       theta_m_d_i,
-      theta_w_d_i
+      theta_w_d_i,
+      min_size
     )
-
-    # If the number of genes expected to be "up" or "down" in the set is too
-    # small, replace the corresponding permutation ES (the entire row) with
-    # zero. The final ES will only depend on the "up" or "down" ES. Gene sets
-    # were previously filtered so both halves of the ES will not be set to 0.
-    ES_perm[theta_m_i < min_size, ] <- 0
-    ES_perm_d[theta_m_d_i < min_size, ] <- 0L
-
-    ES_perm <- ES_perm - ES_perm_d
+  } else {
+    ES_perm <- .Rcpp_calcESPermCore(
+      alpha,
+      Y_perm,
+      R_perm,
+      sumRanks_i,
+      theta_m_i,
+      theta_w_i
+    )
   }
 
   return(ES_perm)
@@ -635,7 +619,7 @@
 
     # Seeds for permutations
     set.seed(seed)
-    seeds <- sample.int(n = 1e7L, size = nperm)
+    seeds <- sample.int(1e7L, nperm, FALSE)
 
     seed_list <- split(x = seeds, f = batch_id)
     names(seed_list) <- NULL
@@ -733,9 +717,9 @@
 #'   https://doi.org/10.1101/060012}{10.1101/060012}
 #'
 #' @noRd
-.permIncidenceMatrix <- function(n_i,
-                                 m_i,
-                                 m_d_i = NULL) {
+.getUniqueSizes <- function(n_i,
+                            m_i,
+                            m_d_i = NULL) {
   # Permutations only need to be generated for each unique set size.
   if (!is.null(m_d_i)) {
     # Include up and down elements or A_perm and A_perm_d may have
@@ -762,20 +746,6 @@
 
     max_set_size <- max(unique_set_sizes)
 
-    A_perm_d <- .Rcpp_calcAPerm(
-      end = theta_m_d_i,
-      MAX_SET_SIZE = max_set_size,
-      check = TRUE # some theta_m_d_i may be zero
-    )
-
-    A_perm <- .Rcpp_calcAPerm(
-      end = unique_set_sizes,
-      MAX_SET_SIZE = max_set_size,
-      check = FALSE
-    )
-
-    A_perm <- A_perm - A_perm_d
-
     # Each unique pair of entries in m_i and m_d_i are converted to a unique
     # integer. The same is done for each pair of entries in theta_m_i and
     # theta_m_d_i. Then, a vector is generated that maps each (m_i, m_d_i)
@@ -795,24 +765,15 @@
 
     max_set_size <- max(theta_m_i)
 
-    A_perm_d <- NULL
-
-    # A_perm <- .Rcpp_calcAPerm(
-    #   end = theta_m_i,
-    #   MAX_SET_SIZE = max_set_size,
-    #   check = FALSE
-    # )
-
     rep_idx <- match(x = m_i, table = theta_m_i)
   }
 
   out <- list(
     "rep_idx" = rep_idx,
-    # "A_perm" = A_perm,
+    "max_set_size" = max_set_size,
     "theta_m_i" = theta_m_i,
     "theta_w_i" = theta_w_i,
     # These may be NULL
-    # "A_perm_d" = A_perm_d,
     "theta_m_d_i" = theta_m_d_i,
     "theta_w_d_i" = theta_w_d_i
   )
@@ -927,16 +888,16 @@
   m_d_i <- tab_i[["m_d_i"]]
 
   if (nperm != 0L) {
-    # Incidence matrices and other information for permutations
-    A_list_perm <- .permIncidenceMatrix(
+    # Unique set sizes and other information for permutations
+    size_list <- .getUniqueSizes(
       n_i = n_i,
       m_i = m_i,
       m_d_i = m_d_i
     )
 
-    # Extract list components: rep_idx, theta_m_i, theta_w_i, theta_m_d_i,
-    # theta_w_d_i
-    list2env(x = A_list_perm, envir = environment())
+    # Extract list components: rep_idx, max_set_size, theta_m_i, theta_w_i,
+    # theta_m_d_i, and theta_w_d_i
+    list2env(x = size_list, envir = environment())
 
     tab_i[, rep_idx := rep_idx]
 
@@ -950,11 +911,12 @@
     # Indices of non-missing values for a particular column
     element_indices <- which(r_i != 0L)
 
-    # Optionally split permutations into batches to reduce memory consumption
+    # Split permutations into batches to reduce memory consumption
     for (b in seq_along(seed_list)) {
       ES_perm <- .calcESPerm(
         alpha = alpha,
         min_size = min_size,
+        max_set_size = max_set_size,
         element_indices = element_indices,
         seeds_batch = seed_list[[b]],
         y_i = y_i,
@@ -966,10 +928,7 @@
         theta_w_d_i = theta_w_d_i
       )
 
-      perm_dt <- .Rcpp_extractPermInfo(
-        ES_ls = ES_ls,
-        ES_perm = ES_perm
-      )
+      perm_dt <- .Rcpp_extractPermInfo(ES_ls, ES_perm)
 
       perm_dt <- rbindlist(perm_dt, use.names = FALSE)
 
@@ -1058,7 +1017,7 @@
                           sort = TRUE,
                           adjust_globally = FALSE) {
   sample_names <- names(tab)
-  tab <- rbindlist(tab, idcol = "sample")
+  tab <- rbindlist(tab, use.names = FALSE, idcol = "sample")
 
   tab[, `:=`(
     sample = factor(sample, levels = sample_names),

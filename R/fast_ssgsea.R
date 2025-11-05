@@ -17,8 +17,8 @@
 #' @param nperm integer (\eqn{\geq 0}); the number of permutations used to
 #'   calculate the normalized enrichment scores (NES) and p-values.
 #' @param batch_size integer (\eqn{\gg 1} and \eqn{\leq} \code{nperm}); the
-#'   maximum number of permutations run as a single batch. Smaller values will
-#'   significantly decrease memory usage and slightly increase runtime.
+#'   maximum number of permutations run as a single batch. It is not recommended
+#'   to change this.
 #' @param adjust_globally logical; whether p-values from different columns of
 #'   \code{X} should be adjusted together. Default is \code{FALSE}.
 #' @param min_size integer; the minimum set size. To be considered for testing,
