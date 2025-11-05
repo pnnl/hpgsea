@@ -21,11 +21,9 @@ knitr::opts_chunk$set(
 [![R-CMD-check](https://github.com/pnnl/fast.ssgsea/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/pnnl/fast.ssgsea/actions/workflows/R-CMD-check.yaml)
 <!-- badges: end -->
 
-`fast.ssgsea` is an R package [@R-core-team] for fast gene permutation Gene Set Enrichment Analysis (GSEA) and Post-Translational Modification Signature Enrichment Analysis (PTM-SEA) [@subramanian-gene-2005; @krug-curated-2019].
+`fast.ssgsea` is an R package [@R-core-team] for High-Performance Gene Set Enrichment Analysis (HP-GSEA). It is also capable of performing Post-Translational Modification Signature Enrichment Analysis (PTM-SEA) [@subramanian-gene-2005; @krug-curated-2019].
 
-**NOTE:** Support for directional databases, such as PTMsigDB, is broken starting with version 0.1.0.9018. Until this is fixed, PTM-SEA is not supported.
-
-The primary function, `fast_ssgsea`, accepts a numeric matrix with genes or other molecules as rows and either samples, contrasts, or some other meaningful representation of the data as columns. A named list of gene sets (more generally, molecular signatures) is also required. Other arguments control the behavior of GSEA/PTM-SEA, and they are described in the function documentation.
+The primary function, `fast_ssgsea`, accepts a numeric matrix with genes or other molecules as rows and either samples, contrasts, or some other meaningful representation of the data as columns. A named list of gene sets (more generally, molecular signatures) is also required. Other arguments control the behavior of HP-GSEA/PTM-SEA, and they are described in the function documentation.
 
 The package also contains a `read_gmt` function, which reads a Gene Matrix Transposed (GMT) file to construct a named list of gene sets for use with `fast_ssgsea`.
 
@@ -92,7 +90,7 @@ names(gene_sets) <- paste0("set", seq_along(gene_sets))
 
 ### Runtime and Results
 
-This shows the runtime of `fast_ssgsea` running on an AMD Ryzen 5 7600X CPU with a clock speed of 4.7 GHz. A total of 10,000 permutations were used to calculate p-values and normalized enrichment scores (NES).
+This shows the runtime of `fast_ssgsea` on an AMD Ryzen 5 7600X CPU with a clock speed of 4.7 GHz. A total of 100,000 permutations were used to calculate P-values and normalized enrichment scores (NES).
 
 ```{r time-results}
 library(fast.ssgsea)
@@ -103,13 +101,15 @@ system.time({
     X = X,
     gene_sets = gene_sets,
     alpha = 1,
-    nperm = 10000L, # default is 1000
+    nperm = 1e5L, # default is 1000
     min_size = min_size,
     seed = 0L
   )
 })
 
 str(res)
+
+head(res, 10L)
 ```
 
 ### Session Information

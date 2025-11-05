@@ -18,10 +18,10 @@ using namespace Rcpp;
 //' @noRd
 //'
 // [[Rcpp::export(.Rcpp_indexNumericVector)]]
-NumericVector Rcpp_indexNumericVector(NumericVector x,
-                                      IntegerVector idx)
+NumericVector Rcpp_indexNumericVector(const NumericVector& x,
+                                      const IntegerVector& idx)
 {
-   int n = idx.size();
+   const int n = idx.size();
 
    NumericVector out(n);
 
@@ -33,10 +33,10 @@ NumericVector Rcpp_indexNumericVector(NumericVector x,
 }
 
 // [[Rcpp::export(.Rcpp_indexIntegerVector)]]
-IntegerVector Rcpp_indexIntegerVector(IntegerVector x,
-                                      IntegerVector idx)
+IntegerVector Rcpp_indexIntegerVector(const IntegerVector& x,
+                                      const IntegerVector& idx)
 {
-   int n = idx.size();
+   const int n = idx.size();
 
    IntegerVector out(n);
 
@@ -147,10 +147,10 @@ arma::mat Rcpp_calcESCore(const double alpha,
 {
    arma::mat RA = R * A;
 
-   arma::mat ES(M.n_rows, M.n_cols, arma::fill::zeros);
+   arma::mat ES = RA;
 
    if (alpha == 0.0) {
-      ES = RA / M;
+      ES /= M;
    } else {
       // % is Hadamard product, * is dot product, / is Hadamard division
       ES = ((R % Y) * A) / (Y * A);
@@ -163,60 +163,12 @@ arma::mat Rcpp_calcESCore(const double alpha,
    ES += RA / W;
 
    // If the set has fewer than min_size elements with nonmissing values, the ES
-   // will be 0.
+   // will be 0. Only applies to directional gene sets.
    arma::uvec indices = arma::find(M < min_size);
    ES(indices).zeros();
 
    return ES;
 }
-
-
-// arma::vec segmented_sum(const arma::vec& y,
-//                         const arma::uword N,
-//                         const arma::uvec& start,
-//                         const arma::uvec& end)
-// {
-//   arma::vec out(N, arma::fill::zeros);
-//
-//   // Compute the first sum outside of the loop so it can be used in the loop
-//   out.at(0) = arma::sum(
-//     y.subvec(start.at(0), end.at(0))
-//   );
-//
-//   for (arma::uword j = 1; j < N; j++) {
-//     // out is a cumulative sum
-//     out.at(j) = arma::sum(
-//       y.subvec(start.at(j), end.at(j))
-//     ) + out.at(j - 1); // (end.at(j) == end.at(j - 1) ? 0.0 : out.at(j - 1));
-//   }
-//
-//   return out;
-// }
-
-
-// arma::mat binary_matmult(const arma::uvec set_sizes,
-//                          const arma::mat Y)
-// {
-//   const arma::uword NCOL = Y.n_cols;
-//   const arma::uword NROW = set_sizes.size();
-//
-//   // Define start and end positions to sum a window of Y column values
-//   arma::uvec start(NROW, arma::fill::zeros);
-//
-//   if (NROW != 1) {
-//     start.subvec(1, NROW - 1) = set_sizes.subvec(0, NROW - 2);
-//   }
-//
-//   const arma::uvec end = set_sizes - 1;
-//
-//   arma::mat out(NROW, NCOL, arma::fill::zeros);
-//
-//   for (arma::uword j = 0; j < NCOL; j++) {
-//     out.unsafe_col(j) = segmented_sum(Y.unsafe_col(j), NROW, start, end);
-//   }
-//
-//   return out;
-// }
 
 
 //' @title Multiplication of an unseen binary matrix and real-valued matrix
@@ -247,8 +199,8 @@ arma::mat Rcpp_calcESCore(const double alpha,
 //'   26. \url{https://doi.org/10.21105/joss.00026}
 //'
 //' @noRd
-arma::mat binary_matmult(const arma::uvec set_sizes,
-                         const arma::mat Y)
+arma::mat binary_matmult(const arma::uvec& set_sizes,
+                         const arma::mat& Y)
 {
   const arma::uword NCOL = Y.n_cols;
   const arma::uword NROW = set_sizes.size();
@@ -325,10 +277,7 @@ arma::mat Rcpp_calcESPermCore(const double alpha,
    arma::mat ES_perm = AR_perm;
 
    if (alpha == 0.0) {
-      // Multiply the diagonal matrix of reciprocals of the unique set sizes by
-      // A_R_perm. Equivalent to dividing each column of A_R_perm by the unique
-      // set sizes.
-      // ES_perm = AR_perm;
+      // Divide each column of AR_perm by the unique set sizes.
       ES_perm.each_col() /= arma::conv_to<arma::vec>::from(theta_m_i);
    } else {
       // % is Hadamard product, / is Hadamard division
@@ -336,9 +285,147 @@ arma::mat Rcpp_calcESPermCore(const double alpha,
         binary_matmult(theta_m_i, Y_perm);
    }
 
-   ES_perm += arma::diagmat(1.0 / theta_w_i) * (AR_perm - sumRanks_i);
+   AR_perm -= sumRanks_i;
+   AR_perm.each_col() /= theta_w_i;
+
+   ES_perm += AR_perm;
 
    return ES_perm;
+}
+
+
+arma::mat binary_matmult_up(const arma::mat& Y,
+                            const arma::uvec& set_sizes_up)
+{
+  const arma::uword NCOL = Y.n_cols;
+  const arma::uword NROW = set_sizes_up.size();
+  const arma::uword last_col = NCOL - 1;
+
+  // Indices of empty sets
+  const arma::uvec nonempty_idx = arma::find(set_sizes_up != 0);
+
+  // Number of nonempty sets
+  const arma::uword N_nonempty = nonempty_idx.size();
+
+  arma::uword j = 0;
+
+  arma::mat out(NROW, NCOL, arma::fill::zeros);
+
+  for (arma::uword i = 0; i < N_nonempty; ++i) {
+    j = nonempty_idx.at(i); // index of the i-th nonempty set
+
+    out.row(j) = arma::sum(
+      // first row, first col, last row, last col
+      Y.submat(0, 0, set_sizes_up.at(j) - 1, last_col),
+      0 // sum submatrix by column. sum returns a row vector
+    );
+  }
+
+  return out;
+}
+
+
+arma::mat binary_matmult_down(const arma::mat& Y,
+                              const arma::uvec& set_sizes_up,
+                              const arma::uvec& set_sizes_down)
+{
+  const arma::uword NCOL = Y.n_cols;
+  const arma::uword NROW = set_sizes_up.size();
+  const arma::uword last_col = NCOL - 1;
+
+  // Indices of empty sets
+  const arma::uvec nonempty_idx = arma::find(set_sizes_down != 0);
+
+  // Number of nonempty sets
+  const arma::uword N_nonempty = nonempty_idx.size();
+
+  arma::uword j = 0;
+
+  arma::mat out(NROW, NCOL, arma::fill::zeros);
+
+  for (arma::uword i = 0; i < N_nonempty; ++i) {
+    j = nonempty_idx.at(i);
+
+    out.row(j) = arma::sum(
+      // first row, first col, last row, last col
+      Y.submat(
+        set_sizes_up.at(j), 0,
+        set_sizes_up.at(j) + set_sizes_down.at(j) - 1, last_col
+      ),
+      0 // sum submatrix by column. sum returns a row vector
+    );
+  }
+
+  return out;
+}
+
+
+//' @title Calculate Permutation ES for Directional Gene Sets
+//'
+//' @inheritParams .Rcpp_calcESPermCore
+//'
+//' @param theta_m_i integer vector of the number of up-regulated genes in each
+//'   set. Each \code{(theta_m_i, theta_m_d_i)} pair is unique.
+//' @param theta_m_d_i integer vector of the number of down-regulated genes in
+//'   each set. Each \code{(theta_m_i, theta_m_d_i)} pair is unique.
+//'
+//' @returns A matrix of permutation ES for directional gene sets.
+//'
+//' @author Tyler Sagendorf
+//'
+//' @noRd
+// [[Rcpp::export(.Rcpp_calcESPerm_dir)]]
+arma::mat calcESPerm_dir(const double alpha,
+                         const arma::mat& Y_perm,
+                         const arma::mat& R_perm,
+                         const double sumRanks_i,
+                         const arma::uvec& theta_m_i,
+                         const arma::vec& theta_w_i,
+                         const arma::uvec& theta_m_d_i,
+                         const arma::vec& theta_w_d_i,
+                         const arma::uword& min_size)
+{
+  arma::mat AR_perm_up = binary_matmult_up(R_perm, theta_m_i);
+  arma::mat AR_perm_down = binary_matmult_down(R_perm, theta_m_i, theta_m_d_i);
+
+  arma::mat ES_perm_up = AR_perm_up;
+  arma::mat ES_perm_down = AR_perm_down;
+
+  if (alpha == 0.0) {
+    ES_perm_up.each_col() /=
+      arma::conv_to<arma::vec>::from(theta_m_i);
+
+    ES_perm_down.each_col() /=
+      arma::conv_to<arma::vec>::from(theta_m_d_i);
+  } else {
+    ES_perm_up =
+      binary_matmult_up(Y_perm % R_perm, theta_m_i) /
+        binary_matmult_up(Y_perm, theta_m_i);
+
+    ES_perm_down =
+      binary_matmult_down(Y_perm % R_perm, theta_m_i, theta_m_d_i) /
+        binary_matmult_down(Y_perm, theta_m_i, theta_m_d_i);
+  }
+
+  // Average rank of genes, excluding those that are "up" and in the sets
+  AR_perm_up -= sumRanks_i;
+  AR_perm_up.each_col() /= theta_w_i;
+  ES_perm_up += AR_perm_up;
+
+  // Average rank of genes, excluding those that are "down" and in the sets
+  AR_perm_down -= sumRanks_i;
+  AR_perm_down.each_col() /= theta_w_d_i;
+  ES_perm_down += AR_perm_down;
+
+  // If a set is too small or empty, replace all permutation ES in that row with
+  // zero.
+  const arma::uvec idx_up = arma::find(theta_m_i < min_size);
+  const arma::uvec idx_down = arma::find(theta_m_d_i < min_size);
+
+  ES_perm_up.rows(idx_up).zeros();
+  ES_perm_down.rows(idx_down).zeros();
+
+  return ES_perm_up - ES_perm_down;
 }
 
 

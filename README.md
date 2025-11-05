@@ -19,21 +19,18 @@
 <!-- badges: end -->
 
 `fast.ssgsea` is an R package ([R Core Team 2024](#ref-R-core-team)) for
-fast gene permutation Gene Set Enrichment Analysis (GSEA) and
-Post-Translational Modification Signature Enrichment Analysis (PTM-SEA)
-([Subramanian et al. 2005](#ref-subramanian-gene-2005); [Krug et al.
+High-Performance Gene Set Enrichment Analysis (HP-GSEA). It is also
+capable of performing Post-Translational Modification Signature
+Enrichment Analysis (PTM-SEA) ([Subramanian et al.
+2005](#ref-subramanian-gene-2005); [Krug et al.
 2019](#ref-krug-curated-2019)).
-
-**NOTE:** Support for directional databases, such as PTMsigDB, is broken
-starting with version 0.1.0.9018. Until this is fixed, PTM-SEA is not
-supported.
 
 The primary function, `fast_ssgsea`, accepts a numeric matrix with genes
 or other molecules as rows and either samples, contrasts, or some other
 meaningful representation of the data as columns. A named list of gene
 sets (more generally, molecular signatures) is also required. Other
-arguments control the behavior of GSEA/PTM-SEA, and they are described
-in the function documentation.
+arguments control the behavior of HP-GSEA/PTM-SEA, and they are
+described in the function documentation.
 
 The package also contains a `read_gmt` function, which reads a Gene
 Matrix Transposed (GMT) file to construct a named list of gene sets for
@@ -112,9 +109,9 @@ names(gene_sets) <- paste0("set", seq_along(gene_sets))
 
 ### Runtime and Results
 
-This shows the runtime of `fast_ssgsea` running on an AMD Ryzen 5 7600X
-CPU with a clock speed of 4.7 GHz. A total of 10,000 permutations were
-used to calculate p-values and normalized enrichment scores (NES).
+This shows the runtime of `fast_ssgsea` on an AMD Ryzen 5 7600X CPU with
+a clock speed of 4.7 GHz. A total of 100,000 permutations were used to
+calculate P-values and normalized enrichment scores (NES).
 
 ``` r
 library(fast.ssgsea)
@@ -125,7 +122,7 @@ system.time({
     X = X,
     gene_sets = gene_sets,
     alpha = 1,
-    nperm = 10000L, # default is 1000
+    nperm = 1e5L, # default is 1000
     min_size = min_size,
     seed = 0L
   )
@@ -133,7 +130,7 @@ system.time({
 ```
 
     ##    user  system elapsed 
-    ##   2.655   0.820   3.001
+    ##   5.919   0.906   6.403
 
 ``` r
 str(res)
@@ -141,14 +138,41 @@ str(res)
 
     ## 'data.frame':    20000 obs. of  9 variables:
     ##  $ sample      : Factor w/ 1 level "sample1": 1 1 1 1 1 1 1 1 1 1 ...
-    ##  $ set         : chr  "set5945" "set18791" "set19084" "set16136" ...
-    ##  $ set_size    : int  36 138 841 801 45 749 761 450 706 163 ...
-    ##  $ ES          : num  2688 -1866 698 709 2333 ...
-    ##  $ NES         : num  3.9 -5.33 4.65 4.61 3.8 ...
-    ##  $ n_same_sign : int  5049 4962 5226 5210 5058 4799 4784 4771 5200 5080 ...
-    ##  $ n_as_extreme: int  0 0 1 1 1 1 1 1 2 2 ...
-    ##  $ p_value     : num  0.000198 0.000201 0.000383 0.000384 0.000395 ...
-    ##  $ adj_p_value : num  0.937 0.937 0.937 0.937 0.937 ...
+    ##  $ set         : chr  "set18791" "set16136" "set19084" "set2830" ...
+    ##  $ set_size    : int  138 801 841 163 706 749 450 87 161 761 ...
+    ##  $ ES          : num  -1866 709 698 1584 759 ...
+    ##  $ NES         : num  -5.3 4.65 4.68 4.76 4.68 ...
+    ##  $ n_same_sign : int  49042 52788 52782 50951 52785 47193 47813 50722 48979 47243 ...
+    ##  $ n_as_extreme: int  1 8 8 9 11 10 13 14 18 20 ...
+    ##  $ p_value     : num  4.08e-05 1.70e-04 1.71e-04 1.96e-04 2.27e-04 ...
+    ##  $ adj_p_value : num  0.739 0.739 0.739 0.739 0.739 ...
+
+``` r
+head(res, 10L)
+```
+
+    ##     sample      set set_size         ES       NES n_same_sign n_as_extreme
+    ## 1  sample1 set18791      138 -1865.9539 -5.301993       49042            1
+    ## 2  sample1 set16136      801   709.4930  4.647777       52788            8
+    ## 3  sample1 set19084      841   697.9020  4.677156       52782            8
+    ## 4  sample1  set2830      163  1584.3635  4.761980       50951            9
+    ## 5  sample1 set18223      706   759.1365  4.680156       52785           11
+    ## 6  sample1 set17184      749  -668.8030 -4.503202       47193           10
+    ## 7  sample1  set8519      450  -859.1930 -4.454985       47813           13
+    ## 8  sample1 set10874       87  1927.4191  4.267786       50722           14
+    ## 9  sample1  set2832      161 -1380.4446 -4.245356       48979           18
+    ## 10 sample1  set3228      761  -633.4807 -4.310214       47243           20
+    ##         p_value adj_p_value
+    ## 1  4.078054e-05   0.7393096
+    ## 2  1.704901e-04   0.7393096
+    ## 3  1.705094e-04   0.7393096
+    ## 4  1.962631e-04   0.7393096
+    ## 5  2.273330e-04   0.7393096
+    ## 6  2.330805e-04   0.7393096
+    ## 7  2.928013e-04   0.7393096
+    ## 8  2.957238e-04   0.7393096
+    ## 9  3.879134e-04   0.7984999
+    ## 10 4.445009e-04   0.7984999
 
 ### Session Information
 
@@ -156,7 +180,7 @@ str(res)
 print(sessionInfo(), locale = FALSE, tzone = FALSE)
 ```
 
-    ## R version 4.5.1 (2025-06-13)
+    ## R version 4.5.2 (2025-10-31)
     ## Platform: x86_64-pc-linux-gnu
     ## Running under: Linux Mint 22.1
     ## 
@@ -174,9 +198,9 @@ print(sessionInfo(), locale = FALSE, tzone = FALSE)
     ##  [1] dqrng_0.4.1            digest_0.6.37          RcppArmadillo_15.0.2-2
     ##  [4] fastmap_1.2.0          xfun_0.53              Matrix_1.7-4          
     ##  [7] lattice_0.22-7         knitr_1.50             htmltools_0.5.8.1     
-    ## [10] rmarkdown_2.29         cli_3.6.5              grid_4.5.1            
-    ## [13] data.table_1.17.8      compiler_4.5.1         rstudioapi_0.17.1     
-    ## [16] tools_4.5.1            evaluate_1.0.5         Rcpp_1.1.0            
+    ## [10] rmarkdown_2.29         cli_3.6.5              grid_4.5.2            
+    ## [13] data.table_1.17.8      compiler_4.5.2         rstudioapi_0.17.1     
+    ## [16] tools_4.5.2            evaluate_1.0.5         Rcpp_1.1.0            
     ## [19] yaml_2.3.10            rlang_1.1.6
 
 ## Performance

@@ -204,6 +204,24 @@ NULL
     .Call(`_fast_ssgsea_Rcpp_calcESPermCore`, alpha, Y_perm, R_perm, sumRanks_i, theta_m_i, theta_w_i)
 }
 
+#' @title Calculate Permutation ES for Directional Gene Sets
+#'
+#' @inheritParams .Rcpp_calcESPermCore
+#'
+#' @param theta_m_i integer vector of the number of up-regulated genes in each
+#'   set. Each \code{(theta_m_i, theta_m_d_i)} pair is unique.
+#' @param theta_m_d_i integer vector of the number of down-regulated genes in
+#'   each set. Each \code{(theta_m_i, theta_m_d_i)} pair is unique.
+#'
+#' @returns A matrix of permutation ES for directional gene sets.
+#'
+#' @author Tyler Sagendorf
+#'
+#' @noRd
+.Rcpp_calcESPerm_dir <- function(alpha, Y_perm, R_perm, sumRanks_i, theta_m_i, theta_w_i, theta_m_d_i, theta_w_d_i, min_size) {
+    .Call(`_fast_ssgsea_calcESPerm_dir`, alpha, Y_perm, R_perm, sumRanks_i, theta_m_i, theta_w_i, theta_m_d_i, theta_w_d_i, min_size)
+}
+
 #' @title Extract Information from a Permutation Enrichment Score Matrix
 #'
 #' @description Extract information from a matrix of permutation enrichment
