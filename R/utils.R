@@ -965,6 +965,9 @@
 #' @param nperm integer; the number of permutations.
 #' @param sort logical; whether to sort rows in descending order by p-value.
 #' @param adjust_globally logical; whether to adjust all p-values together.
+#' @param alternative character; the alternative hypothesis. One of
+#'   "\code{two.sided}" (default), "\code{less}", or "\code{greater}". The
+#'   latter two will perform one-sided tests.
 #'
 #' @returns A \code{data.frame} with the following columns:
 #'
@@ -1015,16 +1018,37 @@
 .stackResults <- function(tab,
                           nperm = 1000L,
                           sort = TRUE,
-                          adjust_globally = FALSE) {
+                          adjust_globally = FALSE,
+                          alternative = "two.sided") {
   sample_names <- names(tab)
   tab <- rbindlist(tab, use.names = FALSE, idcol = "sample")
 
   tab[, `:=`(
     sample = factor(sample, levels = sample_names),
     set_size = as.integer(set_size),
-    NES = ES / (sum_ES_perm / n_same_sign),
-    p_value = (n_as_extreme + 1L) / (n_same_sign + 1L)
+    NES = ES / (sum_ES_perm / n_same_sign)
   )]
+
+  switch(
+    EXPR = alternative,
+    two.sided = {
+      tab[, p_value := (n_as_extreme + 1L) / (n_same_sign + 1L)]
+    },
+    less = {
+      tab[, p_value := ifelse(
+        ES < 0,
+        n_as_extreme + 1L,
+        nperm - n_as_extreme + 1L
+      ) / (nperm + 1L)]
+    },
+    greater = {
+      tab[, p_value := ifelse(
+        ES >= 0,
+        n_as_extreme + 1L,
+        nperm - n_as_extreme + 1L
+      ) / (nperm + 1L)]
+    }
+  )
 
   tab[
     n_same_sign == 0L, # only happens when nperm is very small

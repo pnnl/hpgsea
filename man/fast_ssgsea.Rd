@@ -13,7 +13,8 @@ fast_ssgsea(
   adjust_globally = FALSE,
   min_size = 2L,
   sort = TRUE,
-  seed = NULL
+  seed = NULL,
+  alternative = c("two.sided", "less", "greater")
 )
 }
 \arguments{
@@ -53,6 +54,10 @@ by p-value? Default is \code{TRUE}.}
 \item{seed}{integer or \code{NULL}; passed to \code{\link[base]{set.seed}}.
 If \code{NULL} (default), the normalized enrichment scores and p-values
 will vary between runs.}
+
+\item{alternative}{character; the alternative hypothesis. One of
+"\code{two.sided}" (default), "\code{less}", or "\code{greater}". The
+latter two will perform one-sided tests.}
 }
 \value{
 A \code{data.frame} with the following columns:
@@ -83,7 +88,8 @@ A \code{data.frame} with the following columns:
   sign as the true ES that are at least as extreme as the true ES. At most
   \code{n_same_sign}. If \code{nperm=0}, all values will be \code{NA}.}
   \item{p_value}{numeric; permutation p-value. Calculated as
-  \code{(n_as_extreme + 1L) / (n_same_sign + 1L)}.}
+  \code{(n_as_extreme + 1L) / (n_same_sign + 1L)} if
+  \code{alternative="two.sided"}.}
   \item{adj_p_value}{numeric; Benjamini and Hochberg FDR adjusted p-value.}
 }
 }

@@ -31,6 +31,9 @@
 #' @param seed integer or \code{NULL}; passed to \code{\link[base]{set.seed}}.
 #'   If \code{NULL} (default), the normalized enrichment scores and p-values
 #'   will vary between runs.
+#' @param alternative character; the alternative hypothesis. One of
+#'   "\code{two.sided}" (default), "\code{less}", or "\code{greater}". The
+#'   latter two will perform one-sided tests.
 #'
 #' @details Unlike the original ssGSEA implementation, p-values are computed as
 #'   described by Phipson and Smyth (2010).
@@ -63,7 +66,8 @@
 #'   sign as the true ES that are at least as extreme as the true ES. At most
 #'   \code{n_same_sign}. If \code{nperm=0}, all values will be \code{NA}.}
 #'   \item{p_value}{numeric; permutation p-value. Calculated as
-#'   \code{(n_as_extreme + 1L) / (n_same_sign + 1L)}.}
+#'   \code{(n_as_extreme + 1L) / (n_same_sign + 1L)} if
+#'   \code{alternative="two.sided"}.}
 #'   \item{adj_p_value}{numeric; Benjamini and Hochberg FDR adjusted p-value.}
 #' }
 #'
@@ -104,7 +108,8 @@ fast_ssgsea <- function(X,
                         adjust_globally = FALSE,
                         min_size = 2L,
                         sort = TRUE,
-                        seed = NULL) {
+                        seed = NULL,
+                        alternative = c("two.sided", "less", "greater")) {
   # Validate X, sort genes alphabetically, and transpose
   X <- .prepareX(X)
 
@@ -118,6 +123,11 @@ fast_ssgsea <- function(X,
     sort = sort,
     seed = seed,
     n_genes = ncol(X)
+  )
+
+  alternative <- match.arg(
+    arg = alternative,
+    choices = c("two.sided", "less", "greater")
   )
 
   # List of one or two sparse incidence matrices. Genes (rows) are sorted
@@ -213,7 +223,8 @@ fast_ssgsea <- function(X,
     tab = tab,
     nperm = nperm,
     sort = sort,
-    adjust_globally = adjust_globally
+    adjust_globally = adjust_globally,
+    alternative = alternative
   )
 
   return(tab)
