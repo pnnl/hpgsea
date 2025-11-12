@@ -52,6 +52,7 @@
                             batch_size = 1000L,
                             adjust_globally = FALSE,
                             min_size = 2L,
+                            max_size = Inf,
                             sort = TRUE,
                             seed = NULL,
                             n_genes) {
@@ -101,6 +102,16 @@
       min_size %% 1 != 0
   ) {
     stop("`min_size` must be >= 2 and < nrow(X).")
+  }
+
+  if (
+    !(is.infinite(max_size) || is.vector(max_size, mode = "numeric")) ||
+      length(max_size) != 1L ||
+      is.na(max_size) ||
+      max_size < min_size ||
+      (!is.infinite(max_size) && max_size %% 1 != 0)
+  ) {
+    stop("`max_size` must be Inf or an integer >= min_size.")
   }
 
   if (
@@ -319,6 +330,8 @@
 #'   Indicates which genes are expected to be down-regulated in each sample.
 #' @param min_size integer; minimum gene set size required for testing. Default
 #'   is 2.
+#' @param max_size integer or \code{Inf}; size of the largest gene set that will
+#'   be tested.
 #'
 #' @returns A named list with the following components:
 #'
@@ -350,39 +363,44 @@
                          Z_prime,
                          A,
                          A_d = NULL,
-                         min_size = 2L) {
+                         min_size = 2L,
+                         max_size = Inf) {
   # Matrix with samples as rows and genes as columns. Elements are the number
   # of genes in each set with nonmissing values in the sample.
   M <- .Cpp_matmult_sparse(Z_prime, A) # Z'A
   M[M < min_size] <- 0L
 
-  # Identify sets with too few or too many genes in at least one sample
-  extreme_sets_M <- apply(M, 2L, function(m_j) {
-    any(m_j == 0L | m_j == n)
-  })
+  # It is extremely unlikely that a gene set would consist of all genes with
+  # nonmissing values, but the set size limit will be 1 less than the smallest
+  # number of nonmissing values.
+  max_size <- max(min_size, min(max_size, min(n) - 1L))
 
   if (!is.null(A_d)) {
     M_d <- .Cpp_matmult_sparse(Z_prime, A_d)
     M_d[M_d < min_size] <- 0L
 
-    extreme_sets_M_d <- apply(M_d, 2L, function(m_d_j) {
-      any(m_d_j == 0L | m_d_j == n)
-    })
+    small_sets_M <- apply(M == 0L, 2L, any)
+    small_sets_M_d <- apply(M_d == 0L, 2L, any)
 
-    extreme_sets <- which(extreme_sets_M & extreme_sets_M_d)
+    # Combined set size exceeds max_size
+    large_sets <- apply((M + M_d) > max_size, 2L, any)
+
+    # Too small in both up and down portions or too large overall
+    extreme_sets <- which((small_sets_M & small_sets_M_d) | large_sets)
   } else {
     M_d <- W_d <- NULL
 
-    extreme_sets <- which(extreme_sets_M)
+    extreme_sets <- which(
+      apply(M == 0 | M > max_size, 2L, any)
+    )
   }
 
   if (length(extreme_sets)) {
     # If any sets are extreme, check if they are all extreme.
     if (length(extreme_sets) == ncol(A)) {
       stop(
-        "All sets in `gene_sets` contain fewer than `min_size` genes ",
-        "with nonmissing values or consist of all genes with nonmissing ",
-        "values in at least one sample."
+        "All sets in `gene_sets` contain fewer than `min_size` genes or more ",
+        "than `max_size` genes with nonmissing values."
       )
     }
 

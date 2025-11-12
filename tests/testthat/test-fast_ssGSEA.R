@@ -201,9 +201,8 @@ test_that("extreme sets are removed", {
   expect_identical(
     object = err,
     expected = paste0(
-      "All sets in `gene_sets` contain fewer than `min_size` genes with ",
-      "nonmissing values or consist of all genes with nonmissing values ",
-      "in at least one sample."
+      "All sets in `gene_sets` contain fewer than `min_size` genes or ",
+      "more than `max_size` genes with nonmissing values."
     )
   )
 })
@@ -243,9 +242,8 @@ test_that("extreme directional sets are removed", {
   expect_identical(
     object = err,
     expected = paste0(
-      "All sets in `gene_sets` contain fewer than `min_size` genes with ",
-      "nonmissing values or consist of all genes with nonmissing values ",
-      "in at least one sample."
+      "All sets in `gene_sets` contain fewer than `min_size` genes or ",
+      "more than `max_size` genes with nonmissing values."
     )
   )
 })

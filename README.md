@@ -130,22 +130,7 @@ system.time({
 ```
 
     ##    user  system elapsed 
-    ##   5.919   0.906   6.403
-
-``` r
-str(res)
-```
-
-    ## 'data.frame':    20000 obs. of  9 variables:
-    ##  $ sample      : Factor w/ 1 level "sample1": 1 1 1 1 1 1 1 1 1 1 ...
-    ##  $ set         : chr  "set18791" "set16136" "set19084" "set2830" ...
-    ##  $ set_size    : int  138 801 841 163 706 749 450 87 161 761 ...
-    ##  $ ES          : num  -1866 709 698 1584 759 ...
-    ##  $ NES         : num  -5.3 4.65 4.68 4.76 4.68 ...
-    ##  $ n_same_sign : int  49042 52788 52782 50951 52785 47193 47813 50722 48979 47243 ...
-    ##  $ n_as_extreme: int  1 8 8 9 11 10 13 14 18 20 ...
-    ##  $ p_value     : num  4.08e-05 1.70e-04 1.71e-04 1.96e-04 2.27e-04 ...
-    ##  $ adj_p_value : num  0.739 0.739 0.739 0.739 0.739 ...
+    ##   4.925   0.901   5.370
 
 ``` r
 head(res, 10L)
@@ -192,16 +177,16 @@ print(sessionInfo(), locale = FALSE, tzone = FALSE)
     ## [1] stats     graphics  grDevices utils     datasets  methods   base     
     ## 
     ## other attached packages:
-    ## [1] fast.ssgsea_0.1.0.9018
+    ## [1] dqrng_0.4.1            fast.ssgsea_0.1.0.9021
     ## 
     ## loaded via a namespace (and not attached):
-    ##  [1] dqrng_0.4.1            digest_0.6.37          RcppArmadillo_15.0.2-2
-    ##  [4] fastmap_1.2.0          xfun_0.53              Matrix_1.7-4          
-    ##  [7] lattice_0.22-7         knitr_1.50             htmltools_0.5.8.1     
-    ## [10] rmarkdown_2.29         cli_3.6.5              grid_4.5.2            
-    ## [13] data.table_1.17.8      compiler_4.5.2         rstudioapi_0.17.1     
-    ## [16] tools_4.5.2            evaluate_1.0.5         Rcpp_1.1.0            
-    ## [19] yaml_2.3.10            rlang_1.1.6
+    ##  [1] digest_0.6.37          RcppArmadillo_15.0.2-2 fastmap_1.2.0         
+    ##  [4] xfun_0.53              Matrix_1.7-4           lattice_0.22-7        
+    ##  [7] knitr_1.50             htmltools_0.5.8.1      rmarkdown_2.29        
+    ## [10] cli_3.6.5              grid_4.5.2             data.table_1.17.8     
+    ## [13] compiler_4.5.2         rstudioapi_0.17.1      tools_4.5.2           
+    ## [16] evaluate_1.0.5         Rcpp_1.1.0             yaml_2.3.10           
+    ## [19] rlang_1.1.6
 
 ## Performance
 

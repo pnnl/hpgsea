@@ -107,8 +107,6 @@ system.time({
   )
 })
 
-str(res)
-
 head(res, 10L)
 ```
 

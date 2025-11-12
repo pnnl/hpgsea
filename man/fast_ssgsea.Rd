@@ -12,6 +12,7 @@ fast_ssgsea(
   batch_size = 1000L,
   adjust_globally = FALSE,
   min_size = 2L,
+  max_size = Inf,
   sort = TRUE,
   seed = NULL,
   alternative = c("two.sided", "less", "greater")
@@ -47,6 +48,9 @@ sets must have at least \code{min_size} elements with non-missing values in
 \emph{all} columns of \code{X}. The default value of 2 is the minimum
 possible set size required for testing, though higher values tend to
 produce more robust results.}
+
+\item{max_size}{integer or \code{Inf}; the maximum set size. Recommended to
+set this to 500.}
 
 \item{sort}{logical; should the results for each column of \code{X} be sorted
 by p-value? Default is \code{TRUE}.}

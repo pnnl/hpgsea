@@ -26,6 +26,8 @@
 #'   \emph{all} columns of \code{X}. The default value of 2 is the minimum
 #'   possible set size required for testing, though higher values tend to
 #'   produce more robust results.
+#' @param max_size integer or \code{Inf}; the maximum set size. Recommended to
+#'   set this to 500.
 #' @param sort logical; should the results for each column of \code{X} be sorted
 #'   by p-value? Default is \code{TRUE}.
 #' @param seed integer or \code{NULL}; passed to \code{\link[base]{set.seed}}.
@@ -117,6 +119,7 @@ fast_ssgsea <- function(X,
                         batch_size = 1000L,
                         adjust_globally = FALSE,
                         min_size = 2L,
+                        max_size = Inf,
                         sort = TRUE,
                         seed = NULL,
                         alternative = c("two.sided", "less", "greater")) {
@@ -130,6 +133,7 @@ fast_ssgsea <- function(X,
     batch_size = batch_size,
     adjust_globally = adjust_globally,
     min_size = min_size,
+    max_size = max_size,
     sort = sort,
     seed = seed,
     n_genes = ncol(X)
@@ -171,10 +175,11 @@ fast_ssgsea <- function(X,
     Z_prime = Z[, rownames(A), drop = FALSE], # Z'
     A = A,
     A_d = A_d,
-    min_size = min_size
+    min_size = min_size,
+    max_size = max_size
   )
 
-  # Extract list components: M, W, M_d, W_d, A (optional), A_d (optional)
+  # Extract list components: M, W, M_d, W_d, A, A_d, max_size
   list2env(x = M_list, envir = environment())
 
   # Enrichment score matrices with samples as rows and gene sets as columns
