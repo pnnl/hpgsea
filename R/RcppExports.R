@@ -263,14 +263,14 @@ NULL
 }
 
 .Cpp_calcESPerm <- function(alpha, y_i, r_i, seeds, max_set_size, sumRanks_i, theta_m_i, theta_w_i) {
-    .Call(`_fast_ssgsea_Cpp_calcESPerm`, alpha, y_i, r_i, seeds, max_set_size, sumRanks_i, theta_m_i, theta_w_i)
+    .Call(`_fast_ssgsea_calcESPerm`, alpha, y_i, r_i, seeds, max_set_size, sumRanks_i, theta_m_i, theta_w_i)
 }
 
 .Cpp_calcESPerm_dir <- function(alpha, y_i, r_i, seeds, max_set_size, sumRanks_i, theta_m_i, theta_w_i, theta_m_d_i, theta_w_d_i, min_size) {
     .Call(`_fast_ssgsea_calcESPerm_dir`, alpha, y_i, r_i, seeds, max_set_size, sumRanks_i, theta_m_i, theta_w_i, theta_m_d_i, theta_w_d_i, min_size)
 }
 
-.Cpp_extractPermInfo <- function(ES_ls, ES_perm) {
-    .Call(`_fast_ssgsea_extractPermInfo`, ES_ls, ES_perm)
+.Cpp_extractPermInfo <- function(ls, ES_ls, ES_perm) {
+    invisible(.Call(`_fast_ssgsea_extractPermInfo`, ls, ES_ls, ES_perm))
 }
 

@@ -23,9 +23,7 @@ using namespace Rcpp;
 arma::mat matmult_dense(const arma::mat& X,
                         const arma::mat& Y)
 {
-  arma::mat Z = X * Y;
-
-  return Z;
+  return X * Y;
 }
 
 
@@ -48,9 +46,7 @@ arma::mat matmult_dense(const arma::mat& X,
 arma::mat matmult_sparse(const arma::mat& X,
                          const arma::sp_mat& Y)
 {
-  arma::mat Z = X * Y;
-
-  return Z;
+  return X * Y;
 }
 
 
@@ -145,22 +141,22 @@ arma::mat calcES(const double alpha,
 //' https://cran.r-project.org/web/packages/dqrng/vignettes/cpp-api.html
 //'
 //' @noRd
-arma::umat create_perm_indices(const arma::uword& n_genes,
+arma::umat create_perm_indices(const size_t n_genes,
                                const IntegerVector& seeds,
-                               const arma::uword& max_set_size)
+                               const size_t max_set_size)
 {
-  const arma::uword batch_size = seeds.size();
+  const size_t batch_size = seeds.size();
 
   arma::umat perm_indices(max_set_size, batch_size, arma::fill::zeros);
 
-  for (arma::uword j = 0; j < seeds.size(); ++j) {
+  for (size_t j = 0; j < batch_size; ++j) {
     dqrng::dqset_seed(IntegerVector::create(seeds[j]));
 
     // Sample a total of max_set_size indices taken without replacement from 0
     // to n_genes - 1
-    IntegerVector sample = dqrng::dqsample_int(n_genes, max_set_size);
+    const IntegerVector sample = dqrng::dqsample_int(n_genes, max_set_size);
 
-    for (arma::uword i = 0; i < max_set_size; ++i) {
+    for (size_t i = 0; i < max_set_size; ++i) {
       perm_indices.at(i, j) = sample[i];
     }
   }
@@ -202,32 +198,99 @@ arma::umat create_perm_indices(const arma::uword& n_genes,
 arma::mat binary_matmult(const arma::uvec& set_sizes,
                          const arma::mat& Y)
 {
-  const arma::uword NCOL = Y.n_cols;
-  const arma::uword NROW = set_sizes.size();
-  const arma::uword last_col = NCOL - 1;
+  const arma::uword batch_size = Y.n_cols;
+  const arma::uword N_UNIQUE_SIZES = set_sizes.size();
 
-  // Define start and end positions to sum a window of Y column values
-  arma::uvec start(NROW, arma::fill::zeros);
+  arma::mat out(N_UNIQUE_SIZES, batch_size, arma::fill::zeros);
 
-  if (NROW != 1) {
-    start.subvec(1, NROW - 1) = set_sizes.subvec(0, NROW - 2);
+  // Define start positions to sum a window of Y column values. End positions
+  // are the set sizes.
+  arma::uvec start(N_UNIQUE_SIZES, arma::fill::zeros);
+
+  if (N_UNIQUE_SIZES != 1) {
+    start.subvec(1, N_UNIQUE_SIZES - 1) =
+      set_sizes.subvec(0, N_UNIQUE_SIZES - 2);
   }
 
-  const arma::uvec end = set_sizes - 1;
+  // Loop over permutations
+  for (arma::uword j = 0; j < batch_size; ++j) {
+    double sum_ij = 0.0; // cumulative sum
+    const arma::vec col_j = Y.unsafe_col(j);
 
-  arma::mat out(NROW, NCOL, arma::fill::zeros);
+    // Loop over unique set sizes
+    for (arma::uword i = 0; i < N_UNIQUE_SIZES; ++i) {
+      // Sum the values for genes in the set
+      for (arma::uword k = start.at(i); k < set_sizes.at(i); ++k) {
+        sum_ij += col_j.at(k);
+      }
 
-  out.row(0) = arma::sum(
-    // first row, first col, last row, last col
-    Y.submat(start.at(0), 0, end.at(0), last_col)
-  );
+      out.at(i, j) = sum_ij;
+    }
+  }
 
-  for (arma::uword i = 1; i < NROW; i++) {
-    out.row(i) = arma::sum(
-      Y.submat(start.at(i), 0, end.at(i), last_col),
-      0 // sum submatrix by column. sum returns a row vector
-    ) +
-      out.row(i - 1); // cumulative sum
+  return out;
+}
+
+
+arma::mat binary_matmult_up(const arma::mat& Y,
+                            const arma::uvec& set_sizes_up)
+{
+  const arma::uword batch_size = Y.n_cols;
+  const arma::uword N_UNIQUE_SIZES = set_sizes_up.size();
+
+  arma::mat out(N_UNIQUE_SIZES, batch_size, arma::fill::zeros);
+
+  double sum_ij = 0.0;
+
+  // Loop over permutations
+  for (arma::uword j = 0; j < batch_size; ++j) {
+    const arma::vec col_j = Y.unsafe_col(j);
+
+    // Loop over unique set sizes
+    for (arma::uword i = 0; i < N_UNIQUE_SIZES; ++i) {
+      sum_ij = 0.0;
+
+      // Sum the values for genes in the set. This also handles empty sets
+      for (arma::uword k = 0; k < set_sizes_up.at(i); ++k) {
+        sum_ij += col_j.at(k);
+      }
+
+      out.at(i, j) = sum_ij;
+    }
+  }
+
+  return out;
+}
+
+
+arma::mat binary_matmult_down(const arma::mat& Y,
+                              const arma::uvec& set_sizes_down)
+{
+  const arma::uword batch_size = Y.n_cols;
+  const arma::uword N_UNIQUE_SIZES = set_sizes_down.size();
+  const arma::uword MAX_SET_SIZE = Y.n_rows;
+
+  arma::mat out(N_UNIQUE_SIZES, batch_size, arma::fill::zeros);
+
+  double sum_ij = 0.0;
+
+  // Loop over permutations
+  for (arma::uword j = 0; j < batch_size; ++j) {
+    const arma::vec col_j = Y.unsafe_col(j);
+
+    // Loop over unique set sizes
+    for (arma::uword i = 0; i < N_UNIQUE_SIZES; ++i) {
+      sum_ij = 0.0;
+
+      // Sum the values for genes in the set. This also handles empty sets
+      for (arma::uword k = MAX_SET_SIZE - set_sizes_down.at(i);
+           k < MAX_SET_SIZE;
+           ++k) {
+        sum_ij += col_j.at(k);
+      }
+
+      out.at(i, j) = sum_ij;
+    }
   }
 
   return out;
@@ -265,24 +328,25 @@ arma::mat binary_matmult(const arma::uvec& set_sizes,
 //' @noRd
 
 // [[Rcpp::export(.Cpp_calcESPerm)]]
-arma::mat Cpp_calcESPerm(const double alpha,
-                         const arma::vec& y_i,
-                         const arma::vec& r_i,
-                         const IntegerVector& seeds,
-                         const arma::uword& max_set_size,
-                         const double sumRanks_i,
-                         const arma::uvec& theta_m_i,
-                         const arma::vec& theta_w_i)
+arma::mat calcESPerm(const double alpha,
+                     const arma::vec& y_i,
+                     const arma::vec& r_i,
+                     const IntegerVector& seeds,
+                     const size_t max_set_size,
+                     const double sumRanks_i,
+                     const arma::uvec& theta_m_i,
+                     const arma::vec& theta_w_i)
 {
-  const arma::uword n_genes = r_i.size(); // max index for sampling
+  const size_t n_genes = r_i.size(); // max index for sampling
+  const arma::uword batch_size = seeds.size();
 
   // Each column is an independent random sample of indices
   arma::umat perm_indices = create_perm_indices(n_genes, seeds, max_set_size);
 
-  arma::mat R_perm(perm_indices.n_rows, perm_indices.n_cols, arma::fill::zeros);
+  arma::mat R_perm(max_set_size, batch_size, arma::fill::zeros);
 
   // Each column of R_perm is an independent random sample of the gene ranks
-  for (arma::uword j = 0; j < R_perm.n_cols; ++j) {
+  for (arma::uword j = 0; j < batch_size; ++j) {
     R_perm.unsafe_col(j) = r_i.elem(perm_indices.unsafe_col(j));
   }
 
@@ -299,7 +363,7 @@ arma::mat Cpp_calcESPerm(const double alpha,
     // Each column of Y_perm is an independent random sample of the absolute
     // values of the genes raised to the power of alpha. The ranks in R_perm are
     // the corresponding ranks of the original gene-level values.
-    for (arma::uword j = 0; j < Y_perm.n_cols; ++j) {
+    for (arma::uword j = 0; j < batch_size; ++j) {
       Y_perm.unsafe_col(j) = y_i.elem(perm_indices.unsafe_col(j));
     }
 
@@ -314,72 +378,6 @@ arma::mat Cpp_calcESPerm(const double alpha,
   ES_perm += AR_perm;
 
   return ES_perm;
-}
-
-
-arma::mat binary_matmult_up(const arma::mat& Y,
-                            const arma::uvec& set_sizes_up)
-{
-  const arma::uword NCOL = Y.n_cols;
-  const arma::uword NROW = set_sizes_up.size();
-  const arma::uword last_col = NCOL - 1;
-
-  // Indices of empty sets
-  const arma::uvec nonempty_idx = arma::find(set_sizes_up != 0);
-
-  // Number of nonempty sets
-  const arma::uword N_nonempty = nonempty_idx.size();
-
-  arma::uword j = 0;
-
-  arma::mat out(NROW, NCOL, arma::fill::zeros);
-
-  for (arma::uword i = 0; i < N_nonempty; ++i) {
-    j = nonempty_idx.at(i); // index of the i-th nonempty set
-
-    out.row(j) = arma::sum(
-      // first row, first col, last row, last col
-      Y.submat(0, 0, set_sizes_up.at(j) - 1, last_col),
-      0 // sum submatrix by column. sum returns a row vector
-    );
-  }
-
-  return out;
-}
-
-
-arma::mat binary_matmult_down(const arma::mat& Y,
-                              const arma::uvec& set_sizes_up,
-                              const arma::uvec& set_sizes_down)
-{
-  const arma::uword NCOL = Y.n_cols;
-  const arma::uword NROW = set_sizes_up.size();
-  const arma::uword last_col = NCOL - 1;
-
-  // Indices of empty sets
-  const arma::uvec nonempty_idx = arma::find(set_sizes_down != 0);
-
-  // Number of nonempty sets
-  const arma::uword N_nonempty = nonempty_idx.size();
-
-  arma::uword j = 0;
-
-  arma::mat out(NROW, NCOL, arma::fill::zeros);
-
-  for (arma::uword i = 0; i < N_nonempty; ++i) {
-    j = nonempty_idx.at(i);
-
-    out.row(j) = arma::sum(
-      // first row, first col, last row, last col
-      Y.submat(
-        set_sizes_up.at(j), 0,
-        set_sizes_up.at(j) + set_sizes_down.at(j) - 1, last_col
-      ),
-      0 // sum submatrix by column. sum returns a row vector
-    );
-  }
-
-  return out;
 }
 
 
@@ -412,7 +410,7 @@ arma::mat calcESPerm_dir(const double alpha,
                          const arma::vec& y_i,
                          const arma::vec& r_i,
                          const IntegerVector& seeds,
-                         const arma::uword& max_set_size,
+                         const size_t max_set_size,
                          const double sumRanks_i,
                          const arma::uvec& theta_m_i,
                          const arma::vec& theta_w_i,
@@ -420,43 +418,40 @@ arma::mat calcESPerm_dir(const double alpha,
                          const arma::vec& theta_w_d_i,
                          const arma::uword& min_size)
 {
-  const arma::uword n_genes = r_i.size(); // max index for sampling
+  const size_t n_genes = r_i.size(); // max index for sampling
+  const arma::uword batch_size = seeds.size();
 
   // Each column is an independent random sample of indices
   arma::umat perm_indices = create_perm_indices(n_genes, seeds, max_set_size);
 
-  arma::mat R_perm(perm_indices.n_rows, perm_indices.n_cols, arma::fill::zeros);
+  arma::mat R_perm(max_set_size, batch_size, arma::fill::zeros);
 
-  for (arma::uword j = 0; j < R_perm.n_cols; ++j) {
+  for (arma::uword j = 0; j < batch_size; ++j) {
     R_perm.unsafe_col(j) = r_i.elem(perm_indices.unsafe_col(j));
   }
 
   arma::mat AR_perm_up = binary_matmult_up(R_perm, theta_m_i);
-  arma::mat AR_perm_down = binary_matmult_down(R_perm, theta_m_i, theta_m_d_i);
+  arma::mat AR_perm_down = binary_matmult_down(R_perm, theta_m_d_i);
 
   arma::mat ES_perm_up = AR_perm_up;
   arma::mat ES_perm_down = AR_perm_down;
 
   if (alpha == 0.0) {
-    ES_perm_up.each_col() /=
-      arma::conv_to<arma::vec>::from(theta_m_i);
+    ES_perm_up.each_col() /= arma::conv_to<arma::vec>::from(theta_m_i);
 
-    ES_perm_down.each_col() /=
-      arma::conv_to<arma::vec>::from(theta_m_d_i);
+    ES_perm_down.each_col() /= arma::conv_to<arma::vec>::from(theta_m_d_i);
   } else {
     arma::mat Y_perm = R_perm;
 
-    for (arma::uword j = 0; j < Y_perm.n_cols; ++j) {
+    for (arma::uword j = 0; j < batch_size; ++j) {
       Y_perm.unsafe_col(j) = y_i.elem(perm_indices.unsafe_col(j));
     }
 
-    ES_perm_up =
-      binary_matmult_up(Y_perm % R_perm, theta_m_i) /
+    ES_perm_up = binary_matmult_up(Y_perm % R_perm, theta_m_i) /
         binary_matmult_up(Y_perm, theta_m_i);
 
-    ES_perm_down =
-      binary_matmult_down(Y_perm % R_perm, theta_m_i, theta_m_d_i) /
-        binary_matmult_down(Y_perm, theta_m_i, theta_m_d_i);
+    ES_perm_down = binary_matmult_down(Y_perm % R_perm, theta_m_d_i) /
+        binary_matmult_down(Y_perm, theta_m_d_i);
   }
 
   // Average rank of genes, excluding those that are "up" and in the sets
@@ -503,7 +498,7 @@ int findFirstPositiveIndex(const std::vector<double>& x)
   int high = SIZE_X - 1;
 
   while (low <= high) {
-    mid = (low + high) / 2; // x is never large enough to cause overflow
+    mid = (low + high) >> 1; // x is never large enough to cause overflow
 
     if (x[mid] >= 0.0) {
       // check if the value of x is the first positive
@@ -545,20 +540,12 @@ int findFirstPositiveIndex(const std::vector<double>& x)
 //' @author Tyler Sagendorf
 //'
 //' @noRd
-List extractPermInfo_internal(const std::vector<double>& x,
-                             const std::vector<double>& y)
+void extractPermInfo_internal(List ls,
+                              const std::vector<double>& x,
+                              const std::vector<double>& y)
 {
   const int SIZE_X = x.size();
   const int SIZE_Y = y.size();
-
-  // Number of values of y with the same sign as each value of x
-  std::vector<int> n_same_sign(SIZE_X, 0);
-
-  // Number of values of y that are at least as extreme as each value of x
-  std::vector<int> n_as_extreme(SIZE_X, 0);
-
-  // Vector to store values of sum_y_neg or sum_y_pos for each value of x
-  std::vector<double> sum_ES_perm(SIZE_X, 0.0);
 
   // Number of values of y that are negative
   int n_neg_y = 0;
@@ -567,6 +554,15 @@ List extractPermInfo_internal(const std::vector<double>& x,
   double sum_y_neg = 0.0;
   double sum_y_pos = 0.0;
 
+  // Number of values of y with the same sign as each value of x
+  std::vector<int> n_same_sign = std::vector<int>(ls["n_same_sign"]);
+
+  // Number of values of y that are at least as extreme as each value of x
+  std::vector<int> n_as_extreme = std::vector<int>(ls["n_as_extreme"]);
+
+  // Vector to store values of sum_y_neg or sum_y_pos for each value of x
+  std::vector<double> sum_ES_perm = std::vector<double>(ls["sum_ES_perm"]);
+
   // Index of the first positive element of x. If all elements are negative,
   // returns x.size().
   const int x_pos_index = findFirstPositiveIndex(x);
@@ -574,34 +570,18 @@ List extractPermInfo_internal(const std::vector<double>& x,
   for (int j = 0; j < SIZE_Y; ++j) {
     const double y_j = y[j]; // cache to avoid repeated indexing
 
-    if (y_j < 0.0) { // y[j] is negative
+    if (y_j < 0.0) {
       ++n_neg_y;
       sum_y_neg -= y_j;
 
       for (int i = 0; i < x_pos_index; ++i) {
-        // if (y_j <= x[i]) {
-        //   break;
-        // }
-        //
-        // n_as_extreme[i]--;
-
-        // Unless x consistently has many elements (i.e. when the maximum set
-        // size is small and there are many gene sets), this will be noticeably
-        // faster than the approach that breaks the loop early, likely because
-        // it avoids branching.
         n_as_extreme[i] += y_j <= x[i];
       }
 
-    } else { // y[j] is positive
+    } else {
       sum_y_pos += y_j;
 
-      for (int i = SIZE_X - 1; i >= x_pos_index; --i) {
-        // if (y_j >= x[i]) {
-        //   break;
-        // }
-        //
-        // n_as_extreme[i]--;
-
+      for (int i = x_pos_index; i < SIZE_X; ++i) {
         n_as_extreme[i] += y_j >= x[i];
       }
 
@@ -614,31 +594,21 @@ List extractPermInfo_internal(const std::vector<double>& x,
   // Use the number of negative y and the absolute value of the sum of the
   // negative y for the results of all negative x.
   for (int i = 0; i < x_pos_index; ++i) {
-    // n_as_extreme[i] += n_neg_y;
-    n_same_sign[i] = n_neg_y;
-    sum_ES_perm[i] = sum_y_neg;
+    n_same_sign[i] += n_neg_y;
+    sum_ES_perm[i] += sum_y_neg;
   }
 
   // Use the number of positive y and the sum of the positive y for the results
   // of all positive x.
   for (int i = x_pos_index; i < SIZE_X; ++i) {
-    // n_as_extreme[i] += n_pos_y;
-    n_same_sign[i] = n_pos_y;
-    sum_ES_perm[i] = sum_y_pos;
+    n_same_sign[i] += n_pos_y;
+    sum_ES_perm[i] += sum_y_pos;
   }
 
-  // The '_b' stands for 'batch', since y might be a single batch of
-  // permutation enrichment scores.
-  List out = List::create(
-    Named("n_same_sign_b") = n_same_sign,
-    Named("n_as_extreme_b") = n_as_extreme,
-    Named("sum_ES_perm_b") = sum_ES_perm
-  );
-
-  // Convert list to data.table to stack with rbindlist later
-  out.attr("class") = CharacterVector::create("data.table");
-
-  return out;
+  // Update list vectors. ls is modified by reference
+  ls["n_same_sign"] = IntegerVector(n_same_sign.begin(), n_same_sign.end());
+  ls["n_as_extreme"] = IntegerVector(n_as_extreme.begin(), n_as_extreme.end());
+  ls["sum_ES_perm"] = NumericVector(sum_ES_perm.begin(), sum_ES_perm.end());
 }
 
 
@@ -673,23 +643,19 @@ List extractPermInfo_internal(const std::vector<double>& x,
 //' @noRd
 
 // [[Rcpp::export(.Cpp_extractPermInfo)]]
-List extractPermInfo(const List ES_ls,
+void extractPermInfo(List ls,
+                     const List ES_ls,
                      const NumericMatrix& ES_perm)
 {
-  const int N = ES_ls.size();
-
-  List out(N);
+  const int N_UNIQUE_SIZES = ES_ls.size();
 
   NumericVector temp(ES_perm.ncol(), 0.0); // the size doesn't change
 
-  for (int i = 0; i < N; ++i) {
+  for (int i = 0; i < N_UNIQUE_SIZES; ++i) {
     // Extract i-th row of ES_perm (is there a better way?)
     temp = ES_perm(i, _);
-    const std::vector<double> ES_perm_i(temp.begin(), temp.end());
+    const std::vector<double> ES_perm_i = as<std::vector<double>>(temp);
 
-    out[i] = extractPermInfo_internal(ES_ls[i], ES_perm_i);
+    extractPermInfo_internal(ls[i], ES_ls[i], ES_perm_i);
   }
-
-  return out;
 }
-

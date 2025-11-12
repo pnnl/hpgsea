@@ -101,13 +101,13 @@ system.time({
     X = X,
     gene_sets = gene_sets,
     alpha = 1,
-    nperm = 1e5L, # default is 1000
+    nperm = 1e5L,
     min_size = min_size,
     seed = 0L
   )
 })
 
-head(res, 10L)
+str(res)
 ```
 
 ### Session Information

@@ -122,7 +122,7 @@ plot_time <- function(x, y_breaks) {
       # values = c("grey86", "grey48", "black"),
       # values = c("grey75", "black", "#0070cc"),
       values = palette.colors(n = 3L),
-      breaks = c("1,000", "10,000", "20,000")
+      breaks = c("1,000", "10,000", "50,000")
     ) +
     labs(
       x = latex2exp::TeX("$\\alpha$"),
@@ -168,15 +168,15 @@ time_res <- prepare_data("../data/fast-ssGSEA_timing_results.rds")
 
 # 10,000 permutations
 pa <- filter(time_res, nperm == "10,000") %>%
-  plot_time(y_breaks = seq(0, 2, 0.5))
+  plot_time(y_breaks = seq(0, 4, 1))
 
 # 100,000 permutations
 pb <- filter(time_res, nperm == "100,000") %>%
-  plot_time(y_breaks = seq(0, 5, 1))
+  plot_time(y_breaks = seq(0, 8, 2))
 
 # 1,000,000 permutations
 pc <- filter(time_res, nperm == "1,000,000") %>%
-  plot_time(y_breaks = seq(0, 35, 10))
+  plot_time(y_breaks = seq(0, 30, 5))
 
 # Combine plots
 p <- ggarrange(

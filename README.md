@@ -122,7 +122,7 @@ system.time({
     X = X,
     gene_sets = gene_sets,
     alpha = 1,
-    nperm = 1e5L, # default is 1000
+    nperm = 1e5L,
     min_size = min_size,
     seed = 0L
   )
@@ -130,34 +130,22 @@ system.time({
 ```
 
     ##    user  system elapsed 
-    ##   4.925   0.901   5.370
+    ##   4.137   0.962   4.650
 
 ``` r
-head(res, 10L)
+str(res)
 ```
 
-    ##     sample      set set_size         ES       NES n_same_sign n_as_extreme
-    ## 1  sample1 set18791      138 -1865.9539 -5.301993       49042            1
-    ## 2  sample1 set16136      801   709.4930  4.647777       52788            8
-    ## 3  sample1 set19084      841   697.9020  4.677156       52782            8
-    ## 4  sample1  set2830      163  1584.3635  4.761980       50951            9
-    ## 5  sample1 set18223      706   759.1365  4.680156       52785           11
-    ## 6  sample1 set17184      749  -668.8030 -4.503202       47193           10
-    ## 7  sample1  set8519      450  -859.1930 -4.454985       47813           13
-    ## 8  sample1 set10874       87  1927.4191  4.267786       50722           14
-    ## 9  sample1  set2832      161 -1380.4446 -4.245356       48979           18
-    ## 10 sample1  set3228      761  -633.4807 -4.310214       47243           20
-    ##         p_value adj_p_value
-    ## 1  4.078054e-05   0.7393096
-    ## 2  1.704901e-04   0.7393096
-    ## 3  1.705094e-04   0.7393096
-    ## 4  1.962631e-04   0.7393096
-    ## 5  2.273330e-04   0.7393096
-    ## 6  2.330805e-04   0.7393096
-    ## 7  2.928013e-04   0.7393096
-    ## 8  2.957238e-04   0.7393096
-    ## 9  3.879134e-04   0.7984999
-    ## 10 4.445009e-04   0.7984999
+    ## 'data.frame':    20000 obs. of  9 variables:
+    ##  $ sample      : Factor w/ 1 level "sample1": 1 1 1 1 1 1 1 1 1 1 ...
+    ##  $ set         : chr  "set18791" "set16136" "set19084" "set2830" ...
+    ##  $ set_size    : int  138 801 841 163 706 749 450 87 161 761 ...
+    ##  $ ES          : num  -1866 709 698 1584 759 ...
+    ##  $ NES         : num  -5.3 4.65 4.68 4.76 4.68 ...
+    ##  $ n_same_sign : int  49042 52788 52782 50951 52785 47193 47813 50722 48979 47243 ...
+    ##  $ n_as_extreme: int  1 8 8 9 11 10 13 14 18 20 ...
+    ##  $ p_value     : num  4.08e-05 1.70e-04 1.71e-04 1.96e-04 2.27e-04 ...
+    ##  $ adj_p_value : num  0.739 0.739 0.739 0.739 0.739 ...
 
 ### Session Information
 
@@ -177,7 +165,7 @@ print(sessionInfo(), locale = FALSE, tzone = FALSE)
     ## [1] stats     graphics  grDevices utils     datasets  methods   base     
     ## 
     ## other attached packages:
-    ## [1] dqrng_0.4.1            fast.ssgsea_0.1.0.9021
+    ## [1] dqrng_0.4.1            fast.ssgsea_0.1.0.9022
     ## 
     ## loaded via a namespace (and not attached):
     ##  [1] digest_0.6.37          RcppArmadillo_15.0.2-2 fastmap_1.2.0         

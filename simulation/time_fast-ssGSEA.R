@@ -8,7 +8,7 @@ param_list <- list(
   "nSamples" = 1L,
   "minSetSize" = 10L,
   "maxSetSize" = c(500L, 1000L),
-  "nSets" = c(1e3L, 1e4L, 2e4L),
+  "nSets" = c(1e3L, 1e4L, 5e4L),
   "nperm" = c(1e4L, 1e5L, 1e6L),
   "alpha" = c(0, 1)
 )
@@ -47,7 +47,7 @@ time_df <- lapply(seq_len(3L), function(j) { # 3 replicates
       gene_sets = gene_sets_i,
       alpha = row_i[["alpha"]],
       nperm = row_i[["nperm"]],
-      batch_size = 1e3L, # default
+      batch_size = 1e3L,
       min_size = row_i[["minSetSize"]],
       seed = 0L
     )

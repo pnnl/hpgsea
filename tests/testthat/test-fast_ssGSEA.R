@@ -386,7 +386,7 @@ test_that("the ES are correct for directional sets", {
     X = X,
     gene_sets = gene_sets_dir,
     alpha = 1,
-    nperm = 1000L,
+    nperm = 1e4L,
     sort = FALSE,
     seed = 0
   )
@@ -463,7 +463,7 @@ test_that("the ES are correct for directional sets", {
     X = X,
     gene_sets = list("Set1" = sub(";d", "", gene_set2_down)),
     alpha = 1,
-    nperm = 1000L,
+    nperm = 1e4L,
     sort = FALSE,
     seed = 0
   )
@@ -477,7 +477,7 @@ test_that("the ES are correct for directional sets", {
   # permutation enrichment scores in Rcpp_calcESPermCore()
   expect_equal(
     signif(res1$NES[res1$set == "Set2"], digits = 5L),
-    signif(-1 * res2$NES, digits = 5L)
+    c(-6.0376, -0.16865, 0.76930, 0.099144)
   )
 
 
@@ -486,7 +486,7 @@ test_that("the ES are correct for directional sets", {
     X = X,
     gene_sets = gene_sets_dir,
     alpha = 0,
-    nperm = 1000L,
+    nperm = 1e4L,
     sort = FALSE,
     seed = 0
   )
@@ -509,7 +509,7 @@ test_that("the ES are correct for directional sets", {
     X = X,
     gene_sets = list("Set1" = sub(";d", "", gene_set2_down)),
     alpha = 0,
-    nperm = 1000L,
+    nperm = 1e4L,
     sort = FALSE,
     seed = 0
   )
@@ -520,8 +520,46 @@ test_that("the ES are correct for directional sets", {
   )
 
   expect_equal(
-    res1$NES[res1$set == "Set2"],
-    -1 * res2$NES
+    signif(res1$NES[res1$set == "Set2"], digits = 5L),
+    c(-10.075, 0.0654550, 0.36930, -0.051417)
+  )
+})
+
+
+test_that("Permutation ES are mostly within [-4, +4]", {
+  set_sizes <- rep.int(5:100, 20L)
+
+  gene_sets <- lapply(seq_along(set_sizes), function(i) {
+    set.seed(i)
+
+    sample(rownames(X), size = set_sizes[i])
+  })
+  names(gene_sets) <- paste0("set.", seq_along(gene_sets))
+
+  res1 <- fast_ssgsea(
+    X = X,
+    gene_sets = gene_sets,
+    alpha = 0,
+    nperm = 1000L,
+    sort = FALSE,
+    seed = 0L
+  )
+
+  expect_true(
+    mean(res1$NES <= 4 & res1$NES >= -4) >= 0.995
+  )
+
+  res2 <- fast_ssgsea(
+    X = X,
+    gene_sets = gene_sets,
+    alpha = 1,
+    nperm = 1000L,
+    sort = FALSE,
+    seed = 0L
+  )
+
+  expect_true(
+    mean(res2$NES <= 4 & res2$NES >= -4) >= 0.995
   )
 })
 
@@ -551,6 +589,46 @@ test_that("results are sorted correctly", {
   )
 })
 
+test_that("n_same_sign >= n_as_extreme", {
+  res <- fast_ssgsea(
+    X = X,
+    gene_sets = gene_sets,
+    nperm = 500L,
+    sort = FALSE
+  )
+
+  expect_true(
+    all(res$n_same_sign >= res$n_as_extreme)
+  )
+})
+
+
+test_that("p-values are between 0 and 1", {
+  res1 <- fast_ssgsea(
+    X = X,
+    gene_sets = gene_sets,
+    alpha = 0,
+    nperm = 500L,
+    sort = FALSE
+  )
+
+  expect_true(
+    all(res1$p_value <= 1) && all(res1$p_value > 0)
+  )
+
+  res2 <- fast_ssgsea(
+    X = X,
+    gene_sets = gene_sets,
+    alpha = 1,
+    nperm = 500L,
+    sort = FALSE
+  )
+
+  expect_true(
+    all(res2$p_value <= 1) && all(res2$p_value > 0)
+  )
+})
+
 
 test_that("p-values are adjusted separately by sample", {
   ## Adjust p-values separately by sample
@@ -558,7 +636,7 @@ test_that("p-values are adjusted separately by sample", {
     X = X,
     gene_sets = gene_sets,
     alpha = 0,
-    nperm = 500L,
+    nperm = 1000L,
     sort = FALSE,
     adjust_globally = FALSE
   )
@@ -574,7 +652,7 @@ test_that("p-values are adjusted separately by sample", {
   res2 <- fast_ssgsea(
     X = X,
     gene_sets = gene_sets,
-    nperm = 500L,
+    nperm = 1000L,
     sort = FALSE,
     adjust_globally = TRUE
   )

@@ -4,13 +4,18 @@ test_that("All values are 0 when signs mismatch", {
   dim(y) <- c(1L, length(y))
 
   expected <- list(
-    "n_same_sign_b" = rep(0L, 5L),
-    "n_as_extreme_b" = rep(0L, 5L),
-    "sum_ES_perm_b" = rep(0, 5L)
+    "n_same_sign" = rep(0L, 5L),
+    "n_as_extreme" = rep(0L, 5L),
+    "sum_ES_perm" = rep(0, 5L)
   )
-  actual <- as.list(
-    .Cpp_extractPermInfo(list(x), y)[[1L]]
+
+  actual <- list(
+    .create_list(n = length(x))
   )
+
+  .Cpp_extractPermInfo(actual, list(x), y)
+
+  actual <- unlist(actual, recursive = FALSE)
 
   expect_identical(expected, actual)
 
@@ -18,9 +23,13 @@ test_that("All values are 0 when signs mismatch", {
   y <- c(0, 3, 5, 8.2, 1, 4, 2, 2)
   dim(y) <- c(1L, length(y))
 
-  actual <- as.list(
-    .Cpp_extractPermInfo(list(x), y)[[1L]]
+  actual <- list(
+    .create_list(n = length(x))
   )
+
+  .Cpp_extractPermInfo(actual, list(x), y)
+
+  actual <- unlist(actual, recursive = FALSE)
 
   expect_identical(expected, actual)
 })
@@ -32,14 +41,19 @@ test_that("Positive results are correct", {
   dim(y) <- c(1L, length(y))
 
   expected <- list(
-    "n_same_sign_b" = rep(6L, 5L),
-    "n_as_extreme_b" = c(6L, 6L, 5L, 2L, 0L),
-    "sum_ES_perm_b" = rep(sum(y[y >= 0]), 5L)
+    "n_same_sign" = rep(6L, 5L),
+    "n_as_extreme" = c(6L, 6L, 5L, 2L, 0L),
+    "sum_ES_perm" = rep(sum(y[y >= 0]), 5L)
   )
 
-  actual <- as.list(
-    .Cpp_extractPermInfo(list(x), y)[[1L]]
+  actual <- list(
+    .create_list(n = length(x))
   )
+
+  .Cpp_extractPermInfo(actual, list(x), y)
+
+  actual <- unlist(actual, recursive = FALSE)
+
   expect_identical(expected, actual)
 })
 
@@ -50,14 +64,18 @@ test_that("Negative results are correct", {
   dim(y) <- c(1L, length(y))
 
   expected <- list(
-    "n_same_sign_b" = rep(3L, 5L),
-    "n_as_extreme_b" = c(1L, 2L, 2L, 2L, 3L),
-    "sum_ES_perm_b" = rep(-sum(y[y < 0]), 5L)
+    "n_same_sign" = rep(3L, 5L),
+    "n_as_extreme" = c(1L, 2L, 2L, 2L, 3L),
+    "sum_ES_perm" = rep(-sum(y[y < 0]), 5L)
   )
 
-  actual <- as.list(
-    .Cpp_extractPermInfo(list(x), y)[[1L]]
+  actual <- list(
+    .create_list(n = length(x))
   )
+
+  .Cpp_extractPermInfo(actual, list(x), y)
+
+  actual <- unlist(actual, recursive = FALSE)
 
   expect_identical(expected, actual)
 })
@@ -69,14 +87,18 @@ test_that("Mixed sign results are correct", {
   dim(y) <- c(1L, length(y))
 
   expected <- list(
-    "n_same_sign_b" = rep(c(5L, 7L), each = 4L),
-    "n_as_extreme_b" = c(0L, 2L, 3L, 4L, 7L, 6L, 4L, 0L),
-    "sum_ES_perm_b" = rep(c(32, 40), each = 4L)
+    "n_same_sign" = rep(c(5L, 7L), each = 4L),
+    "n_as_extreme" = c(0L, 2L, 3L, 4L, 7L, 6L, 4L, 0L),
+    "sum_ES_perm" = rep(c(32, 40), each = 4L)
   )
 
-  actual <- as.list(
-    .Cpp_extractPermInfo(list(x), y)[[1L]]
+  actual <- list(
+    .create_list(n = length(x))
   )
+
+  .Cpp_extractPermInfo(actual, list(x), y)
+
+  actual <- unlist(actual, recursive = FALSE)
 
   expect_identical(expected, actual)
 })

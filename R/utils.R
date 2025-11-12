@@ -697,6 +697,15 @@
 }
 
 
+.create_list <- function(n) {
+  list(
+    "n_same_sign" = rep.int(0L, n),
+    "n_as_extreme" = rep.int(0L, n),
+    "sum_ES_perm" = rep.int(0, n)
+  )
+}
+
+
 #' @title Generate ssGSEA Results Table for a Single Sample
 #'
 #' @inheritParams fast_ssgsea
@@ -783,11 +792,6 @@
     set_size = m_i,
     m_d_i = m_d_i,
     ES = ES_i,
-    # Initialize vectors of 0's. These 3 vectors will be updated using the
-    # results from each batch of permutations.
-    n_same_sign = rep.int(0L, length(ES_i)),
-    n_as_extreme = rep.int(0L, length(ES_i)),
-    sum_ES_perm = rep.int(0, length(ES_i)),
     row_order = seq_along(ES_i),
     stringsAsFactors = FALSE
   )
@@ -803,7 +807,13 @@
   m_i <- tab_i[["set_size"]]
   m_d_i <- tab_i[["m_d_i"]]
 
-  if (nperm != 0L) {
+  if (nperm == 0L) {
+    tab_i[, `:=`(
+      n_same_sign = rep.int(0L, length(ES_i)),
+      n_as_extreme = rep.int(0L, length(ES_i)),
+      sum_ES_perm = rep.int(0, length(ES_i))
+    )]
+  } else {
     # Unique set sizes and other information for permutations
     size_list <- .getUniqueSizes(
       n_i = n_i,
@@ -830,9 +840,13 @@
       y_i <- y_i[element_indices]
     }
 
-    # Split permutations into batches to reduce memory consumption
-    for (seeds in seed_list) {
-      if (is.null(theta_m_d_i)) {
+    # List to store results needed to calculate P-values and NES
+    perm_ls <- lapply(table(rep_idx), .create_list)
+    names(perm_ls) <- NULL
+
+    if (is.null(theta_m_d_i)) {
+      # Split permutations into batches to reduce memory consumption
+      for (seeds in seed_list) {
         ES_perm <- .Cpp_calcESPerm(
           alpha,
           y_i,
@@ -843,7 +857,12 @@
           theta_m_i,
           theta_w_i
         )
-      } else {
+
+        # Update perm_ls by reference
+        .Cpp_extractPermInfo(perm_ls, ES_ls, ES_perm)
+      }
+    } else {
+      for (seeds in seed_list) {
         # Directional gene sets
         ES_perm <- .Cpp_calcESPerm_dir(
           alpha,
@@ -858,19 +877,25 @@
           theta_w_d_i,
           min_size
         )
+
+        # Update perm_ls by reference
+        .Cpp_extractPermInfo(perm_ls, ES_ls, ES_perm)
       }
-
-      perm_dt <- .Cpp_extractPermInfo(ES_ls, ES_perm)
-
-      perm_dt <- rbindlist(perm_dt, use.names = FALSE)
-
-      # Update summary vectors
-      tab_i[, `:=`(
-        n_same_sign = n_same_sign + perm_dt[["n_same_sign_b"]],
-        n_as_extreme = n_as_extreme + perm_dt[["n_as_extreme_b"]],
-        sum_ES_perm = sum_ES_perm + perm_dt[["sum_ES_perm_b"]]
-      )]
     } # end permutation batching
+
+    # Convert each list of vectors to a data.table to use rbindlist
+    for (i in seq_len(length(perm_ls))) {
+      class(perm_ls[[i]]) <- "data.table"
+    }
+
+    perm_dt <- rbindlist(perm_ls, use.names = FALSE)
+
+    # Make columns for summary vectors in results
+    tab_i[, `:=`(
+      n_same_sign = perm_dt[["n_same_sign"]],
+      n_as_extreme = perm_dt[["n_as_extreme"]],
+      sum_ES_perm = perm_dt[["sum_ES_perm"]]
+    )]
   } # end permutations
 
   setorderv(tab_i, cols = "row_order", order = 1L) # original row order
