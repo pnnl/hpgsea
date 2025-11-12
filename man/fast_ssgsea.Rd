@@ -64,32 +64,42 @@ A \code{data.frame} with the following columns:
 
 \describe{
   \item{sample}{factor; one of \code{colnames(X)}.}
+
   \item{set}{character; the gene set being tested.}
+
   \item{set_size}{integer; number of genes in the set with non-missing values
   in the \code{mat} matrix for a given column.}
+
   \item{ES_u}{numeric; only included if \code{gene_sets} is a directional
   database. The enrichment score for the elements that are expected to be
   up-regulated.}
+
   \item{ES_d}{numeric; only included if \code{gene_sets} is a directional
   database. The enrichment score for the elements that are expected to be
   down-regulated.}
+
   \item{ES}{numeric; the enrichment score (ES). The area under the running
   sum. If \code{gene_sets} is a directional database, it is calculated as
   \code{ES_u - ES_d}, where more positive values indicate better agreement
   between the true and expected directions of change and more negative values
   indicate worse agreement.}
+
   \item{NES}{numeric; normalized enrichment score (NES). The ratio of the ES
   to the absolute mean of the permutation ES with the same sign. If
   \code{nperm=0}, all NES will be \code{NA}.}
+
   \item{n_same_sign}{integer; the number of permutation ES with the same sign
   as the true ES. At most \code{nperm}. If \code{nperm=0}, all values will be
   \code{NA}.}
+
   \item{n_as_extreme}{integer; the number of permutation ES with the same
   sign as the true ES that are at least as extreme as the true ES. At most
   \code{n_same_sign}. If \code{nperm=0}, all values will be \code{NA}.}
+
   \item{p_value}{numeric; permutation p-value. Calculated as
   \code{(n_as_extreme + 1L) / (n_same_sign + 1L)} if
   \code{alternative="two.sided"}.}
+
   \item{adj_p_value}{numeric; Benjamini and Hochberg FDR adjusted p-value.}
 }
 }

@@ -14,6 +14,7 @@ utils::globalVariables(
     "j",
     "M",
     "M_d",
+    "max_set_size",
     "n_as_extreme",
     "n_same_sign",
     "sum_ES_perm",

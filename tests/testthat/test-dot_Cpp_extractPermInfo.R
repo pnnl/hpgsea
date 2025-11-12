@@ -9,7 +9,7 @@ test_that("All values are 0 when signs mismatch", {
     "sum_ES_perm_b" = rep(0, 5L)
   )
   actual <- as.list(
-    .Rcpp_extractPermInfo(list(x), y)[[1L]]
+    .Cpp_extractPermInfo(list(x), y)[[1L]]
   )
 
   expect_identical(expected, actual)
@@ -19,7 +19,7 @@ test_that("All values are 0 when signs mismatch", {
   dim(y) <- c(1L, length(y))
 
   actual <- as.list(
-    .Rcpp_extractPermInfo(list(x), y)[[1L]]
+    .Cpp_extractPermInfo(list(x), y)[[1L]]
   )
 
   expect_identical(expected, actual)
@@ -38,7 +38,7 @@ test_that("Positive results are correct", {
   )
 
   actual <- as.list(
-    .Rcpp_extractPermInfo(list(x), y)[[1L]]
+    .Cpp_extractPermInfo(list(x), y)[[1L]]
   )
   expect_identical(expected, actual)
 })
@@ -56,7 +56,7 @@ test_that("Negative results are correct", {
   )
 
   actual <- as.list(
-    .Rcpp_extractPermInfo(list(x), y)[[1L]]
+    .Cpp_extractPermInfo(list(x), y)[[1L]]
   )
 
   expect_identical(expected, actual)
@@ -75,7 +75,7 @@ test_that("Mixed sign results are correct", {
   )
 
   actual <- as.list(
-    .Rcpp_extractPermInfo(list(x), y)[[1L]]
+    .Cpp_extractPermInfo(list(x), y)[[1L]]
   )
 
   expect_identical(expected, actual)

@@ -337,10 +337,10 @@
 #'   \code{n - M_d}.}
 #'
 #'   \item{"A"}{incidence matrix \code{A} with extremely small or extremely
-#'   large gene sets removed. Not included if no sets were removed.}
+#'   large gene sets removed.}
 #'
 #'   \item{"A_d"}{incidence matrix \code{A_d} with extremely small or extremely
-#'   large gene sets removed. Not included if no sets were removed.}
+#'   large gene sets removed.}
 #' }
 #'
 #' @author Tyler Sagendorf
@@ -353,7 +353,7 @@
                          min_size = 2L) {
   # Matrix with samples as rows and genes as columns. Elements are the number
   # of genes in each set with nonmissing values in the sample.
-  M <- .Rcpp_matmult_sparse(Z_prime, A) # Z'A
+  M <- .Cpp_matmult_sparse(Z_prime, A) # Z'A
   M[M < min_size] <- 0L
 
   # Identify sets with too few or too many genes in at least one sample
@@ -362,7 +362,7 @@
   })
 
   if (!is.null(A_d)) {
-    M_d <- .Rcpp_matmult_sparse(Z_prime, A_d)
+    M_d <- .Cpp_matmult_sparse(Z_prime, A_d)
     M_d[M_d < min_size] <- 0L
 
     extreme_sets_M_d <- apply(M_d, 2L, function(m_d_j) {
@@ -394,13 +394,6 @@
       A_d <- A_d[, -extreme_sets, drop = FALSE]
       M_d <- M_d[, -extreme_sets, drop = FALSE]
     }
-
-    out <- list(
-      "A" = A,
-      "A_d" = A_d
-    )
-  } else {
-    out <- list() # no need to update A and A_d
   }
 
   # Number of genes not in each set with nonmissing values
@@ -410,14 +403,13 @@
     W_d <- n - M_d
   }
 
-  out <- c(
-    list(
-      "M" = M,
-      "W" = W,
-      "M_d" = M_d,
-      "W_d" = W_d
-    ),
-    out # empty, or contains A and A_d
+  out <- list(
+    "A" = A,
+    "A_d" = A_d,
+    "M" = M,
+    "W" = W,
+    "M_d" = M_d,
+    "W_d" = W_d
   )
 
   return(out)
@@ -463,7 +455,7 @@
                     M_d = NULL,
                     W_d = NULL) {
   # Sample by gene set matrix of enrichment scores
-  ES_u <- .Rcpp_calcESCore(
+  ES_u <- .Cpp_calcES(
     alpha,
     min_size,
     Y_prime,
@@ -475,7 +467,7 @@
   )
 
   if (!is.null(A_d)) { # directional database
-    ES_d <- .Rcpp_calcESCore(
+    ES_d <- .Cpp_calcES(
       alpha,
       min_size,
       Y_prime,
@@ -498,100 +490,6 @@
   }
 
   return(out)
-}
-
-
-#' @title Calculate Permutation Enrichment Scores for a Single Sample
-#'
-#' @inheritParams fast_ssgsea
-#' @param element_indices integer vector of the indices of nonmissing values in
-#'   the sample.
-#' @param seeds_batch integer vector of seeds used to generate the permutations.
-#' @param y_i dense row vector of absolute gene-level values from the i-th
-#'   sample raised to the power of \code{alpha}.
-#' @param r_i dense row vector of the ranks of the gene-level values for the
-#'   i-th sample.
-#' @param sumRanks_i sum of the ranks for the i-th sample.
-#' @param theta_m_i vector of unique number of genes with nonmissing values in
-#'   each set for the i-th sample.
-#' @param theta_w_i vector of unique number of genes with nonmissing values not
-#'   in each set for the i-th sample.
-#' @param A_perm_d,theta_m_d_i,theta_w_d_i similar to \code{A_perm},
-#'   \code{theta_m_i}, and \code{theta_w_i}, but they only contain information
-#'   about genes expected to be "down". These will be \code{NULL} if the gene
-#'   set database is not directional.
-#'
-#' @returns A list of permutation ES vectors. The length of the list is equal to
-#'   \code{nrow(A_perm)} (number of unique gene set sizes) and each vector has
-#'   length \code{batch_size_b}, which is as most the total number of
-#'   permutations.
-#'
-#' @author Tyler Sagendorf
-#'
-#' @importFrom dqrng dqset.seed dqsample.int
-#'
-#' @noRd
-.calcESPerm <- function(alpha = 1,
-                        min_size,
-                        max_set_size,
-                        element_indices,
-                        seeds_batch,
-                        y_i,
-                        r_i,
-                        sumRanks_i,
-                        theta_m_i,
-                        theta_w_i,
-                        theta_m_d_i = NULL,
-                        theta_w_d_i = NULL) {
-  n_elements <- length(element_indices) # number of nonmissing values
-
-  batch_size_b <- length(seeds_batch)
-
-  # Integer matrix of indices ranging from 1 to the number of nonmissing values
-  # (n_elements). Each column is a different permutation. The number of rows is
-  # equal to the size of the largest gene set.
-  perm_indices <- vapply(seeds_batch, function(seed_p) {
-    dqset.seed(seed_p)
-
-    dqsample.int(n_elements, max_set_size, FALSE)
-  }, integer(max_set_size)) # integer matrix
-
-  dim(perm_indices) <- NULL # in-place matrix to vector conversion
-
-  # Integer vector of indices of nonmissing values for each permutation
-  # (permutations are stacked). Faster than element_indices[perm_indices]
-  perm_indices <- .Rcpp_indexIntegerVector(element_indices, perm_indices)
-
-  Y_perm <- .Rcpp_indexNumericVector(y_i, perm_indices) # Y*
-  R_perm <- .Rcpp_indexIntegerVector(r_i, perm_indices) # R*
-
-  # Convert vectors to matrices. The matrices are populated by column.
-  dim(Y_perm) <- dim(R_perm) <- c(max_set_size, batch_size_b)
-
-  if (!is.null(theta_m_d_i)) { # directional sets
-    ES_perm <- .Rcpp_calcESPerm_dir(
-      alpha,
-      Y_perm,
-      R_perm,
-      sumRanks_i,
-      theta_m_i,
-      theta_w_i,
-      theta_m_d_i,
-      theta_w_d_i,
-      min_size
-    )
-  } else {
-    ES_perm <- .Rcpp_calcESPermCore(
-      alpha,
-      Y_perm,
-      R_perm,
-      sumRanks_i,
-      theta_m_i,
-      theta_w_i
-    )
-  }
-
-  return(ES_perm)
 }
 
 
@@ -661,10 +559,9 @@
 }
 
 
-#' @title Construct Permutation Incidence Matrices and Other Objects
+#' @title Get Unique Set Sizes and Other Information for Permutations
 #'
-#' @description Construct a list containing permutation incidence matrices and
-#'   other objects.
+#' @description Construct a list containing vectors needed for permutations.
 #'
 #' @param n_i the total number of nonmissing values in the i-th sample.
 #' @param m_i integer vector containing the number of genes in each set or the
@@ -877,6 +774,7 @@
     stringsAsFactors = FALSE
   )
 
+  # Sorting by set size and then ES allows for major optimizations
   setorderv(
     x = tab_i,
     cols = c("set_size", "ES", "row_order"),
@@ -899,11 +797,9 @@
     # theta_m_d_i, and theta_w_d_i
     list2env(x = size_list, envir = environment())
 
-    tab_i[, rep_idx := rep_idx]
-
     ES_ls <- split(
       x = tab_i[["ES"]],
-      f = tab_i[["rep_idx"]]
+      f = rep_idx
     )
 
     names(ES_ls) <- NULL
@@ -911,24 +807,42 @@
     # Indices of non-missing values for a particular column
     element_indices <- which(r_i != 0L)
 
-    # Split permutations into batches to reduce memory consumption
-    for (b in seq_along(seed_list)) {
-      ES_perm <- .calcESPerm(
-        alpha = alpha,
-        min_size = min_size,
-        max_set_size = max_set_size,
-        element_indices = element_indices,
-        seeds_batch = seed_list[[b]],
-        y_i = y_i,
-        r_i = r_i,
-        sumRanks_i = sumRanks_i,
-        theta_m_i = theta_m_i,
-        theta_w_i = theta_w_i,
-        theta_m_d_i = theta_m_d_i,
-        theta_w_d_i = theta_w_d_i
-      )
+    if (length(element_indices) != length(r_i)) {
+      r_i <- r_i[element_indices]
+      y_i <- y_i[element_indices]
+    }
 
-      perm_dt <- .Rcpp_extractPermInfo(ES_ls, ES_perm)
+    # Split permutations into batches to reduce memory consumption
+    for (seeds in seed_list) {
+      if (is.null(theta_m_d_i)) {
+        ES_perm <- .Cpp_calcESPerm(
+          alpha,
+          y_i,
+          r_i,
+          seeds,
+          max_set_size,
+          sumRanks_i,
+          theta_m_i,
+          theta_w_i
+        )
+      } else {
+        # Directional gene sets
+        ES_perm <- .Cpp_calcESPerm_dir(
+          alpha,
+          y_i,
+          r_i,
+          seeds,
+          max_set_size,
+          sumRanks_i,
+          theta_m_i,
+          theta_w_i,
+          theta_m_d_i,
+          theta_w_d_i,
+          min_size
+        )
+      }
+
+      perm_dt <- .Cpp_extractPermInfo(ES_ls, ES_perm)
 
       perm_dt <- rbindlist(perm_dt, use.names = FALSE)
 
@@ -1011,7 +925,7 @@
 #'
 #' @author Tyler Sagendorf
 #'
-#' @importFrom data.table rbindlist := setorderv
+#' @importFrom data.table rbindlist := setorderv setDF
 #' @importFrom stats p.adjust
 #'
 #' @noRd
@@ -1088,7 +1002,7 @@
   tab <- tab[, keep_cols, with = FALSE]
 
   # Convert to data.frame
-  tab <- as.data.frame(tab)
+  setDF(tab)
 
   return(tab)
 }

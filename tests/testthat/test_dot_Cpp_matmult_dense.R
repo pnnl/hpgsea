@@ -1,4 +1,4 @@
-test_that(".Rcpp_matmult_dense works correctly", {
+test_that(".Cpp_matmult_dense works correctly", {
   set.seed(0L)
 
   x <- rnorm(3 * 3)
@@ -9,7 +9,7 @@ test_that(".Rcpp_matmult_dense works correctly", {
 
   expected <- x %*% y
 
-  actual <- .Rcpp_matmult_dense(x, y)
+  actual <- .Cpp_matmult_dense(x, y)
 
   expect_identical(actual, expected)
 })

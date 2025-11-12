@@ -1,51 +1,8 @@
+// [[Rcpp::depends(RcppArmadillo, dqrng)]]
 #include <RcppArmadillo.h>
-// [[Rcpp::depends(RcppArmadillo)]]
-#include <vector>
+#include <dqrng.h>
 
 using namespace Rcpp;
-
-
-//' @title Fast Vector Indexing
-//'
-//' @param x a numeric or integer vecctor.
-//' @param idx an integer vector of indices of \code{x}. May be longer than
-//'   \code{x}.
-//'
-//' @returns The result of \code{x[idx]}.
-//'
-//' @note These functions are more than twice as fast as their R counterparts.
-//'
-//' @noRd
-//'
-// [[Rcpp::export(.Rcpp_indexNumericVector)]]
-NumericVector Rcpp_indexNumericVector(const NumericVector& x,
-                                      const IntegerVector& idx)
-{
-   const int n = idx.size();
-
-   NumericVector out(n);
-
-   for (int i = 0; i < n; i++) {
-      out[i] = x[idx[i] - 1];
-   }
-
-   return out;
-}
-
-// [[Rcpp::export(.Rcpp_indexIntegerVector)]]
-IntegerVector Rcpp_indexIntegerVector(const IntegerVector& x,
-                                      const IntegerVector& idx)
-{
-   const int n = idx.size();
-
-   IntegerVector out(n);
-
-   for (int i = 0; i < n; i++) {
-      out[i] = x[idx[i] - 1];
-   }
-
-   return out;
-}
 
 
 //' @title Dense Matrix Multiplication
@@ -61,10 +18,10 @@ IntegerVector Rcpp_indexIntegerVector(const IntegerVector& x,
 //'   26. \url{https://doi.org/10.21105/joss.00026}
 //'
 //' @noRd
-//'
-// [[Rcpp::export(.Rcpp_matmult_dense)]]
-arma::mat Rcpp_matmult_dense(const arma::mat& X,
-                             const arma::mat& Y)
+
+// [[Rcpp::export(.Cpp_matmult_dense)]]
+arma::mat matmult_dense(const arma::mat& X,
+                        const arma::mat& Y)
 {
   arma::mat Z = X * Y;
 
@@ -86,10 +43,10 @@ arma::mat Rcpp_matmult_dense(const arma::mat& X,
 //'   26. \url{https://doi.org/10.21105/joss.00026}
 //'
 //' @noRd
-//'
-// [[Rcpp::export(.Rcpp_matmult_sparse)]]
-arma::mat Rcpp_matmult_sparse(const arma::mat& X,
-                              const arma::sp_mat& Y)
+
+// [[Rcpp::export(.Cpp_matmult_sparse)]]
+arma::mat matmult_sparse(const arma::mat& X,
+                         const arma::sp_mat& Y)
 {
   arma::mat Z = X * Y;
 
@@ -105,9 +62,9 @@ arma::mat Rcpp_matmult_sparse(const arma::mat& X,
 //'   genes in each set will contribute equally.
 //' @param Y absolute values of the matrix \code{t(X)} raised to the power of
 //'   \code{alpha}. Missing values are then imputed with 0.
-//' @param R matrix of ranks of the values in each row of \code{X}.
-//'   Missing values in \code{X} are assigned a rank of \code{NA}, which are
-//'   then imputed with 0.
+//' @param R matrix of ranks of the values in each row of \code{X}. Missing
+//'   values in \code{X} are assigned a rank of \code{NA}, which are then
+//'   imputed with 0.
 //' @param sumRanks integer vector; the sums of the ranks in each sample. Equal
 //'   to \code{rowSums(R)}.
 //' @param A sparse incidence matrix with single genes as rows and gene sets as
@@ -115,8 +72,8 @@ arma::mat Rcpp_matmult_sparse(const arma::mat& X,
 //'   while a value of 0 indicates otherwise.
 //' @param M matrix with samples as rows and gene sets as columns, where each
 //'   entry is the number of genes with nonmissing values in each set.
-//' @param W matrix with the same dimensions as \code{M} where each entry is
-//'   the number of genes with nonmissing values \emph{not} in each set.
+//' @param W matrix with the same dimensions as \code{M} where each entry is the
+//'   number of genes with nonmissing values \emph{not} in each set.
 //'
 //' @returns A matrix of real-valued enrichment scores with samples as rows and
 //'   gene sets as columns. May contain missing values if the corresponding
@@ -134,47 +91,88 @@ arma::mat Rcpp_matmult_sparse(const arma::mat& X,
 //'   https://doi.org/10.3390/mca24030070}
 //'
 //' @noRd
-//'
-// [[Rcpp::export(.Rcpp_calcESCore)]]
-arma::mat Rcpp_calcESCore(const double alpha,
-                          const int min_size,
-                          const arma::mat& Y,
-                          const arma::mat& R,
-                          const arma::colvec& sumRanks,
-                          const arma::sp_mat& A,
-                          const arma::mat& M,
-                          const arma::mat& W)
+
+// [[Rcpp::export(.Cpp_calcES)]]
+arma::mat calcES(const double alpha,
+                 const int min_size,
+                 const arma::mat& Y,
+                 const arma::mat& R,
+                 const arma::colvec& sumRanks,
+                 const arma::sp_mat& A,
+                 const arma::mat& M,
+                 const arma::mat& W)
 {
-   arma::mat RA = R * A;
+  arma::mat RA = R * A;
 
-   arma::mat ES = RA;
+  arma::mat ES = RA;
 
-   if (alpha == 0.0) {
-      ES /= M;
-   } else {
-      // % is Hadamard product, * is dot product, / is Hadamard division
-      ES = ((R % Y) * A) / (Y * A);
-   }
+  if (alpha == 0.0) {
+    ES /= M;
+  } else {
+    // % is Hadamard product, * is dot product, / is Hadamard division
+    ES = ((R % Y) * A) / (Y * A);
+  }
 
-   // Subtract the total sum of ranks in each sample from the corresponding row
-   // of R * A
-   RA.each_col() -= sumRanks;
+  // Subtract the total sum of ranks in each sample from the corresponding row
+  // of R * A
+  RA.each_col() -= sumRanks;
 
-   ES += RA / W;
+  ES += RA / W;
 
-   // If the set has fewer than min_size elements with nonmissing values, the ES
-   // will be 0. Only applies to directional gene sets.
-   arma::uvec indices = arma::find(M < min_size);
-   ES(indices).zeros();
+  // If the set has fewer than min_size elements with nonmissing values, the ES
+  // will be 0. Only applies to directional gene sets.
+  arma::uvec indices = arma::find(M < min_size);
+  ES(indices).zeros();
 
-   return ES;
+  return ES;
+}
+
+
+//' @title Create a Matrix of Random Indices
+//'
+//' @description Create a matrix where each column is an independent random
+//'   sample of indices, taken without replacement from 0 to \code{n_genes - 1}.
+//'
+//' @param n_genes one more than the maximum index.
+//' @param seeds integer vector of random seeds. The length will determine the
+//'   number of columns in the output matrix.
+//' @param max_set_size the size of the largest gene set. This will determine
+//'   the number of rows in the output matrix.
+//'
+//' @returns A matrix.
+//'
+//' @seealso
+//' https://cran.r-project.org/web/packages/dqrng/vignettes/cpp-api.html
+//'
+//' @noRd
+arma::umat create_perm_indices(const arma::uword& n_genes,
+                               const IntegerVector& seeds,
+                               const arma::uword& max_set_size)
+{
+  const arma::uword batch_size = seeds.size();
+
+  arma::umat perm_indices(max_set_size, batch_size, arma::fill::zeros);
+
+  for (arma::uword j = 0; j < seeds.size(); ++j) {
+    dqrng::dqset_seed(IntegerVector::create(seeds[j]));
+
+    // Sample a total of max_set_size indices taken without replacement from 0
+    // to n_genes - 1
+    IntegerVector sample = dqrng::dqsample_int(n_genes, max_set_size);
+
+    for (arma::uword i = 0; i < max_set_size; ++i) {
+      perm_indices.at(i, j) = sample[i];
+    }
+  }
+
+  return perm_indices;
 }
 
 
 //' @title Multiplication of an unseen binary matrix and real-valued matrix
 //'
-//' @description Compute the product of an unseen binary and real-valued matrix
-//'   when the binary matrix is in a specific format. See details.
+//' @description Compute the product of an unseen binary matrix and real-valued
+//'   matrix when the binary matrix is in a specific format. See details.
 //'
 //' @param set_sizes integer vector of unique set sizes, sorted in ascending
 //'   order.
@@ -184,13 +182,15 @@ arma::mat Rcpp_calcESCore(const double alpha,
 //' @details The set_sizes vector acts as a stand-in for the unseen binary
 //'   matrix, which has the following characteristics:
 //'
-//'   1. The first `set_sizes[i]` elements of the i-th row are all 1 and the
-//'   remaining entries of that row are 0.
+//'   1. The first \code{set_sizes[i]} elements of the i-th row are all 1 and
+//'   the remaining entries of that row are 0.
 //'
 //'   2. If the i-th row has n ones, then the i + 1 row will have at least (n +
 //'   1) ones.
 //'
 //'   3. All elements of the last row are 1.
+//'
+//'   This function has time complexity \code{O(max(set_sizes) * Y.n_cols)}.
 //'
 //' @author Tyler Sagendorf
 //'
@@ -234,27 +234,27 @@ arma::mat binary_matmult(const arma::uvec& set_sizes,
 }
 
 
-//' @title Core of the .calcESPerm R function
+//' @title Calculate Permutation Enrichment Scores
 //'
 //' @param alpha non-negative real value.
-//' @param Y_perm matrix of absolute values of the input matrix \code{t(X)} (see
-//'   \code{\link{fast_ssgsea}}) raised to the power \code{alpha}. The number of
-//'   rows is the size of the largest gene set, while the number of columns is
-//'   the number of permutations. Each column is a random sample of values from
-//'   the i-th row of matrix \code{Y} (see \code{Rcpp_calcESCore}).
-//' @param R_perm matrix with the same dimensions as \code{Y_perm} containing
-//'   the corresponding ranks of the values of the genes that were selected for
-//'   \code{Y_perm}.
-//' @param sumRanks_i integer; sum of the ranks of all genes for sample i.
-//' @param A_perm dense incidence matrix where the number of rows is the number
-//'   of unique gene set sizes and the number of columns is the size of the
-//'   largest gene set. Indicates which genes to use to calculate the
-//'   permutation ES.
-//' @param theta_m_i integer vector of unique gene set sizes.
-//' @param theta_w_i integer vector of unique number of genes not in each set.
+//' @param y_i numeric vector of absolute values raised to the power of
+//'   \code{alpha}.
+//' @param r_i corresponding vector of ranks of the genes in \code{y_i}.
+//' @param seeds integer vector of seeds used for random sampling.
+//' @param max_set_size integer; the size of the largest gene set that will be
+//'   tested. Determines the size of each random sample.
+//' @param sumRanks_i numeric; sum of the ranks of all genes.
+//' @param theta_m_i integer vector of unique gene set sizes. These will be
+//'   unique and sorted in ascending order.
+//' @param theta_w_i integer vector of the unique number of genes not in each
+//'   set. Equal to the total number of genes with nonmissing values minus the
+//'   elements of \code{theta_m_i}.
 //'
 //' @returns A dense matrix of permutation enrichment scores. Rows correspond to
 //'   unique gene set sizes and columns to independent permutations.
+//'
+//' @details This function has time complexity \code{O(max_set_size *
+//'   seeds.size())}.
 //'
 //' @author Tyler Sagendorf
 //'
@@ -263,34 +263,57 @@ arma::mat binary_matmult(const arma::uvec& set_sizes,
 //'   26. \url{https://doi.org/10.21105/joss.00026}
 //'
 //' @noRd
-//'
-// [[Rcpp::export(.Rcpp_calcESPermCore)]]
-arma::mat Rcpp_calcESPermCore(const double alpha,
-                              const arma::mat& Y_perm,
-                              const arma::mat& R_perm,
-                              const double sumRanks_i,
-                              const arma::uvec& theta_m_i,
-                              const arma::vec& theta_w_i)
+
+// [[Rcpp::export(.Cpp_calcESPerm)]]
+arma::mat Cpp_calcESPerm(const double alpha,
+                         const arma::vec& y_i,
+                         const arma::vec& r_i,
+                         const IntegerVector& seeds,
+                         const arma::uword& max_set_size,
+                         const double sumRanks_i,
+                         const arma::uvec& theta_m_i,
+                         const arma::vec& theta_w_i)
 {
-   arma::mat AR_perm = binary_matmult(theta_m_i, R_perm);
+  const arma::uword n_genes = r_i.size(); // max index for sampling
 
-   arma::mat ES_perm = AR_perm;
+  // Each column is an independent random sample of indices
+  arma::umat perm_indices = create_perm_indices(n_genes, seeds, max_set_size);
 
-   if (alpha == 0.0) {
-      // Divide each column of AR_perm by the unique set sizes.
-      ES_perm.each_col() /= arma::conv_to<arma::vec>::from(theta_m_i);
-   } else {
-      // % is Hadamard product, / is Hadamard division
-      ES_perm = binary_matmult(theta_m_i, Y_perm % R_perm) /
-        binary_matmult(theta_m_i, Y_perm);
-   }
+  arma::mat R_perm(perm_indices.n_rows, perm_indices.n_cols, arma::fill::zeros);
 
-   AR_perm -= sumRanks_i;
-   AR_perm.each_col() /= theta_w_i;
+  // Each column of R_perm is an independent random sample of the gene ranks
+  for (arma::uword j = 0; j < R_perm.n_cols; ++j) {
+    R_perm.unsafe_col(j) = r_i.elem(perm_indices.unsafe_col(j));
+  }
 
-   ES_perm += AR_perm;
+  arma::mat AR_perm = binary_matmult(theta_m_i, R_perm);
 
-   return ES_perm;
+  arma::mat ES_perm = AR_perm;
+
+  if (alpha == 0.0) {
+    // Divide each column of AR_perm by the unique set sizes.
+    ES_perm.each_col() /= arma::conv_to<arma::vec>::from(theta_m_i);
+  } else {
+    arma::mat Y_perm = R_perm;
+
+    // Each column of Y_perm is an independent random sample of the absolute
+    // values of the genes raised to the power of alpha. The ranks in R_perm are
+    // the corresponding ranks of the original gene-level values.
+    for (arma::uword j = 0; j < Y_perm.n_cols; ++j) {
+      Y_perm.unsafe_col(j) = y_i.elem(perm_indices.unsafe_col(j));
+    }
+
+    // % is Hadamard product, / is Hadamard division
+    ES_perm = binary_matmult(theta_m_i, Y_perm % R_perm) /
+      binary_matmult(theta_m_i, Y_perm);
+  }
+
+  AR_perm -= sumRanks_i;
+  AR_perm.each_col() /= theta_w_i;
+
+  ES_perm += AR_perm;
+
+  return ES_perm;
 }
 
 
@@ -362,22 +385,34 @@ arma::mat binary_matmult_down(const arma::mat& Y,
 
 //' @title Calculate Permutation ES for Directional Gene Sets
 //'
-//' @inheritParams .Rcpp_calcESPermCore
+//' @inheritParams .Cpp_calcESPerm
 //'
 //' @param theta_m_i integer vector of the number of up-regulated genes in each
 //'   set. Each \code{(theta_m_i, theta_m_d_i)} pair is unique.
+//' @param theta_w_i integer vector of the number of genes that are not
+//'   up-regulated in the set. Will count genes that are either not in the set
+//'   or down-regulated in the set.
 //' @param theta_m_d_i integer vector of the number of down-regulated genes in
 //'   each set. Each \code{(theta_m_i, theta_m_d_i)} pair is unique.
+//' @param theta_w_d_i integer vector of the number of genes that are not
+//'   down-regulated in the set. Will count genes that are either not in the set
+//'   or up-regulated in the set.
+//' @param min_size integer; minimum set size. If the number of "up" or "down"
+//'   genes in the set is less than \code{min_size}, the directional ES will be
+//'   set to 0.
 //'
 //' @returns A matrix of permutation ES for directional gene sets.
 //'
 //' @author Tyler Sagendorf
 //'
 //' @noRd
-// [[Rcpp::export(.Rcpp_calcESPerm_dir)]]
+
+// [[Rcpp::export(.Cpp_calcESPerm_dir)]]
 arma::mat calcESPerm_dir(const double alpha,
-                         const arma::mat& Y_perm,
-                         const arma::mat& R_perm,
+                         const arma::vec& y_i,
+                         const arma::vec& r_i,
+                         const IntegerVector& seeds,
+                         const arma::uword& max_set_size,
                          const double sumRanks_i,
                          const arma::uvec& theta_m_i,
                          const arma::vec& theta_w_i,
@@ -385,6 +420,17 @@ arma::mat calcESPerm_dir(const double alpha,
                          const arma::vec& theta_w_d_i,
                          const arma::uword& min_size)
 {
+  const arma::uword n_genes = r_i.size(); // max index for sampling
+
+  // Each column is an independent random sample of indices
+  arma::umat perm_indices = create_perm_indices(n_genes, seeds, max_set_size);
+
+  arma::mat R_perm(perm_indices.n_rows, perm_indices.n_cols, arma::fill::zeros);
+
+  for (arma::uword j = 0; j < R_perm.n_cols; ++j) {
+    R_perm.unsafe_col(j) = r_i.elem(perm_indices.unsafe_col(j));
+  }
+
   arma::mat AR_perm_up = binary_matmult_up(R_perm, theta_m_i);
   arma::mat AR_perm_down = binary_matmult_down(R_perm, theta_m_i, theta_m_d_i);
 
@@ -398,6 +444,12 @@ arma::mat calcESPerm_dir(const double alpha,
     ES_perm_down.each_col() /=
       arma::conv_to<arma::vec>::from(theta_m_d_i);
   } else {
+    arma::mat Y_perm = R_perm;
+
+    for (arma::uword j = 0; j < Y_perm.n_cols; ++j) {
+      Y_perm.unsafe_col(j) = y_i.elem(perm_indices.unsafe_col(j));
+    }
+
     ES_perm_up =
       binary_matmult_up(Y_perm % R_perm, theta_m_i) /
         binary_matmult_up(Y_perm, theta_m_i);
@@ -444,46 +496,47 @@ arma::mat calcESPerm_dir(const double alpha,
 //' @noRd
 int findFirstPositiveIndex(const std::vector<double>& x)
 {
-   const int SIZE_X = x.size();
+  const int SIZE_X = x.size();
 
-   int low = 0;
-   int mid;
-   int high = SIZE_X - 1;
+  int low = 0;
+  int mid;
+  int high = SIZE_X - 1;
 
-   while (low <= high) {
-      mid = (low + high) / 2; // x is never large enough to cause overflow
+  while (low <= high) {
+    mid = (low + high) / 2; // x is never large enough to cause overflow
 
-      if (x[mid] >= 0.0) {
-         // check if the value of x is the first positive
-         if (mid == 0 || x[mid - 1] < 0.0) {
-            return mid;
-         } else {
-            high = mid - 1;
-         }
+    if (x[mid] >= 0.0) {
+      // check if the value of x is the first positive
+      if (mid == 0 || x[mid - 1] < 0.0) {
+        return mid;
       } else {
-         low = mid + 1;
+        high = mid - 1;
       }
-   }
+    } else {
+        low = mid + 1;
+    }
+  }
 
-   return SIZE_X; // no positive values found
+  return SIZE_X; // no positive values found
 }
 
 
 //' @title Extract Information About Permutation Enrichment Scores
 //'
-//' @param x sorted vector of true enrichment scores. Missing values not
-//'   allowed.
-//' @param y vector of permutation enrichment scores (not necessarily sorted).
+//' @param x sorted vector of true enrichment scores.
+//' @param y vector of permutation enrichment scores (not sorted).
 //'
-//' @returns A named list with 3 components, each vectors with the same length
-//'   as x:
+//' @returns A \code{data.table} with 3 columns where the number of rows is
+//'   equal to the length of \code{x}.
 //'
 //' \describe{
 //'   \item{"n_same_sign_b"}{integer vector; the number of permutation ES in
 //'   \code{y} with the same sign as the corresponding ES in \code{x}.}
+//'
 //'   \item{"n_as_extreme_b"}{integer vector; the number of permutation ES in
 //'   \code{y} that were at least as extreme as the corresponding ES in
-//'   \code{x}. At most \code{NSameSign.b}.}
+//'   \code{x}. At most \code{n_same_sign_b}.}
+//'
 //'   \item{"sum_ES_perm_b"}{numeric vector; the absolute value of the sum of
 //'   the permutation ES in \code{y} that have the same sign as the
 //'   corresponding ES in \code{x}.}
@@ -492,96 +545,100 @@ int findFirstPositiveIndex(const std::vector<double>& x)
 //' @author Tyler Sagendorf
 //'
 //' @noRd
-List extractPermInfoInternal(const std::vector<double>& x,
+List extractPermInfo_internal(const std::vector<double>& x,
                              const std::vector<double>& y)
 {
-   const int SIZE_X = x.size();
-   const int SIZE_Y = y.size();
+  const int SIZE_X = x.size();
+  const int SIZE_Y = y.size();
 
-   // Number of values of y with the same sign as each value of x
-   std::vector<int> n_same_sign(SIZE_X, 0);
+  // Number of values of y with the same sign as each value of x
+  std::vector<int> n_same_sign(SIZE_X, 0);
 
-   // Number of values of y that are at least as extreme as each value of x
-   std::vector<int> n_as_extreme(SIZE_X, 0);
+  // Number of values of y that are at least as extreme as each value of x
+  std::vector<int> n_as_extreme(SIZE_X, 0);
 
-   // Vector to store values of sum_y_neg or sum_y_pos for each value of x
-   std::vector<double> sum_ES_perm(SIZE_X, 0.0);
+  // Vector to store values of sum_y_neg or sum_y_pos for each value of x
+  std::vector<double> sum_ES_perm(SIZE_X, 0.0);
 
-   // Number of values of y that are negative
-   int n_neg_y = 0;
+  // Number of values of y that are negative
+  int n_neg_y = 0;
 
-   // Absolute values of the sums of the negative and positive values of y
-   double sum_y_neg = 0.0;
-   double sum_y_pos = 0.0;
+  // Absolute values of the sums of the negative and positive values of y
+  double sum_y_neg = 0.0;
+  double sum_y_pos = 0.0;
 
-   // Index of the first positive element of x. If all elements are negative,
-   // returns x.size().
-   const int x_pos_index = findFirstPositiveIndex(x);
+  // Index of the first positive element of x. If all elements are negative,
+  // returns x.size().
+  const int x_pos_index = findFirstPositiveIndex(x);
 
-   int i = 0; // index for values of x
+  for (int j = 0; j < SIZE_Y; ++j) {
+    const double y_j = y[j]; // cache to avoid repeated indexing
 
-   for (int j = 0; j < SIZE_Y; j++) {
-      if (y[j] < 0.0) { // y[j] is negative
-         n_neg_y++;
-         sum_y_neg -= y[j];
+    if (y_j < 0.0) { // y[j] is negative
+      ++n_neg_y;
+      sum_y_neg -= y_j;
 
-         i = 0; // start by checking most negative value of x
+      for (int i = 0; i < x_pos_index; ++i) {
+        // if (y_j <= x[i]) {
+        //   break;
+        // }
+        //
+        // n_as_extreme[i]--;
 
-         // While y is less negative than x and we have not gone past the
-         // last negative value of x, move forward to the next most negative
-         // x.
-         while (i < x_pos_index && y[j] > x[i]) {
-            n_as_extreme[i]--;
-            i++;
-         }
-
-      } else { // y[j] is positive
-         sum_y_pos += y[j];
-
-         i = SIZE_X - 1; // start by checking most positive value of x
-
-         // While y is less positive than x and we have not gone past the
-         // first positive value of x, move backward to the next most
-         // positive x.
-         while (i >= x_pos_index && y[j] < x[i]) {
-            n_as_extreme[i]--;
-            i--;
-         }
-
+        // Unless x consistently has many elements (i.e. when the maximum set
+        // size is small and there are many gene sets), this will be noticeably
+        // faster than the approach that breaks the loop early, likely because
+        // it avoids branching.
+        n_as_extreme[i] += y_j <= x[i];
       }
-   }
 
-   // Number of positive values of y
-   const int n_pos_y = SIZE_Y - n_neg_y;
+    } else { // y[j] is positive
+      sum_y_pos += y_j;
 
-   // Use the number of negative y and the absolute value of the sum of the
-   // negative y for the results of all negative x.
-   for (int i = 0; i < x_pos_index; i++) {
-      n_as_extreme[i] += n_neg_y;
-      n_same_sign[i] = n_neg_y;
-      sum_ES_perm[i] = sum_y_neg;
-   }
+      for (int i = SIZE_X - 1; i >= x_pos_index; --i) {
+        // if (y_j >= x[i]) {
+        //   break;
+        // }
+        //
+        // n_as_extreme[i]--;
 
-   // Use the number of positive y and the sum of the positive y for the results
-   // of all positive x.
-   for (int i = x_pos_index; i < SIZE_X; i++) {
-      n_as_extreme[i] += n_pos_y;
-      n_same_sign[i] = n_pos_y;
-      sum_ES_perm[i] = sum_y_pos;
-   }
+        n_as_extreme[i] += y_j >= x[i];
+      }
 
-   // The '_b' stands for 'batch', since y might be a single batch of
-   // permutation enrichment scores.
-   List out = List::create(
-      Named("n_same_sign_b") = n_same_sign,
-      Named("n_as_extreme_b") = n_as_extreme,
-      Named("sum_ES_perm_b") = sum_ES_perm
-   );
+    }
+  }
 
-   // Convert list to data.table to stack with rbindlist later
-   out.attr("class") = CharacterVector::create("data.table");
+  // Number of positive values of y
+  const int n_pos_y = SIZE_Y - n_neg_y;
 
-   return out;
+  // Use the number of negative y and the absolute value of the sum of the
+  // negative y for the results of all negative x.
+  for (int i = 0; i < x_pos_index; ++i) {
+    // n_as_extreme[i] += n_neg_y;
+    n_same_sign[i] = n_neg_y;
+    sum_ES_perm[i] = sum_y_neg;
+  }
+
+  // Use the number of positive y and the sum of the positive y for the results
+  // of all positive x.
+  for (int i = x_pos_index; i < SIZE_X; ++i) {
+    // n_as_extreme[i] += n_pos_y;
+    n_same_sign[i] = n_pos_y;
+    sum_ES_perm[i] = sum_y_pos;
+  }
+
+  // The '_b' stands for 'batch', since y might be a single batch of
+  // permutation enrichment scores.
+  List out = List::create(
+    Named("n_same_sign_b") = n_same_sign,
+    Named("n_as_extreme_b") = n_as_extreme,
+    Named("sum_ES_perm_b") = sum_ES_perm
+  );
+
+  // Convert list to data.table to stack with rbindlist later
+  out.attr("class") = CharacterVector::create("data.table");
+
+  return out;
 }
 
 
@@ -614,10 +671,10 @@ List extractPermInfoInternal(const std::vector<double>& x,
 //' @author Tyler Sagendorf
 //'
 //' @noRd
-//'
-// [[Rcpp::export(.Rcpp_extractPermInfo)]]
-List Rcpp_extractPermInfo(const List ES_ls,
-                          const NumericMatrix& ES_perm)
+
+// [[Rcpp::export(.Cpp_extractPermInfo)]]
+List extractPermInfo(const List ES_ls,
+                     const NumericMatrix& ES_perm)
 {
   const int N = ES_ls.size();
 
@@ -625,55 +682,14 @@ List Rcpp_extractPermInfo(const List ES_ls,
 
   NumericVector temp(ES_perm.ncol(), 0.0); // the size doesn't change
 
-  for (int i = 0; i < N; i++) {
+  for (int i = 0; i < N; ++i) {
     // Extract i-th row of ES_perm (is there a better way?)
     temp = ES_perm(i, _);
-    std::vector<double> ES_perm_i(temp.begin(), temp.end());
+    const std::vector<double> ES_perm_i(temp.begin(), temp.end());
 
-    out[i] = extractPermInfoInternal(ES_ls[i], ES_perm_i);
+    out[i] = extractPermInfo_internal(ES_ls[i], ES_perm_i);
   }
 
   return out;
 }
 
-
-//' @title Generate a dense incidence matrix for permutation testing
-//'
-//' @param end positive integer vector; specifies the number of entries in each
-//'   row of the result matrix that will be 1.
-//' @param MAX_SET_SIZE integer; the size of the largest set. Determines the
-//'   number of rows of the matrix.
-//' @param check logical; whether to check each value of \code{end} to ensure it
-//'   is greater than 0.
-//'
-//' @returns An binary 0/1 integer matrix. The number of rows is the length of
-//'   \code{end}, and the number of columns is \code{MAX_SET_SIZE}.
-//'
-//' @author Tyler Sagendorf
-//'
-//' @noRd
-//'
-// [[Rcpp::export(.Rcpp_calcAPerm)]]
-arma::umat Rcpp_calcAPerm(const arma::uvec& end,
-                          const int MAX_SET_SIZE,
-                          const bool check)
-{
-   const int NCOL = end.size();
-
-   // Matrices are in column-major order, so it is better to fill values by
-   // column and then take the transpose at the end.
-   arma::umat A_perm(MAX_SET_SIZE, NCOL, arma::fill::zeros);
-
-   if (check) { // only needed for directional sets, since they may be empty
-      for (int j = 0; j < NCOL; j++) {
-         if (end[j] > 0)
-            A_perm.col(j).rows(0, end[j] - 1).fill(1);
-      }
-   } else {
-      for (int j = 0; j < NCOL; j++) {
-         A_perm.col(j).rows(0, end[j] - 1).fill(1);
-      }
-   }
-
-   return A_perm.t();
-}

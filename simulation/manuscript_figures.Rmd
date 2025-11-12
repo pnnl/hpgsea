@@ -30,7 +30,7 @@ prepare_data <- function(path) {
     mutate(replicate = as.integer(replicate)) %>%
     arrange(nperm, nSamples, maxSetSize, nSets, alpha, replicate) %>%
     mutate(
-      x_pos = (replicate - 2L) * 0.25 + alpha,
+      x_pos = (replicate - 2L) * 0.2 + alpha,
       across(
         .cols = c(nSets, nperm, maxSetSize),
         .fns = ~ scales::comma_format()(.x)
@@ -85,7 +85,7 @@ plot_time <- function(x, y_breaks) {
   )) +
     geom_point(
       shape = 3,
-      size = 1.05,
+      size = 1.5,
       stroke = 0.8
     ) +
     # ggh4x::facet_nested_wrap(~ nSamples + maxSetSize,
@@ -122,7 +122,7 @@ plot_time <- function(x, y_breaks) {
       # values = c("grey86", "grey48", "black"),
       # values = c("grey75", "black", "#0070cc"),
       values = palette.colors(n = 3L),
-      breaks = c("1,000", "10,000", "50,000")
+      breaks = c("1,000", "10,000", "20,000")
     ) +
     labs(
       x = latex2exp::TeX("$\\alpha$"),
@@ -163,20 +163,20 @@ plot_time <- function(x, y_breaks) {
 ```
 
 ```{r timing-ssgsea}
-# Fast-ssGSEA
+# fast-ssGSEA
 time_res <- prepare_data("../data/fast-ssGSEA_timing_results.rds")
 
 # 10,000 permutations
-pa <- filter(desktop, nperm == "10,000") %>%
-  plot_time(y_breaks = seq(0, 6, 1))
+pa <- filter(time_res, nperm == "10,000") %>%
+  plot_time(y_breaks = seq(0, 2, 0.5))
 
 # 100,000 permutations
-pb <- filter(desktop, nperm == "100,000") %>%
-  plot_time(y_breaks = seq(0, 10, 2))
+pb <- filter(time_res, nperm == "100,000") %>%
+  plot_time(y_breaks = seq(0, 5, 1))
 
 # 1,000,000 permutations
-pc <- filter(desktop, nperm == "1,000,000") %>%
-  plot_time(y_breaks = seq(0, 55, 10))
+pc <- filter(time_res, nperm == "1,000,000") %>%
+  plot_time(y_breaks = seq(0, 35, 10))
 
 # Combine plots
 p <- ggarrange(

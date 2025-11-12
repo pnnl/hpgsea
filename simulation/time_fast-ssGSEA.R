@@ -8,7 +8,7 @@ param_list <- list(
   "nSamples" = 1L,
   "minSetSize" = 10L,
   "maxSetSize" = c(500L, 1000L),
-  "nSets" = c(1e3L, 1e4L, 5e4L),
+  "nSets" = c(1e3L, 1e4L, 2e4L),
   "nperm" = c(1e4L, 1e5L, 1e6L),
   "alpha" = c(0, 1)
 )

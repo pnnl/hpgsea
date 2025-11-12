@@ -1,3 +1,4 @@
+#' @import dqrng
 #' @import RcppArmadillo
 #' @importFrom Rcpp evalCpp
 #'
