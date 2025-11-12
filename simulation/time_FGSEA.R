@@ -2,13 +2,15 @@ library(fgsea)
 
 source("simulation/scripts/function-generate_data.R")
 
+nproc <- 1L # 0 for multithreading, 1 for single thread
+
 # Parameter combinations ----
 param_list <- list(
   "nGenes" = 1e4L,
   "nSamples" = 1L,
   "minSetSize" = 10L,
   "maxSetSize" = c(500L, 1000L),
-  "nSets" = c(1e3L, 1e4L, 5e4L),
+  "nSets" = c(1e3L, 1e4L, 2e4L),
   "nperm" = c(1e4L, 1e5L, 1e6L),
   "alpha" = c(0, 1)
 )
@@ -44,14 +46,14 @@ time_df <- lapply(seq_len(3L), function(j) { # 3 replicates
 
     invisible({
       capture.output({
-        . <- fgseaSimple(
+        res <- fgseaSimple(
           stats = X_i,
           pathways = gene_sets_i,
           gseaParam = row_i[["alpha"]],
           nperm = row_i[["nperm"]],
           minSize = row_i[["minSetSize"]],
           maxSize = row_i[["maxSetSize"]],
-          nproc = 1L
+          nproc = nproc
         )
       })
     })
@@ -65,6 +67,8 @@ time_df <- lapply(seq_len(3L), function(j) { # 3 replicates
     message("  ", hms::as_hms(elapsed_time))
 
     comb_df_j[i, "elapsed_time"] <- elapsed_time
+
+    rm(list = "res")
   }
 
   return(comb_df_j)
@@ -78,6 +82,6 @@ saveRDS(
   file = file.path(
     "simulation",
     "data",
-    "FGSEA_timing_results.rds"
+    sprintf("FGSEA_timing_results_nproc_%d.rds", nproc)
   )
 )
