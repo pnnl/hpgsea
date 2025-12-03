@@ -48,7 +48,7 @@
 #'
 #' @noRd
 .validateParams <- function(alpha = 1,
-                            nperm = 1000L,
+                            nperm = 1e5L,
                             batch_size = 1000L,
                             adjust_globally = FALSE,
                             min_size = 2L,
@@ -520,7 +520,7 @@
 #' @author Tyler Sagendorf
 #'
 #' @noRd
-.createSeedList <- function(nperm = 1000L,
+.createSeedList <- function(nperm = 1e5L,
                             batch_size = 1000L,
                             seed = NULL) {
   if (nperm != 0L) {
@@ -773,7 +773,7 @@
 #'
 #' @noRd
 .makeResultsTable <- function(alpha = 1,
-                              nperm = 1000L,
+                              nperm = 1e5L,
                               min_size = 2L,
                               seed_list,
                               y_i,
@@ -973,7 +973,7 @@
 #'
 #' @noRd
 .stackResults <- function(tab,
-                          nperm = 1000L,
+                          nperm = 1e5L,
                           sort = TRUE,
                           adjust_globally = FALSE,
                           alternative = "two.sided") {

@@ -8,7 +8,7 @@ fast_ssgsea(
   X,
   gene_sets,
   alpha = 1,
-  nperm = 1000L,
+  nperm = 100000L,
   batch_size = 1000L,
   adjust_globally = FALSE,
   min_size = 2L,

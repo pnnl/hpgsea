@@ -662,3 +662,27 @@ test_that("p-values are adjusted separately by sample", {
     expected = p.adjust(res2$p_value, method = "BH")
   )
 })
+
+
+test_that("batching permutations works correctly", {
+  res1 <- fast_ssgsea(
+    X = X,
+    gene_sets = gene_sets,
+    nperm = 1000L,
+    batch_size = 1000L,
+    sort = FALSE,
+    seed = 0L
+  )
+
+  res2 <- fast_ssgsea(
+    X = X,
+    gene_sets = gene_sets,
+    nperm = 1000L,
+    batch_size = 500L,
+    sort = FALSE,
+    seed = 0L
+  )
+
+  # The NES might be different in the last few digits, but they are close enough
+  expect_equal(res1, res2)
+})
