@@ -148,7 +148,8 @@ fast_ssgsea <- function(X,
   # alphabetically.
   A_list <- .sparseIncidence(
     gene_sets = gene_sets,
-    background = colnames(X)
+    background = colnames(X),
+    min_size = min_size
   )
 
   list2env(x = A_list, envir = environment()) # A, A_d
@@ -179,7 +180,7 @@ fast_ssgsea <- function(X,
     max_size = max_size
   )
 
-  # Extract list components: M, W, M_d, W_d, A, A_d, max_size
+  # Extract list components: M, W, M_d, W_d, A, A_d
   list2env(x = M_list, envir = environment())
 
   # Enrichment score matrices with samples as rows and gene sets as columns

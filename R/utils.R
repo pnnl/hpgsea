@@ -142,6 +142,8 @@
 #'   separated from the rest and placed in the "A_d" incidence matrix.
 #' @param background character vector of elements used to filter the elements of
 #'   \code{gene_sets}.
+#' @param min_size integer; minimum gene set size required for testing. Default
+#'   is 2.
 #'
 #' @returns A named list of incidence matrices, each of class \code{"dgCMatrix"}
 #'   with unique elements as rows and unique sets as columns. \code{"A"} is the
@@ -153,94 +155,133 @@
 #'
 #' @author Tyler Sagendorf
 #'
-#' @importFrom data.table data.table := chmatch setattr
+#' @importFrom collapse alloc allv anyv fsubset funique groupid vec vlengths
+#'   vtypes whichNA whichv
+#' @importFrom data.table chmatch
 #' @importFrom Matrix sparseMatrix
 #'
 #' @noRd
-.sparseIncidence <- function(gene_sets, background) {
-  if (
-    !is.list(gene_sets) ||
-      is.null(names(gene_sets))
-  ) {
-    stop("`gene_sets` must be a named list of character vectors.")
+.sparseIncidence <- function(gene_sets,
+                             background,
+                             min_size = 2L) {
+  # background and min_size are validated before calling this function
+
+  err <- "`gene_sets` must be a named list of character vectors."
+
+  if (!is.list(gene_sets)) {
+    stop(err)
   }
 
-  elements <- unlist(
-    x = gene_sets,
-    recursive = FALSE,
-    use.names = FALSE
-  )
-
-  if (!is.vector(elements, mode = "character")) {
-    stop("`gene_sets` must be a named list of character vectors.")
+  if (is.null(names(gene_sets))) {
+    stop(err)
   }
 
-  # "elements" is a factor, "sets" is not
-  dt <- data.table(
-    elements = elements,
-    stringsAsFactors = TRUE
-  )
+  all_char <- allv(vtypes(gene_sets, use.names = FALSE), "character")
 
-  dt[, sets := rep.int(
-    names(gene_sets),
-    lengths(gene_sets)
-  )]
+  if (!all_char) {
+    stop(err)
+  }
 
-  # Determine which elements are expected to be "down", if any
-  dt[, direction_down := grepl(";d$", elements, perl = TRUE)]
+  # Pre-filter to remove gene sets that are too small. We can not remove gene
+  # sets that are too large without first restricting the genes to the
+  # background. Additionally, missing values in matrix X may make the gene sets
+  # smaller than min_size, and duplicate elements may cause gene sets to contain
+  # at least min_size genes. In all of these cases, the gene sets will survive
+  # the initial filter, but they will be removed later by .calcSetSize.
+  set_sizes <- vlengths(gene_sets)
 
-  # Strip information about direction of change. This may reduce the number of
-  # levels if an element is both "up" and "down": "gene;u" and "gene;d" become
-  # "gene".
-  setattr(dt$elements, "levels", sub(";[ud]{1}$", "", levels(dt[["elements"]])))
+  keep_sets <- whichv(set_sizes >= min_size, TRUE)
 
-  # Do not chain with previous line, since the number of levels may change.
-  unique_elements <- levels(dt[["elements"]])
+  if (length(keep_sets) != length(gene_sets)) {
+    if (length(keep_sets) == 0L) {
+      stop(
+        "No gene sets with at least `min_size` elements."
+      )
+    }
 
-  # Convert to characters to use chmatch()
-  dt[, elements := as.character.factor(elements)]
+    gene_sets <- gene_sets[keep_sets]
+    set_sizes <- fsubset(set_sizes, keep_sets)
+  }
+
+  elements <- vec(gene_sets)
+  unique_elements <- funique(elements)
+
+  # Determine if any elements have an expected direction of change (i.e., they
+  # end in ";u" or ";d")
+  any_dir <- anyv(grepl(";[ud]{1}", unique_elements, perl = TRUE), TRUE)
+
+  if (any_dir) {
+    # Convert elements to an integer vector to index direction_down
+    elements <- chmatch(elements, unique_elements)
+
+    # Determine which elements are expected to be "down", if any. grepl will be
+    # slower than indexing, so apply grepl to the unique elements and then
+    # expand the logical vector by indexing with the elements integer vector.
+    direction_down <- grepl(";d$", unique_elements, perl = TRUE)
+    direction_down <- fsubset(direction_down, elements)
+
+    # Strip information about direction of change. This may reduce the number of
+    # levels if an element is both "up" and "down": "gene;u" and "gene;d" become
+    # "gene".
+    unique_elements <- sub(";[ud]{1}$", "", unique_elements)
+
+    # Convert back to a character vector to use chmatch()
+    elements <- fsubset(unique_elements, elements)
+  } else {
+    direction_down <- NULL # signal that this should not be used later
+  }
 
   # Only need to check those elements of the background that overlap with the
-  # elements of x. No need to validate background, since it gets validated
-  # prior to calling this function.
-  unique_elements <- intersect(unique_elements, background)
+  # elements of x.
+  unique_elements <- intersect(background, unique_elements)
 
   if (length(unique_elements) == 0L) {
     stop("No elements of `gene_sets` are present in rownames(X).")
   }
 
-  # Fast character matching (row indices for sparse matrix)
-  dt[, i := chmatch(elements, unique_elements, nomatch = 0L)]
+  # Row indices for sparse matrix
+  i <- chmatch(elements, unique_elements, nomatch = NA_integer_)
 
-  if (any(dt[["i"]] == 0L)) {
-    # Remove elements not in the background
-    dt <- dt[i != 0L]
-
-    unique_sets <- unique.default(dt[["sets"]])
-  } else {
-    unique_sets <- names(gene_sets)
-  }
+  # Unique set names
+  unique_sets <- names(gene_sets)
 
   # Column indices for sparse matrix
-  dt[, j := chmatch(sets, unique_sets)]
+  j <- rep.int(seq_along(unique_sets), set_sizes)
 
-  dim_names <- list(unique_elements, unique_sets)
-  dims <- lengths(dim_names)
+  if (anyNA(i)) {
+    # Remove elements not in the background
+    keep <- whichNA(i, invert = TRUE)
 
-  # Keep genes expected to be "up"
-  if (any(dt[["direction_down"]])) {
-    dt_u <- dt[direction_down == FALSE]
-  } else {
-    dt_u <- dt
+    i <- fsubset(i, keep)
+    j <- fsubset(j, keep)
+
+    unique_sets <- fsubset(unique_sets, funique(j))
+
+    j <- groupid(j) # this works because each set is a contiguous batch
   }
 
-  # Incidence matrix where a 1 indicates that the element is in the set. If x
-  # is a directional database, then A will only contain elements that are
-  # expected to be "up".
+  dim_names <- list(unique_elements, unique_sets)
+  dims <- vlengths(dim_names)
+
+  # Split elements by direction of change to create two incidence matrices
+  if (any_dir) {
+    idx_down <- whichv(direction_down, TRUE)
+    direction_down <- NULL # signal that this is no longer needed
+
+    i_down <- fsubset(i, idx_down)
+    j_down <- fsubset(j, idx_down)
+
+    i <- fsubset(i, -idx_down)
+    j <- fsubset(j, -idx_down)
+  }
+
+  # Incidence matrix where a 1 indicates that the element is in the set. If
+  # gene_sets is a directional database, then A will only contain elements that
+  # are expected to be "up".
   A <- sparseMatrix(
-    i = dt_u[["i"]],
-    j = dt_u[["j"]],
-    x = 1,
+    i = i,
+    j = j,
+    x = alloc(1, length(i)),
     dims = dims,
     dimnames = dim_names,
     check = FALSE,
@@ -248,30 +289,29 @@
   )
 
   # In the unlikely event where an element appears multiple times in the same
-  # set, some values of A will be > 1. Replace all values with 1. Could also
-  # use the use.last.ij parameter in sparseMatrix(), but this is faster.
-  attr(A, which = "x") <- rep.int(1, length(attr(A, which = "x")))
+  # set, some values of A will be > 1. Replace all values with 1. Could also use
+  # the use.last.ij parameter in sparseMatrix(), but this is faster.
+  attr(A, which = "x") <- alloc(1, length(attr(A, which = "x")))
 
   A_d <- NULL # default
 
-  if (nrow(dt_u) < nrow(dt)) {
-    dt_d <- dt[direction_down == TRUE]
-
-    # Incidence matrix where a 1 indicates that a feature is expected to be
-    # down in the set.
+  if (any_dir) {
+    # Incidence matrix where a 1 indicates that an element is expected to be
+    # down in the set
     A_d <- sparseMatrix(
-      i = dt_d[["i"]],
-      j = dt_d[["j"]],
-      x = 1,
+      i = i_down,
+      j = j_down,
+      x = alloc(1, length(i_down)),
       dims = dims,
       dimnames = dim_names,
       check = FALSE,
       use.last.ij = FALSE
     )
 
-    attr(A_d, which = "x") <- rep.int(1, length(attr(A_d, which = "x")))
+    attr(A_d, which = "x") <- alloc(1, length(attr(A_d, which = "x")))
 
-    # The Hadamard product A * A.d should be a matrix of zeros
+    # The Hadamard product A * A_d should be a matrix of zeros, since genes can
+    # not be "up" and "down" in the same set.
     if (length(attr(A * A_d, which = "x"))) {
       stop(
         "Elements can not be both up (suffix \";u\") and ",
