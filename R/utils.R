@@ -548,42 +548,6 @@
 }
 
 
-#' @title Create List of Random Seeds for Each Batch of Permutations
-#'
-#' @inheritParams fast_ssgsea
-#'
-#' @returns \code{NULL} or a list of random seeds divided into batches.
-#'
-#' @author Tyler Sagendorf
-#'
-#' @noRd
-.createSeedList <- function(nperm = 1e5L,
-                            batch_size = 1000L,
-                            seed = NULL) {
-  if (nperm != 0L) {
-    n_batches <- ceiling(nperm / batch_size)
-
-    batch_sizes <- c(
-      rep.int(batch_size, n_batches - 1L),
-      nperm - batch_size * (n_batches - 1L)
-    )
-
-    batch_id <- rep.int(seq_len(n_batches), batch_sizes)
-
-    # Seeds for permutations
-    set.seed(seed)
-    seeds <- sample.int(1e7L, nperm, FALSE)
-
-    seed_list <- split(x = seeds, f = batch_id)
-    names(seed_list) <- NULL
-  } else {
-    seed_list <- NULL
-  }
-
-  return(seed_list)
-}
-
-
 #' @title Szudzik Pairing Function for Two Integer Vectors
 #'
 #' @description A pairing function with 100%% packing efficiency that maps a
@@ -616,155 +580,133 @@
 
 #' @title Get Unique Set Sizes and Other Information for Permutations
 #'
-#' @description Construct a list containing vectors needed for permutations.
-#'
-#' @param n_i the total number of nonmissing values in the i-th sample.
-#' @param m_i integer vector containing the number of genes in each set or the
+#' @param n the total number of nonmissing values in the i-th sample.
+#' @param m integer vector containing the number of genes in each set or the
 #'   number of genes expected to be up-regulated in each set in the i-th sample.
-#' @param m_d_i integer vector or \code{NULL}. The number of genes expected to
-#'   be down-regulated in each set in the i-th sample. This vector has the same
-#'   length as \code{m_i}.
+#' @param m_d integer vector or \code{NULL}. The number of genes expected to be
+#'   down-regulated in each set in the i-th sample. This vector has the same
+#'   length as \code{m}.
 #'
-#' @returns A named list with the following components:
-#'
-#' \describe{
-#'   \item{"rep_idx"}{a vector with length \eqn{\geq} \code{ncol(A_perm)} that
-#'   maps each row of \code{A_perm} to the corresponding entry of \code{m_i}.
-#'   This is used by \code{.makeResultsTable}.}
-#'
-#'   \item{"A_perm"}{dense incidence matrix where the number of rows is the
-#'   number of unique gene set sizes and the number of columns is the size of
-#'   the largest gene set. Indicates which genes to use to calculate the
-#'   permutation ES or, if \code{"A_perm_d"} is not \code{NULL}, indicates which
-#'   genes are expected to be up-regulated to calculate the permutation ES.}
-#'
-#'   \item{"theta_m_i"}{vector of unique set sizes. If testing a directional
-#'   database, the sizes are not necessarily unique, since two gene sets of the
-#'   same total size can have different numbers of up- and down-regulated genes,
-#'   so those will be treated as separate entries.}
-#'
-#'   \item{"theta_w_i"}{vector of the same length as \code{m_i}. Calculated as
-#'   \code{n_i - theta_m_i}.}
-#'
-#'   \item{"A_perm_d"}{dense incidence matrix with the same dimensions as
-#'   \code{"A_perm"} or \code{NULL}.}
-#'
-#'   \item{"theta_m_d_i"}{vector with the same length as \code{m_i} containing
-#'   the unique numbers of genes expected to be down-regulated in each set or
-#'   \code{NULL}. The sizes are not necessarily unique, since two gene sets of
-#'   the same total size can have different numbers of up- and down-regulated
-#'   genes, so these will be treated as separate entries.}
-#'
-#'   \item{"theta_w_d_i"}{vector of the number of genes that are not expected to
-#'   be "down" in the set. Calculated as \code{n_i - theta_m_d_i}.} }
-#'
-#' @details Creation of permutation incidence matrices is based on ideas from
-#'   Korotkevich \emph{et al.} (2021).
+#' @returns A named list.
 #'
 #' @author Tyler Sagendorf
 #'
-#' @references Korotkevich, G., Sukhov, V., Budin, N., Shpak, B., Artyomov, M.
-#'   N., & Sergushichev, A. (2021). Fast gene set enrichment analysis.
-#'   \emph{bioRxiv}, 060012. doi:\href{
-#'   https://doi.org/10.1101/060012}{10.1101/060012}
-#'
 #' @noRd
-.getUniqueSizes <- function(n_i,
-                            m_i,
-                            m_d_i = NULL) {
-  # Permutations only need to be generated for each unique set size.
-  if (!is.null(m_d_i)) {
-    # Include up and down elements or A_perm and A_perm_d may have
-    # different dimensions.
-    unique_size_mat <- unique(cbind(m_i, m_d_i))
+.getUniqueSizes <- function(n,
+                            m,
+                            m_d = NULL) {
+  if (is.null(m_d)) {
+    # Level 1 ----
 
-    # Number of genes expected to be up-regulated in each set. May not be
-    # unique.
-    theta_m_i <- unique_size_mat[, 1L]
+    # All gene sets, even if the number of genes is not unique (m). Set sizes
+    # are sorted.
 
-    # Number of genes not expected to be up-regulated. May not be unique.
-    theta_w_i <- n_i - theta_m_i
+    # Level 2 ----
 
-    # Number of genes expected to be down-regulated in each set. May not be
-    # unique.
-    theta_m_d_i <- unique_size_mat[, 2L]
-
-    # Number of genes not expected to be down-regulated. May not be unique.
-    theta_w_d_i <- n_i - theta_m_d_i
-
-    # Combine up and down set sizes to get the total number of genes in each
-    # set. May not be unique.
-    unique_set_sizes <- theta_m_i + theta_m_d_i
-
-    max_set_size <- max(unique_set_sizes)
-
-    # Each unique pair of entries in m_i and m_d_i are converted to a unique
-    # integer. The same is done for each pair of entries in theta_m_i and
-    # theta_m_d_i. Then, a vector is generated that maps each (m_i, m_d_i)
-    # pair to the unique (theta_m_i, theta_m_d_i) pairs.
-    rep_idx <- match(
-      x = .szudzikPairing(m_i, m_d_i),
-      table = .szudzikPairing(theta_m_i, theta_m_d_i)
-    )
-  } else {
     # Unique number of genes in each set
-    theta_m_i <- unique(m_i)
+    L2_m <- unique(m)
 
     # Unique number of genes not in each set
-    theta_w_i <- n_i - theta_m_i
+    L2_w <- n - L2_m
 
-    theta_m_d_i <- theta_w_d_i <- NULL
+    # Indices to map from level 2 to level 1 ----
+    map_L2_to_L1 <- match(m, L2_m)
 
-    max_set_size <- max(theta_m_i)
+    out <- list(
+      "max_set_size" = max(L2_m),
+      "L2_m" = L2_m,
+      "L2_w" = L2_w
+    )
+  } else {
+    # Level 1 ----
 
-    rep_idx <- match(x = m_i, table = theta_m_i)
+    # All gene sets, even if the number of up and down-regulated genes in the
+    # set is not unique (m and m_d).
+
+    # Level 2 ----
+
+    # Unique combinations of the number of up and down genes. Sorted by the
+    # number of up-regulated genes and then by the number of down-regulated
+    # genes.
+    unique_pairs <- unique(cbind(m, m_d))
+
+    # Up-regulated, in the set
+    L2_m <- unique_pairs[, 1L]
+
+    # Not up-regulated (includes genes not in the set)
+    L2_w <- theta_w <- n - L2_m
+
+    # Down-regulated, in the set
+    L2_m_d <- unique_pairs[, 2L]
+
+    # Not down-regulated (includes genes not in the set)
+    L2_w_d <- n - L2_m_d
+
+    # Level 3 ----
+
+    # Unique number of up-regulated genes and the unique number of
+    # down-regulated genes (separate, sorted vectors). Same as level 2 for
+    # non-directional gene sets.
+
+    # Up-regulated, in the set
+    L3_m <- unique(L2_m)
+
+    # Not up-regulated (includes genes not in the set)
+    L3_w <- n - L3_m
+
+    # Down-regulated, in the set
+    L3_m_d <- sort(unique(L2_m_d))
+
+    # Not down-regulated (includes genes not in the set)
+    L3_w_d <- n - L3_m_d
+
+    # Indices to map from lower levels to higher levels ----
+    map_L2_to_L1 <- match(
+      .szudzikPairing(m, m_d),
+      .szudzikPairing(L2_m, L2_m_d)
+    )
+
+    map_L3_to_L2 <- match(L2_m, L3_m) # up-regulated
+    map_L3_to_L2_d <- match(L2_m_d, L3_m_d) # down-regulated
+
+    out <- list(
+      "max_set_size" = max(L2_m + L2_m_d),
+      "L3_m" = L3_m,
+      "L3_w" = L3_w,
+      "L3_m_d" = L3_m_d,
+      "L3_w_d" = L3_w_d,
+      "map_L3_to_L2" = map_L3_to_L2,
+      "map_L3_to_L2_d" = map_L3_to_L2_d
+    )
   }
 
-  out <- list(
-    "rep_idx" = rep_idx,
-    "max_set_size" = max_set_size,
-    "theta_m_i" = theta_m_i,
-    "theta_w_i" = theta_w_i,
-    # These may be NULL
-    "theta_m_d_i" = theta_m_d_i,
-    "theta_w_d_i" = theta_w_d_i
-  )
+  out[["ES_end"]] <- which(!duplicated(map_L2_to_L1, fromLast = TRUE))
 
   return(out)
 }
 
 
-.create_list <- function(n) {
-  list(
-    "n_same_sign" = rep.int(0L, n),
-    "n_as_extreme" = rep.int(0L, n),
-    "sum_ES_perm" = rep.int(0, n)
-  )
-}
-
+# TODO update documentation
 
 #' @title Generate ssGSEA Results Table for a Single Sample
 #'
 #' @inheritParams fast_ssgsea
-#' @param seed_list list of random seeds for each batch. Ensures that the
-#'   permutation enrichment scores will be reproducible.
-#' @param y_i numeric vector of absolute gene-level values raised to the power
-#'   of \code{alpha} from the i-th sample.
-#' @param r_i numeric vector of ranks of the gene-level values from the i-th
+#' @param y numeric vector of absolute gene-level values from the i-th sample
+#'   raised to the power of \code{alpha}.
+#' @param r numeric vector of ranks of the gene-level values from the i-th
 #'   sample.
-#' @param n_i integer; number of genes in the i-th sample with nonmissing
-#'   values.
-#' @param sumRanks_i integer; the sum of \code{r_i}.
-#' @param m_i the number of genes with nonmissing values in each set from the
-#'   i-th sample.
-#' @param m_d_i the number of genes with nonmissing values not in each set from
+#' @param n integer; number of genes in the i-th sample with nonmissing values.
+#' @param sumRanks integer; the sum of \code{r}.
+#' @param m the number of genes with nonmissing values in each set from the i-th
+#'   sample.
+#' @param m_d the number of genes with nonmissing values not in each set from
 #'   the i-th sample.
 #' @param sets character vector of gene set labels.
-#' @param ES_i numeric vector of enrichment scores from the i-th sample.
-#' @param ES_u_i numeric vector of enrichment scores for the genes in each set
+#' @param ES numeric vector of enrichment scores from the i-th sample.
+#' @param ES_u numeric vector of enrichment scores for the genes in each set
 #'   that are expected to be up-regulated in the i-th sample. If not testing a
 #'   directional database, this will be \code{NULL}.
-#' @param ES_d_i numeric vector of enrichment scores for the genes in each set
+#' @param ES_d numeric vector of enrichment scores for the genes in each set
 #'   that are expected to be down-regulated in the i-th sample. If not testing a
 #'   directional database, this will be \code{NULL}.
 #'
@@ -809,139 +751,120 @@
 #' @importFrom data.table data.table := setorderv rbindlist
 #'
 #' @noRd
-.makeResultsTable <- function(alpha = 1,
+.makeResultsTable <- function(seed = NULL,
                               nperm = 1e5L,
+                              batch_size = 1000L,
                               min_size = 2L,
-                              seed_list,
-                              y_i,
-                              r_i,
-                              n_i,
-                              sumRanks_i,
-                              m_i,
-                              m_d_i,
+                              y,
+                              r,
+                              n,
+                              sumRanks,
+                              m,
+                              m_d,
                               sets,
-                              ES_i,
-                              ES_u_i,
-                              ES_d_i) {
-  # This will store the results for a single sample
+                              ES,
+                              ES_u,
+                              ES_d) {
   tab_i <- data.table(
     set = sets,
-    set_size = m_i,
-    m_d_i = m_d_i,
-    ES = ES_i,
-    row_order = seq_along(ES_i),
+    set_size = m,
+    m_d = m_d,
+    ES = ES,
+    row_order = seq_along(ES),
     stringsAsFactors = FALSE
   )
 
   # Sorting by set size and then ES allows for major optimizations
   setorderv(
     x = tab_i,
-    cols = c("set_size", "ES", "row_order"),
-    order = c(1L, 1L, 1L)
+    cols = intersect(
+      c("set_size", "m_d", "ES", "row_order"),
+      colnames(tab_i)
+    )
   )
 
   # Reordered
-  m_i <- tab_i[["set_size"]]
-  m_d_i <- tab_i[["m_d_i"]]
+  m <- tab_i[["set_size"]]
+  m_d <- tab_i[["m_d"]]
+  ES <- tab_i[["ES"]]
 
-  if (nperm == 0L) {
-    tab_i[, `:=`(
-      n_same_sign = rep.int(0L, length(ES_i)),
-      n_as_extreme = rep.int(0L, length(ES_i)),
-      sum_ES_perm = rep.int(0, length(ES_i))
-    )]
-  } else {
-    # Unique set sizes and other information for permutations
+  # Vectors needed to store information from the permutation tests to calculate
+  # NES and p-values
+  n_same_sign <- rep.int(0L, length(ES))
+  n_as_extreme <- rep.int(0L, length(ES))
+  sum_ES_perm <- rep.int(0, length(ES))
+
+  if (nperm != 0L) {
     size_list <- .getUniqueSizes(
-      n_i = n_i,
-      m_i = m_i,
-      m_d_i = m_d_i
+      n = n,
+      m = m,
+      m_d = m_d
     )
 
-    # Extract list components: rep_idx, max_set_size, theta_m_i, theta_w_i,
-    # theta_m_d_i, and theta_w_d_i
     list2env(x = size_list, envir = environment())
 
-    ES_ls <- split(
-      x = tab_i[["ES"]],
-      f = rep_idx
-    )
-
-    names(ES_ls) <- NULL
-
     # Indices of non-missing values for a particular column
-    element_indices <- which(r_i != 0L)
+    element_indices <- which(r != 0)
 
-    if (length(element_indices) != length(r_i)) {
-      r_i <- r_i[element_indices]
-      y_i <- y_i[element_indices]
+    if (length(element_indices) != length(r)) {
+      r <- r[element_indices]
+      y <- y[element_indices]
     }
 
-    # List to store results needed to calculate P-values and NES
-    perm_ls <- lapply(table(rep_idx), .create_list)
-    names(perm_ls) <- NULL
-
-    if (is.null(theta_m_d_i)) {
-      # Split permutations into batches to reduce memory consumption
-      for (seeds in seed_list) {
-        ES_perm <- .Cpp_calcESPerm(
-          alpha,
-          y_i,
-          r_i,
-          seeds,
-          max_set_size,
-          sumRanks_i,
-          theta_m_i,
-          theta_w_i
-        )
-
-        # Update perm_ls by reference
-        .Cpp_extractPermInfo(perm_ls, ES_ls, ES_perm)
-      }
+    if (is.null(m_d)) {
+      .Cpp_calc_ES_perm(
+        n_same_sign,
+        n_as_extreme,
+        sum_ES_perm,
+        seed,
+        nperm,
+        batch_size,
+        ES,
+        ES_end,
+        y,
+        r,
+        max_set_size,
+        sumRanks,
+        L2_m,
+        L2_w
+      )
     } else {
-      for (seeds in seed_list) {
-        # Directional gene sets
-        ES_perm <- .Cpp_calcESPerm_dir(
-          alpha,
-          y_i,
-          r_i,
-          seeds,
-          max_set_size,
-          sumRanks_i,
-          theta_m_i,
-          theta_w_i,
-          theta_m_d_i,
-          theta_w_d_i,
-          min_size
-        )
-
-        # Update perm_ls by reference
-        .Cpp_extractPermInfo(perm_ls, ES_ls, ES_perm)
-      }
-    } # end permutation batching
-
-    # Convert each list of vectors to a data.table to use rbindlist
-    for (i in seq_len(length(perm_ls))) {
-      class(perm_ls[[i]]) <- "data.table"
+      .Cpp_calc_ES_perm_dir(
+        n_same_sign,
+        n_as_extreme,
+        sum_ES_perm,
+        seed,
+        nperm,
+        batch_size,
+        ES,
+        ES_end,
+        y,
+        r,
+        max_set_size,
+        sumRanks,
+        L3_m,
+        L3_w,
+        L3_m_d,
+        L3_w_d,
+        map_L3_to_L2,
+        map_L3_to_L2_d
+      )
     }
-
-    perm_dt <- rbindlist(perm_ls, use.names = FALSE)
-
-    # Make columns for summary vectors in results
-    tab_i[, `:=`(
-      n_same_sign = perm_dt[["n_same_sign"]],
-      n_as_extreme = perm_dt[["n_as_extreme"]],
-      sum_ES_perm = perm_dt[["sum_ES_perm"]]
-    )]
   } # end permutations
+
+  tab_i[, `:=`(
+    n_same_sign = n_same_sign,
+    n_as_extreme = n_as_extreme,
+    sum_ES_perm = sum_ES_perm
+  )]
 
   setorderv(tab_i, cols = "row_order", order = 1L) # original row order
 
-  if (!is.null(m_d_i)) {
+  if (!is.null(m_d)) {
     tab_i[, `:=`(
-      set_size = set_size + m_d_i,
-      ES_u = ES_u_i,
-      ES_d = ES_d_i
+      set_size = set_size + m_d,
+      ES_u = ES_u,
+      ES_d = ES_d
     )]
   }
 
@@ -1046,6 +969,15 @@
 
   tab[
     n_same_sign == 0L, # only happens when nperm is very small
+    `:=`(
+      NES = NA_real_,
+      p_value = NA_real_
+    )
+  ]
+
+  # NOTE this shouldn't happen. Throw an error instead?
+  tab[
+    is.na(NES) | is.infinite(NES),
     `:=`(
       NES = NA_real_,
       p_value = NA_real_

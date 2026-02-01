@@ -11,18 +11,6 @@ Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
 Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
-// matmult_dense
-arma::mat matmult_dense(const arma::mat& X, const arma::mat& Y);
-RcppExport SEXP _fast_ssgsea_matmult_dense(SEXP XSEXP, SEXP YSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const arma::mat& >::type X(XSEXP);
-    Rcpp::traits::input_parameter< const arma::mat& >::type Y(YSEXP);
-    rcpp_result_gen = Rcpp::wrap(matmult_dense(X, Y));
-    return rcpp_result_gen;
-END_RCPP
-}
 // matmult_sparse
 arma::mat matmult_sparse(const arma::mat& X, const arma::sp_mat& Y);
 RcppExport SEXP _fast_ssgsea_matmult_sparse(SEXP XSEXP, SEXP YSEXP) {
@@ -52,65 +40,62 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// calcESPerm
-arma::mat calcESPerm(const double alpha, const arma::vec& y_i, const arma::vec& r_i, const IntegerVector& seeds, const size_t max_set_size, const double sumRanks_i, const arma::uvec& theta_m_i, const arma::vec& theta_w_i);
-RcppExport SEXP _fast_ssgsea_calcESPerm(SEXP alphaSEXP, SEXP y_iSEXP, SEXP r_iSEXP, SEXP seedsSEXP, SEXP max_set_sizeSEXP, SEXP sumRanks_iSEXP, SEXP theta_m_iSEXP, SEXP theta_w_iSEXP) {
+// calc_ES_perm
+void calc_ES_perm(IntegerVector& n_same_sign, IntegerVector& n_as_extreme, NumericVector& sum_ES_perm, const Nullable<IntegerVector> seed, const int nperm, int batch_size, const NumericVector& ES, const IntegerVector& ES_end, const NumericVector& y, const NumericVector& r, const int max_set_size, const double sum_ranks, const IntegerVector& L2_m, const IntegerVector& L2_w);
+RcppExport SEXP _fast_ssgsea_calc_ES_perm(SEXP n_same_signSEXP, SEXP n_as_extremeSEXP, SEXP sum_ES_permSEXP, SEXP seedSEXP, SEXP npermSEXP, SEXP batch_sizeSEXP, SEXP ESSEXP, SEXP ES_endSEXP, SEXP ySEXP, SEXP rSEXP, SEXP max_set_sizeSEXP, SEXP sum_ranksSEXP, SEXP L2_mSEXP, SEXP L2_wSEXP) {
 BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const double >::type alpha(alphaSEXP);
-    Rcpp::traits::input_parameter< const arma::vec& >::type y_i(y_iSEXP);
-    Rcpp::traits::input_parameter< const arma::vec& >::type r_i(r_iSEXP);
-    Rcpp::traits::input_parameter< const IntegerVector& >::type seeds(seedsSEXP);
-    Rcpp::traits::input_parameter< const size_t >::type max_set_size(max_set_sizeSEXP);
-    Rcpp::traits::input_parameter< const double >::type sumRanks_i(sumRanks_iSEXP);
-    Rcpp::traits::input_parameter< const arma::uvec& >::type theta_m_i(theta_m_iSEXP);
-    Rcpp::traits::input_parameter< const arma::vec& >::type theta_w_i(theta_w_iSEXP);
-    rcpp_result_gen = Rcpp::wrap(calcESPerm(alpha, y_i, r_i, seeds, max_set_size, sumRanks_i, theta_m_i, theta_w_i));
-    return rcpp_result_gen;
+    Rcpp::traits::input_parameter< IntegerVector& >::type n_same_sign(n_same_signSEXP);
+    Rcpp::traits::input_parameter< IntegerVector& >::type n_as_extreme(n_as_extremeSEXP);
+    Rcpp::traits::input_parameter< NumericVector& >::type sum_ES_perm(sum_ES_permSEXP);
+    Rcpp::traits::input_parameter< const Nullable<IntegerVector> >::type seed(seedSEXP);
+    Rcpp::traits::input_parameter< const int >::type nperm(npermSEXP);
+    Rcpp::traits::input_parameter< int >::type batch_size(batch_sizeSEXP);
+    Rcpp::traits::input_parameter< const NumericVector& >::type ES(ESSEXP);
+    Rcpp::traits::input_parameter< const IntegerVector& >::type ES_end(ES_endSEXP);
+    Rcpp::traits::input_parameter< const NumericVector& >::type y(ySEXP);
+    Rcpp::traits::input_parameter< const NumericVector& >::type r(rSEXP);
+    Rcpp::traits::input_parameter< const int >::type max_set_size(max_set_sizeSEXP);
+    Rcpp::traits::input_parameter< const double >::type sum_ranks(sum_ranksSEXP);
+    Rcpp::traits::input_parameter< const IntegerVector& >::type L2_m(L2_mSEXP);
+    Rcpp::traits::input_parameter< const IntegerVector& >::type L2_w(L2_wSEXP);
+    calc_ES_perm(n_same_sign, n_as_extreme, sum_ES_perm, seed, nperm, batch_size, ES, ES_end, y, r, max_set_size, sum_ranks, L2_m, L2_w);
+    return R_NilValue;
 END_RCPP
 }
-// calcESPerm_dir
-arma::mat calcESPerm_dir(const double alpha, const arma::vec& y_i, const arma::vec& r_i, const IntegerVector& seeds, const size_t max_set_size, const double sumRanks_i, const arma::uvec& theta_m_i, const arma::vec& theta_w_i, const arma::uvec& theta_m_d_i, const arma::vec& theta_w_d_i, const arma::uword& min_size);
-RcppExport SEXP _fast_ssgsea_calcESPerm_dir(SEXP alphaSEXP, SEXP y_iSEXP, SEXP r_iSEXP, SEXP seedsSEXP, SEXP max_set_sizeSEXP, SEXP sumRanks_iSEXP, SEXP theta_m_iSEXP, SEXP theta_w_iSEXP, SEXP theta_m_d_iSEXP, SEXP theta_w_d_iSEXP, SEXP min_sizeSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const double >::type alpha(alphaSEXP);
-    Rcpp::traits::input_parameter< const arma::vec& >::type y_i(y_iSEXP);
-    Rcpp::traits::input_parameter< const arma::vec& >::type r_i(r_iSEXP);
-    Rcpp::traits::input_parameter< const IntegerVector& >::type seeds(seedsSEXP);
-    Rcpp::traits::input_parameter< const size_t >::type max_set_size(max_set_sizeSEXP);
-    Rcpp::traits::input_parameter< const double >::type sumRanks_i(sumRanks_iSEXP);
-    Rcpp::traits::input_parameter< const arma::uvec& >::type theta_m_i(theta_m_iSEXP);
-    Rcpp::traits::input_parameter< const arma::vec& >::type theta_w_i(theta_w_iSEXP);
-    Rcpp::traits::input_parameter< const arma::uvec& >::type theta_m_d_i(theta_m_d_iSEXP);
-    Rcpp::traits::input_parameter< const arma::vec& >::type theta_w_d_i(theta_w_d_iSEXP);
-    Rcpp::traits::input_parameter< const arma::uword& >::type min_size(min_sizeSEXP);
-    rcpp_result_gen = Rcpp::wrap(calcESPerm_dir(alpha, y_i, r_i, seeds, max_set_size, sumRanks_i, theta_m_i, theta_w_i, theta_m_d_i, theta_w_d_i, min_size));
-    return rcpp_result_gen;
-END_RCPP
-}
-// extractPermInfo
-void extractPermInfo(List ls, const List ES_ls, const NumericMatrix& ES_perm);
-RcppExport SEXP _fast_ssgsea_extractPermInfo(SEXP lsSEXP, SEXP ES_lsSEXP, SEXP ES_permSEXP) {
+// calc_ES_perm_dir
+void calc_ES_perm_dir(IntegerVector& n_same_sign, IntegerVector& n_as_extreme, NumericVector& sum_ES_perm, const Nullable<IntegerVector> seed, const int nperm, int batch_size, const NumericVector& ES, const IntegerVector& ES_end, const NumericVector& y, const NumericVector& r, const int max_set_size, const double sum_ranks, const IntegerVector& L3_m, const IntegerVector& L3_w, const IntegerVector& L3_m_down, const IntegerVector& L3_w_down, IntegerVector& map_L3_to_L2, IntegerVector& map_L3_to_L2_down);
+RcppExport SEXP _fast_ssgsea_calc_ES_perm_dir(SEXP n_same_signSEXP, SEXP n_as_extremeSEXP, SEXP sum_ES_permSEXP, SEXP seedSEXP, SEXP npermSEXP, SEXP batch_sizeSEXP, SEXP ESSEXP, SEXP ES_endSEXP, SEXP ySEXP, SEXP rSEXP, SEXP max_set_sizeSEXP, SEXP sum_ranksSEXP, SEXP L3_mSEXP, SEXP L3_wSEXP, SEXP L3_m_downSEXP, SEXP L3_w_downSEXP, SEXP map_L3_to_L2SEXP, SEXP map_L3_to_L2_downSEXP) {
 BEGIN_RCPP
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< List >::type ls(lsSEXP);
-    Rcpp::traits::input_parameter< const List >::type ES_ls(ES_lsSEXP);
-    Rcpp::traits::input_parameter< const NumericMatrix& >::type ES_perm(ES_permSEXP);
-    extractPermInfo(ls, ES_ls, ES_perm);
+    Rcpp::traits::input_parameter< IntegerVector& >::type n_same_sign(n_same_signSEXP);
+    Rcpp::traits::input_parameter< IntegerVector& >::type n_as_extreme(n_as_extremeSEXP);
+    Rcpp::traits::input_parameter< NumericVector& >::type sum_ES_perm(sum_ES_permSEXP);
+    Rcpp::traits::input_parameter< const Nullable<IntegerVector> >::type seed(seedSEXP);
+    Rcpp::traits::input_parameter< const int >::type nperm(npermSEXP);
+    Rcpp::traits::input_parameter< int >::type batch_size(batch_sizeSEXP);
+    Rcpp::traits::input_parameter< const NumericVector& >::type ES(ESSEXP);
+    Rcpp::traits::input_parameter< const IntegerVector& >::type ES_end(ES_endSEXP);
+    Rcpp::traits::input_parameter< const NumericVector& >::type y(ySEXP);
+    Rcpp::traits::input_parameter< const NumericVector& >::type r(rSEXP);
+    Rcpp::traits::input_parameter< const int >::type max_set_size(max_set_sizeSEXP);
+    Rcpp::traits::input_parameter< const double >::type sum_ranks(sum_ranksSEXP);
+    Rcpp::traits::input_parameter< const IntegerVector& >::type L3_m(L3_mSEXP);
+    Rcpp::traits::input_parameter< const IntegerVector& >::type L3_w(L3_wSEXP);
+    Rcpp::traits::input_parameter< const IntegerVector& >::type L3_m_down(L3_m_downSEXP);
+    Rcpp::traits::input_parameter< const IntegerVector& >::type L3_w_down(L3_w_downSEXP);
+    Rcpp::traits::input_parameter< IntegerVector& >::type map_L3_to_L2(map_L3_to_L2SEXP);
+    Rcpp::traits::input_parameter< IntegerVector& >::type map_L3_to_L2_down(map_L3_to_L2_downSEXP);
+    calc_ES_perm_dir(n_same_sign, n_as_extreme, sum_ES_perm, seed, nperm, batch_size, ES, ES_end, y, r, max_set_size, sum_ranks, L3_m, L3_w, L3_m_down, L3_w_down, map_L3_to_L2, map_L3_to_L2_down);
     return R_NilValue;
 END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_fast_ssgsea_matmult_dense", (DL_FUNC) &_fast_ssgsea_matmult_dense, 2},
     {"_fast_ssgsea_matmult_sparse", (DL_FUNC) &_fast_ssgsea_matmult_sparse, 2},
     {"_fast_ssgsea_calcES", (DL_FUNC) &_fast_ssgsea_calcES, 7},
-    {"_fast_ssgsea_calcESPerm", (DL_FUNC) &_fast_ssgsea_calcESPerm, 8},
-    {"_fast_ssgsea_calcESPerm_dir", (DL_FUNC) &_fast_ssgsea_calcESPerm_dir, 11},
-    {"_fast_ssgsea_extractPermInfo", (DL_FUNC) &_fast_ssgsea_extractPermInfo, 3},
+    {"_fast_ssgsea_calc_ES_perm", (DL_FUNC) &_fast_ssgsea_calc_ES_perm, 14},
+    {"_fast_ssgsea_calc_ES_perm_dir", (DL_FUNC) &_fast_ssgsea_calc_ES_perm_dir, 18},
     {NULL, NULL, 0}
 };
 
