@@ -10,7 +10,7 @@ param_list <- list(
   "maxSetSize" = c(500L, 1000L),
   "nSets" = c(1e3L, 1e4L, 5e4L),
   "nperm" = c(1e4L, 1e5L, 1e6L),
-  "alpha" = c(0, 1)
+  "alpha" = 1
 )
 
 comb_df <- expand.grid(param_list)
