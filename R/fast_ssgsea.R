@@ -185,7 +185,6 @@ fast_ssgsea <- function(X,
 
   # Enrichment score matrices with samples as rows and gene sets as columns
   ES_list <- .calcES(
-    alpha = alpha,
     Y_prime = Y[, rownames(A), drop = FALSE], # Y'
     R_prime = R[, rownames(A), drop = FALSE], # R'
     sumRanks = sumRanks,

@@ -34,10 +34,6 @@ NULL
 
 #' @title Core of the .calcES R function
 #'
-#' @param alpha numeric (\eqn{\geq 0}); the power to which the absolute values
-#'   of the entries of \code{X} were raised to construct \code{Y}. If
-#'   \code{alpha=0}, computation time may be significantly reduced, though all
-#'   genes in each set will contribute equally.
 #' @param Y absolute values of the matrix \code{t(X)} raised to the power of
 #'   \code{alpha}. Missing values are then imputed with 0.
 #' @param R matrix of ranks of the values in each row of \code{X}. Missing
@@ -258,8 +254,8 @@ NULL
     .Call(`_fast_ssgsea_matmult_sparse`, X, Y)
 }
 
-.Cpp_calcES <- function(alpha, min_size, Y, R, sumRanks, A, M, W) {
-    .Call(`_fast_ssgsea_calcES`, alpha, min_size, Y, R, sumRanks, A, M, W)
+.Cpp_calcES <- function(min_size, Y, R, sumRanks, A, M, W) {
+    .Call(`_fast_ssgsea_calcES`, min_size, Y, R, sumRanks, A, M, W)
 }
 
 .Cpp_calcESPerm <- function(alpha, y_i, r_i, seeds, max_set_size, sumRanks_i, theta_m_i, theta_w_i) {

@@ -501,8 +501,7 @@
 #' @author Tyler Sagendorf
 #'
 #' @noRd
-.calcES <- function(alpha = 1,
-                    min_size = 2L,
+.calcES <- function(min_size = 2L,
                     Y_prime,
                     R_prime,
                     sumRanks,
@@ -514,7 +513,6 @@
                     W_d = NULL) {
   # Sample by gene set matrix of enrichment scores
   ES_u <- .Cpp_calcES(
-    alpha,
     min_size,
     Y_prime,
     R_prime,
@@ -526,7 +524,6 @@
 
   if (!is.null(A_d)) { # directional database
     ES_d <- .Cpp_calcES(
-      alpha,
       min_size,
       Y_prime,
       R_prime,

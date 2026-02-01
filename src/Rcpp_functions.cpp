@@ -52,10 +52,6 @@ arma::mat matmult_sparse(const arma::mat& X,
 
 //' @title Core of the .calcES R function
 //'
-//' @param alpha numeric (\eqn{\geq 0}); the power to which the absolute values
-//'   of the entries of \code{X} were raised to construct \code{Y}. If
-//'   \code{alpha=0}, computation time may be significantly reduced, though all
-//'   genes in each set will contribute equally.
 //' @param Y absolute values of the matrix \code{t(X)} raised to the power of
 //'   \code{alpha}. Missing values are then imputed with 0.
 //' @param R matrix of ranks of the values in each row of \code{X}. Missing
@@ -89,8 +85,7 @@ arma::mat matmult_sparse(const arma::mat& X,
 //' @noRd
 
 // [[Rcpp::export(.Cpp_calcES)]]
-arma::mat calcES(const double alpha,
-                 const int min_size,
+arma::mat calcES(const int min_size,
                  const arma::mat& Y,
                  const arma::mat& R,
                  const arma::colvec& sumRanks,
@@ -98,22 +93,11 @@ arma::mat calcES(const double alpha,
                  const arma::mat& M,
                  const arma::mat& W)
 {
+  // % is Hadamard product, * is dot product, / is Hadamard division
   arma::mat RA = R * A;
-
-  arma::mat ES = RA;
-
-  if (alpha == 0.0) {
-    ES /= M;
-  } else {
-    // % is Hadamard product, * is dot product, / is Hadamard division
-    ES = ((R % Y) * A) / (Y * A);
-  }
-
-  // Subtract the total sum of ranks in each sample from the corresponding row
-  // of R * A
   RA.each_col() -= sumRanks;
 
-  ES += RA / W;
+  arma::mat ES = ((R % Y) * A) / (Y * A) + (RA / W);
 
   // If the set has fewer than min_size elements with nonmissing values, the ES
   // will be 0. Only applies to directional gene sets.

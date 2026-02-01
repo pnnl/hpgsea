@@ -36,12 +36,11 @@ BEGIN_RCPP
 END_RCPP
 }
 // calcES
-arma::mat calcES(const double alpha, const int min_size, const arma::mat& Y, const arma::mat& R, const arma::colvec& sumRanks, const arma::sp_mat& A, const arma::mat& M, const arma::mat& W);
-RcppExport SEXP _fast_ssgsea_calcES(SEXP alphaSEXP, SEXP min_sizeSEXP, SEXP YSEXP, SEXP RSEXP, SEXP sumRanksSEXP, SEXP ASEXP, SEXP MSEXP, SEXP WSEXP) {
+arma::mat calcES(const int min_size, const arma::mat& Y, const arma::mat& R, const arma::colvec& sumRanks, const arma::sp_mat& A, const arma::mat& M, const arma::mat& W);
+RcppExport SEXP _fast_ssgsea_calcES(SEXP min_sizeSEXP, SEXP YSEXP, SEXP RSEXP, SEXP sumRanksSEXP, SEXP ASEXP, SEXP MSEXP, SEXP WSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const double >::type alpha(alphaSEXP);
     Rcpp::traits::input_parameter< const int >::type min_size(min_sizeSEXP);
     Rcpp::traits::input_parameter< const arma::mat& >::type Y(YSEXP);
     Rcpp::traits::input_parameter< const arma::mat& >::type R(RSEXP);
@@ -49,7 +48,7 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const arma::sp_mat& >::type A(ASEXP);
     Rcpp::traits::input_parameter< const arma::mat& >::type M(MSEXP);
     Rcpp::traits::input_parameter< const arma::mat& >::type W(WSEXP);
-    rcpp_result_gen = Rcpp::wrap(calcES(alpha, min_size, Y, R, sumRanks, A, M, W));
+    rcpp_result_gen = Rcpp::wrap(calcES(min_size, Y, R, sumRanks, A, M, W));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -108,7 +107,7 @@ END_RCPP
 static const R_CallMethodDef CallEntries[] = {
     {"_fast_ssgsea_matmult_dense", (DL_FUNC) &_fast_ssgsea_matmult_dense, 2},
     {"_fast_ssgsea_matmult_sparse", (DL_FUNC) &_fast_ssgsea_matmult_sparse, 2},
-    {"_fast_ssgsea_calcES", (DL_FUNC) &_fast_ssgsea_calcES, 8},
+    {"_fast_ssgsea_calcES", (DL_FUNC) &_fast_ssgsea_calcES, 7},
     {"_fast_ssgsea_calcESPerm", (DL_FUNC) &_fast_ssgsea_calcESPerm, 8},
     {"_fast_ssgsea_calcESPerm_dir", (DL_FUNC) &_fast_ssgsea_calcESPerm_dir, 11},
     {"_fast_ssgsea_extractPermInfo", (DL_FUNC) &_fast_ssgsea_extractPermInfo, 3},
