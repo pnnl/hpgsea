@@ -71,10 +71,10 @@
       length(nperm) != 1L ||
       is.na(nperm) ||
       nperm < 0L ||
-      nperm > 1e6L || # arbitrary limit on number of permutations
+      nperm > 2e9L || # arbitrary limit on number of permutations
       nperm %% 1 != 0 # decimal number
   ) {
-    stop("`nperm` must be a whole number between 0 and 1 million.")
+    stop("`nperm` must be a whole number between 0 and 2 billion.")
   }
 
   # batch_size gets modified later, outside of this function

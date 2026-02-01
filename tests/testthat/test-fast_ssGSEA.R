@@ -1,14 +1,14 @@
 # These tests are a mess. Some of them can be moved to separate scripts for
 # their corresponding internal function.
 
-test_that("nperm <= 1 million", {
+test_that("nperm <= 2 billion", {
   err <- capture_error(
-    fast_ssgsea(X = X, gene_sets = gene_sets, nperm = 1e6L + 1L)
+    fast_ssgsea(X = X, gene_sets = gene_sets, nperm = 2e9L + 1L)
   )$message
 
   expect_identical(
     object = err,
-    expected = "`nperm` must be a whole number between 0 and 1 million."
+    expected = "`nperm` must be a whole number between 0 and 2 billion."
   )
 })
 

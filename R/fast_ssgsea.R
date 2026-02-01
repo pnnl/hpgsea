@@ -15,7 +15,8 @@
 #'   \code{alpha=0}, computation time may be significantly reduced, though all
 #'   genes/molecules in each set will contribute equally.
 #' @param nperm integer (\eqn{\geq 0}); the number of permutations used to
-#'   calculate the normalized enrichment scores (NES) and p-values.
+#'   calculate the normalized enrichment scores (NES) and p-values. Between 0
+#'   and 2 billion.
 #' @param batch_size integer (\eqn{\gg 1} and \eqn{\leq} \code{nperm}); the
 #'   maximum number of permutations run as a single batch. It is not recommended
 #'   to change this.
