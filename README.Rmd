@@ -119,16 +119,30 @@ print(sessionInfo(), locale = FALSE, tzone = FALSE)
 
 ## Performance
 
-The `fast.ssgsea` R package utilizes linear algebra and ideas from Fast Gene Set Enrichment Analysis [@korotkevich-fast-2021] to greatly reduce the runtime.
+### fast-ssGSEA
 
-Tests were performed on a desktop computer with an AMD Ryzen 5 7600X CPU (6 cores, 12 threads) at 4.7 GHz. Different combinations of the number of gene sets, maximum gene set size, number of permutations, and value of the $\alpha$ parameter (the weighting exponent) were tested in a random order (3 replicates each) to minimize the influence of previous runs.
+The `fast.ssgsea` R package utilizes linear algebra and ideas from Fast Gene Set Enrichment Analysis (FGSEA) [@korotkevich-fast-2021] to greatly reduce the runtime.
+
+Tests were performed on a desktop computer with an AMD Ryzen 5 7600X CPU running at 4.7 GHz, single threaded. Different combinations of the number of gene sets, maximum gene set size, and the number of permutations were tested in a random order (3 replicates each) to minimize the influence of previous runs. The R scripts and data are available in the simulation/ folder.
 
 ```{r, echo=FALSE}
-fig_cap <- "Runtime of fast_ssgsea with A) 10,000, B) 100,000, or C) 1,000,000 permutations."
+fig1_cap <- "Runtime of fast_ssgsea with A) 10,000, B) 100,000, or C) 1,000,000 permutations."
 ```
 
-```{r, echo=FALSE, fig.cap=fig_cap}
+```{r, echo=FALSE, fig.cap=fig1_cap}
 knitr::include_graphics("./man/figures/README-figure-1.png")
+```
+
+### FGSEA-simple
+
+The same tests were also carried out using the simple implementation of FGSEA (`fgsea::fgseaSimple`). Like fast-ssGSEA, FGSEA-simple relies purely on the number of permutations to calculate p-values, which limits how small they can become. While FGSEA-simple is instead meant to be run with a smaller number of permutations and followed up with FGSEA-multilevel (the method capable of calculating arbitrarily small p-values), these results serve to illustrate the extreme difference in runtime between the two approaches. This difference is largely the result of changes to how the ES is defined.
+
+```{r, echo=FALSE}
+fig2_cap <- "Runtime of fgsea::fgseaSimple with A) 10,000, B) 100,000, or C) 1,000,000 permutations."
+```
+
+```{r, echo=FALSE, fig.cap=fig2_cap}
+knitr::include_graphics("./man/figures/README-figure-2.png")
 ```
 
 ## References

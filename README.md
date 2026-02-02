@@ -9,6 +9,8 @@
     - [Runtime and Results](#runtime-and-results)
     - [Session Information](#session-information)
   - [Performance](#performance)
+    - [fast-ssGSEA](#fast-ssgsea)
+    - [FGSEA-simple](#fgsea-simple)
   - [References](#references)
 
 # fast.ssgsea
@@ -130,7 +132,7 @@ system.time({
 ```
 
     ##    user  system elapsed 
-    ##   4.137   0.962   4.650
+    ##   2.245   0.377   2.376
 
 ``` r
 str(res)
@@ -138,14 +140,14 @@ str(res)
 
     ## 'data.frame':    20000 obs. of  9 variables:
     ##  $ sample      : Factor w/ 1 level "sample1": 1 1 1 1 1 1 1 1 1 1 ...
-    ##  $ set         : chr  "set18791" "set16136" "set19084" "set2830" ...
-    ##  $ set_size    : int  138 801 841 163 706 749 450 87 161 761 ...
-    ##  $ ES          : num  -1866 709 698 1584 759 ...
-    ##  $ NES         : num  -5.3 4.65 4.68 4.76 4.68 ...
-    ##  $ n_same_sign : int  49042 52788 52782 50951 52785 47193 47813 50722 48979 47243 ...
-    ##  $ n_as_extreme: int  1 8 8 9 11 10 13 14 18 20 ...
-    ##  $ p_value     : num  4.08e-05 1.70e-04 1.71e-04 1.96e-04 2.27e-04 ...
-    ##  $ adj_p_value : num  0.739 0.739 0.739 0.739 0.739 ...
+    ##  $ set         : chr  "set18791" "set2830" "set19084" "set18223" ...
+    ##  $ set_size    : int  138 163 841 706 801 87 503 409 320 450 ...
+    ##  $ ES          : num  -1866 1584 698 759 709 ...
+    ##  $ NES         : num  -5.34 4.78 4.66 4.67 4.62 ...
+    ##  $ n_same_sign : int  49235 51107 52907 52784 52813 50461 52351 51847 51728 47859 ...
+    ##  $ n_as_extreme: int  1 3 8 9 12 12 16 19 19 19 ...
+    ##  $ p_value     : num  4.06e-05 7.83e-05 1.70e-04 1.89e-04 2.46e-04 ...
+    ##  $ adj_p_value : num  0.783 0.783 0.836 0.836 0.836 ...
 
 ### Session Information
 
@@ -158,44 +160,69 @@ print(sessionInfo(), locale = FALSE, tzone = FALSE)
     ## Running under: Linux Mint 22.1
     ## 
     ## Matrix products: default
-    ## BLAS:   /usr/lib/x86_64-linux-gnu/blas/libblas.so.3.12.0 
-    ## LAPACK: /usr/lib/x86_64-linux-gnu/lapack/liblapack.so.3.12.0  LAPACK version 3.12.0
+    ## BLAS:   /usr/lib/x86_64-linux-gnu/openblas-pthread/libblas.so.3 
+    ## LAPACK: /usr/lib/x86_64-linux-gnu/openblas-pthread/libopenblasp-r0.3.26.so;  LAPACK version 3.12.0
     ## 
     ## attached base packages:
     ## [1] stats     graphics  grDevices utils     datasets  methods   base     
     ## 
     ## other attached packages:
-    ## [1] dqrng_0.4.1            fast.ssgsea_0.1.0.9022
+    ## [1] dqrng_0.4.1            fast.ssgsea_0.1.0.9025
     ## 
     ## loaded via a namespace (and not attached):
-    ##  [1] digest_0.6.37          RcppArmadillo_15.0.2-2 fastmap_1.2.0         
-    ##  [4] xfun_0.53              Matrix_1.7-4           lattice_0.22-7        
-    ##  [7] knitr_1.50             htmltools_0.5.8.1      rmarkdown_2.29        
-    ## [10] cli_3.6.5              grid_4.5.2             data.table_1.17.8     
-    ## [13] compiler_4.5.2         rstudioapi_0.17.1      tools_4.5.2           
-    ## [16] evaluate_1.0.5         Rcpp_1.1.0             yaml_2.3.10           
-    ## [19] rlang_1.1.6
+    ##  [1] digest_0.6.37          RcppArmadillo_15.0.2-2 collapse_2.1.3        
+    ##  [4] fastmap_1.2.0          xfun_0.53              Matrix_1.7-4          
+    ##  [7] lattice_0.22-7         parallel_4.5.2         knitr_1.50            
+    ## [10] htmltools_0.5.8.1      rmarkdown_2.29         cli_3.6.5             
+    ## [13] grid_4.5.2             data.table_1.17.8      compiler_4.5.2        
+    ## [16] rstudioapi_0.17.1      tools_4.5.2            evaluate_1.0.5        
+    ## [19] Rcpp_1.1.0             yaml_2.3.10            rlang_1.1.6
 
 ## Performance
 
+### fast-ssGSEA
+
 The `fast.ssgsea` R package utilizes linear algebra and ideas from Fast
-Gene Set Enrichment Analysis ([Korotkevich et al.
+Gene Set Enrichment Analysis (FGSEA) ([Korotkevich et al.
 2021](#ref-korotkevich-fast-2021)) to greatly reduce the runtime.
 
 Tests were performed on a desktop computer with an AMD Ryzen 5 7600X CPU
-(6 cores, 12 threads) at 4.7 GHz. Different combinations of the number
-of gene sets, maximum gene set size, number of permutations, and value
-of the $\alpha$ parameter (the weighting exponent) were tested in a
-random order (3 replicates each) to minimize the influence of previous
-runs.
+running at 4.7 GHz, single threaded. Different combinations of the
+number of gene sets, maximum gene set size, and the number of
+permutations were tested in a random order (3 replicates each) to
+minimize the influence of previous runs. The R scripts and data are
+available in the simulation/ folder.
 
 <div class="figure" style="text-align: center">
 
-<img src="./man/figures/README-figure-1.png" alt="Runtime of fast_ssgsea with A) 10,000, B) 100,000, or C) 1,000,000 permutations." width="648" />
+<img src="./man/figures/README-figure-1.png" alt="Runtime of fast_ssgsea with A) 10,000, B) 100,000, or C) 1,000,000 permutations." width="864" />
 <p class="caption">
 
 Runtime of fast_ssgsea with A) 10,000, B) 100,000, or C) 1,000,000
 permutations.
+</p>
+
+</div>
+
+### FGSEA-simple
+
+The same tests were also carried out using the simple implementation of
+FGSEA (`fgsea::fgseaSimple`). Like fast-ssGSEA, FGSEA-simple relies
+purely on the number of permutations to calculate p-values, which limits
+how small they can become. While FGSEA-simple is instead meant to be run
+with a smaller number of permutations and followed up with
+FGSEA-multilevel (the method capable of calculating arbitrarily small
+p-values), these results serve to illustrate the extreme difference in
+runtime between the two approaches. This difference is largely the
+result of changes to how the ES is defined.
+
+<div class="figure" style="text-align: center">
+
+<img src="./man/figures/README-figure-2.png" alt="Runtime of fgsea::fgseaSimple with A) 10,000, B) 100,000, or C) 1,000,000 permutations." width="864" />
+<p class="caption">
+
+Runtime of fgsea::fgseaSimple with A) 10,000, B) 100,000, or C)
+1,000,000 permutations.
 </p>
 
 </div>

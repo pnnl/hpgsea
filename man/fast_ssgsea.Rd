@@ -34,7 +34,8 @@ of the entries of \code{X} will be raised. Affects the ES calculation. If
 genes/molecules in each set will contribute equally.}
 
 \item{nperm}{integer (\eqn{\geq 0}); the number of permutations used to
-calculate the normalized enrichment scores (NES) and p-values.}
+calculate the normalized enrichment scores (NES) and p-values. Between 0
+and 2 billion.}
 
 \item{batch_size}{integer (\eqn{\gg 1} and \eqn{\leq} \code{nperm}); the
 maximum number of permutations run as a single batch. It is not recommended

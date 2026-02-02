@@ -15,7 +15,8 @@
 #'   \code{alpha=0}, computation time may be significantly reduced, though all
 #'   genes/molecules in each set will contribute equally.
 #' @param nperm integer (\eqn{\geq 0}); the number of permutations used to
-#'   calculate the normalized enrichment scores (NES) and p-values.
+#'   calculate the normalized enrichment scores (NES) and p-values. Between 0
+#'   and 2 billion.
 #' @param batch_size integer (\eqn{\gg 1} and \eqn{\leq} \code{nperm}); the
 #'   maximum number of permutations run as a single batch. It is not recommended
 #'   to change this.
@@ -139,6 +140,8 @@ fast_ssgsea <- function(X,
     n_genes = ncol(X)
   )
 
+  batch_size <- max(1L, min(batch_size, nperm))
+
   alternative <- match.arg(
     arg = alternative,
     choices = c("two.sided", "less", "greater")
@@ -148,7 +151,8 @@ fast_ssgsea <- function(X,
   # alphabetically.
   A_list <- .sparseIncidence(
     gene_sets = gene_sets,
-    background = colnames(X)
+    background = colnames(X),
+    min_size = min_size
   )
 
   list2env(x = A_list, envir = environment()) # A, A_d
@@ -179,12 +183,11 @@ fast_ssgsea <- function(X,
     max_size = max_size
   )
 
-  # Extract list components: M, W, M_d, W_d, A, A_d, max_size
+  # Extract list components: M, W, M_d, W_d, A, A_d
   list2env(x = M_list, envir = environment())
 
   # Enrichment score matrices with samples as rows and gene sets as columns
   ES_list <- .calcES(
-    alpha = alpha,
     Y_prime = Y[, rownames(A), drop = FALSE], # Y'
     R_prime = R[, rownames(A), drop = FALSE], # R'
     sumRanks = sumRanks,
@@ -200,33 +203,25 @@ fast_ssgsea <- function(X,
   # Extract matrices ES, ES_u, and ES_d
   list2env(x = ES_list, envir = environment())
 
-  # Permutations are run in batches to avoid initializing a matrix with nperm
-  # columns all at once.
-  seed_list <- .createSeedList(
-    nperm = nperm,
-    batch_size = batch_size,
-    seed = seed
-  )
-
   # List of results for each sample
   tab <- lapply(seq_len(nrow(X)), function(i) {
     # Calculate permutation ES and generate table of results
     tab_i <- .makeResultsTable(
-      alpha = alpha,
+      seed = seed,
       nperm = nperm,
+      batch_size = batch_size,
       min_size = min_size,
-      seed_list = seed_list,
-      y_i = Y[i, , drop = TRUE],
-      r_i = R[i, , drop = TRUE],
-      n_i = n[i],
-      sumRanks_i = sumRanks[i],
-      m_i = M[i, , drop = TRUE],
-      m_d_i = M_d[i, , drop = TRUE], # may be NULL
+      y = Y[i, , drop = TRUE],
+      r = R[i, , drop = TRUE],
+      n = n[i],
+      sumRanks = sumRanks[i],
+      m = M[i, , drop = TRUE],
+      m_d = M_d[i, , drop = TRUE], # may be NULL
       sets = colnames(A),
-      ES_i = ES[i, , drop = TRUE],
+      ES = ES[i, , drop = TRUE],
       # These may be NULL
-      ES_u_i = ES_u[i, , drop = TRUE],
-      ES_d_i = ES_d[i, , drop = TRUE]
+      ES_u = ES_u[i, , drop = TRUE],
+      ES_d = ES_d[i, , drop = TRUE]
     )
 
     return(tab_i)
