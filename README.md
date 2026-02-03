@@ -1,8 +1,10 @@
 
 - [fast.ssgsea](#fastssgsea)
+  - [Overview](#overview)
   - [Installation](#installation)
     - [macOS](#macos)
     - [Windows](#windows)
+    - [Linux](#linux)
     - [Install](#install)
   - [Usage](#usage)
     - [Simulate Data](#simulate-data)
@@ -20,19 +22,45 @@
 [![R-CMD-check](https://github.com/pnnl/fast.ssgsea/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/pnnl/fast.ssgsea/actions/workflows/R-CMD-check.yaml)
 <!-- badges: end -->
 
+**NOTICE:** While this R package was based on the
+[ssGSEA2.0](https://github.com/broadinstitute/ssGSEA2.0) repository,
+neither perform single-sample Gene Set Enrichment Analysis (ssGSEA) as
+originally described by Barbie, *et al.* ([Barbie et al.
+2009](#ref-barbie-systematic-2009)). They are instead modifications of
+pre-ranked GSEA that calculate the enrichment score (ES) differently and
+support testing directional gene sets (details below). The package and
+fast-ssGSEA name will be corrected in the near future.
+
+## Overview
+
 `fast.ssgsea` is an R package ([R Core Team 2024](#ref-R-core-team)) for
-High-Performance Gene Set Enrichment Analysis (HP-GSEA). It is also
-capable of performing Post-Translational Modification Signature
-Enrichment Analysis (PTM-SEA) ([Subramanian et al.
-2005](#ref-subramanian-gene-2005); [Krug et al.
-2019](#ref-krug-curated-2019)).
+a highly optimized variant of pre-ranked Gene Set Enrichment Analysis
+(GSEA) ([Subramanian et al. 2005](#ref-subramanian-gene-2005)). Unlike
+standard GSEA, fast-ssGSEA is capable of testing gene sets where each
+gene has an expected direction of change (up- or down-regulation;
+indicated by appending a “;u” or “;d” to the end of every gene in a set)
+from a prior experiment. fast-ssGSEA is based on Post-Translational
+Modification Signature Enrichment Analysis (PTM-SEA) ([Krug et al.
+2019](#ref-krug-curated-2019)), and it borrows optimization techniques
+from the simple implementation of Fast Gene Set Enrichment Analysis
+(FGSEA-simple) ([Korotkevich et al. 2021](#ref-korotkevich-fast-2021)).
+Also, while the enrichment score (ES) for standard GSEA is the most
+extreme value of the running sum (see any GSEA paper for details), the
+ES for fast-ssGSEA is the sum of all values of the running sum. This
+change allows the ES to be computed much more quickly, making
+fast-ssGSEA 1-2 orders of magnitude faster than FGSEA-simple (see
+runtime measurements below). However, fast-ssGSEA it not able to
+calculate arbitrarily small p-values like FGSEA-multilevel ([Korotkevich
+et al. 2021](#ref-korotkevich-fast-2021)).
 
 The primary function, `fast_ssgsea`, accepts a numeric matrix with genes
 or other molecules as rows and either samples, contrasts, or some other
-meaningful representation of the data as columns. A named list of gene
-sets (more generally, molecular signatures) is also required. Other
-arguments control the behavior of HP-GSEA/PTM-SEA, and they are
-described in the function documentation.
+meaningful representation of the data as columns. The values in each
+column must be approximately symmetric around zero, with more extreme
+values indicating greater importance. A named list of gene sets (more
+generally, molecular signatures) is also required. Other arguments
+control the behavior of fast-ssGSEA, and they are described in the
+function documentation.
 
 The package also contains a `read_gmt` function, which reads a Gene
 Matrix Transposed (GMT) file to construct a named list of gene sets for
@@ -59,7 +87,14 @@ Xcode developer tools from Apple and a FORTRAN compiler installed. See
 
 No Windows binary is available, so
 [Rtools](https://cran.r-project.org/bin/windows/Rtools/) must be
-installed to compile C++ code.
+installed to compile C and C++ code. Then, the development version of
+`fast.ssgsea` can be installed with the code below.
+
+### Linux
+
+Most Linux distributions come pre-packaged with tools to compile C and
+C++ code, so no extra work needs to be done. Users can install the
+development version of `fast.ssgsea` on Linux by running the code below.
 
 ### Install
 
@@ -70,13 +105,24 @@ The development version of `fast.ssgsea` can be installed with
 pak::pak("pnnl/fast.ssgsea")
 ```
 
+or 
+
+``` r
+# install.packages("devtools")
+devtools::install_github("pnnl/fast.ssgsea")
+```
+
 ## Usage
 
 ### Simulate Data
 
 We will simulate a matrix with 10,000 genes as rows and one column.
-Then, we generate 20,000 gene sets by randomly sampling between 5 and
-1,000 genes.
+These simulated values represent signed gene-level statistics that might
+be produced from a package such as
+[limma](https://bioconductor.org/packages//release/bioc/html/limma.html).
+
+We will also generate 20,000 gene sets by randomly sampling between 5
+and 1,000 genes.
 
 ``` r
 n_genes <- 10000L # number of genes
@@ -118,7 +164,7 @@ calculate P-values and normalized enrichment scores (NES).
 ``` r
 library(fast.ssgsea)
 
-# Runtime (elapsed time)
+# Runtime (in seconds)
 system.time({
   res <- fast_ssgsea(
     X = X,
@@ -155,13 +201,13 @@ str(res)
 print(sessionInfo(), locale = FALSE, tzone = FALSE)
 ```
 
-    ## R version 4.5.2 (2025-10-31)
-    ## Platform: x86_64-pc-linux-gnu
-    ## Running under: Linux Mint 22.1
+    ## R version 4.3.3 (2024-02-29)
+    ## Platform: x86_64-pc-linux-gnu (64-bit)
+    ## Running under: Linux Mint 22.2
     ## 
     ## Matrix products: default
-    ## BLAS:   /usr/lib/x86_64-linux-gnu/openblas-pthread/libblas.so.3 
-    ## LAPACK: /usr/lib/x86_64-linux-gnu/openblas-pthread/libopenblasp-r0.3.26.so;  LAPACK version 3.12.0
+    ## BLAS:   /usr/lib/x86_64-linux-gnu/blas/libblas.so.3.12.0 
+    ## LAPACK: /usr/lib/x86_64-linux-gnu/openblas-pthread/liblapack.so.3;  LAPACK version 3.12.0
     ## 
     ## attached base packages:
     ## [1] stats     graphics  grDevices utils     datasets  methods   base     
@@ -170,28 +216,27 @@ print(sessionInfo(), locale = FALSE, tzone = FALSE)
     ## [1] dqrng_0.4.1            fast.ssgsea_0.1.0.9025
     ## 
     ## loaded via a namespace (and not attached):
-    ##  [1] digest_0.6.37          RcppArmadillo_15.0.2-2 collapse_2.1.3        
-    ##  [4] fastmap_1.2.0          xfun_0.53              Matrix_1.7-4          
-    ##  [7] lattice_0.22-7         parallel_4.5.2         knitr_1.50            
-    ## [10] htmltools_0.5.8.1      rmarkdown_2.29         cli_3.6.5             
-    ## [13] grid_4.5.2             data.table_1.17.8      compiler_4.5.2        
-    ## [16] rstudioapi_0.17.1      tools_4.5.2            evaluate_1.0.5        
-    ## [19] Rcpp_1.1.0             yaml_2.3.10            rlang_1.1.6
+    ##  [1] digest_0.6.39          RcppArmadillo_15.2.3-1 collapse_2.1.6        
+    ##  [4] fastmap_1.2.0          Matrix_1.6-5           xfun_0.55             
+    ##  [7] lattice_0.22-7         parallel_4.3.3         knitr_1.51            
+    ## [10] htmltools_0.5.9        rmarkdown_2.30         cli_3.6.5             
+    ## [13] grid_4.3.3             data.table_1.18.0      compiler_4.3.3        
+    ## [16] rstudioapi_0.17.1      tools_4.3.3            evaluate_1.0.5        
+    ## [19] Rcpp_1.1.1             yaml_2.3.12            otel_0.2.0            
+    ## [22] rlang_1.1.7
 
 ## Performance
 
-### fast-ssGSEA
-
-The `fast.ssgsea` R package utilizes linear algebra and ideas from Fast
-Gene Set Enrichment Analysis (FGSEA) ([Korotkevich et al.
-2021](#ref-korotkevich-fast-2021)) to greatly reduce the runtime.
-
 Tests were performed on a desktop computer with an AMD Ryzen 5 7600X CPU
-running at 4.7 GHz, single threaded. Different combinations of the
-number of gene sets, maximum gene set size, and the number of
-permutations were tested in a random order (3 replicates each) to
-minimize the influence of previous runs. The R scripts and data are
-available in the simulation/ folder.
+running at 4.7 GHz, single threaded, to measure the runtime of
+fast-ssGSEA (`fast.ssgsea::fast_ssgsea`) and FGSEA-simple
+(`fgsea::fgseaSimple`). Different combinations of the number of gene
+sets, maximum gene set size, and the number of permutations were tested
+in a random order (3 replicates each) to minimize the influence of
+previous runs. The R scripts and data are available in the simulation/
+folder.
+
+### fast-ssGSEA
 
 <div class="figure" style="text-align: center">
 
@@ -206,15 +251,14 @@ permutations.
 
 ### FGSEA-simple
 
-The same tests were also carried out using the simple implementation of
-FGSEA (`fgsea::fgseaSimple`). Like fast-ssGSEA, FGSEA-simple relies
-purely on the number of permutations to calculate p-values, which limits
-how small they can become. While FGSEA-simple is instead meant to be run
-with a smaller number of permutations and followed up with
-FGSEA-multilevel (the method capable of calculating arbitrarily small
-p-values), these results serve to illustrate the extreme difference in
-runtime between the two approaches. This difference is largely the
-result of changes to how the ES is defined.
+Like fast-ssGSEA, FGSEA-simple relies purely on the number of
+permutations to calculate p-values, which limits how small they can
+become. While FGSEA-simple is meant to be run with a smaller number of
+permutations and followed up by FGSEA-multilevel (the method capable of
+calculating arbitrarily small p-values), these results serve to
+illustrate the extreme difference in runtime between the two approaches.
+This difference is largely the result of changes to how the ES is
+defined.
 
 <div class="figure" style="text-align: center">
 
@@ -231,6 +275,15 @@ Runtime of fgsea::fgseaSimple with A) 10,000, B) 100,000, or C)
 
 <div id="refs" class="references csl-bib-body hanging-indent"
 entry-spacing="0">
+
+<div id="ref-barbie-systematic-2009" class="csl-entry">
+
+Barbie, David A., Pablo Tamayo, Jesse S. Boehm, So Young Kim, Susan E.
+Moody, Ian F. Dunn, Anna C. Schinzel, et al. 2009. “Systematic RNA
+Interference Reveals That Oncogenic KRAS-Driven Cancers Require TBK1.”
+*Nature* 462 (7269): 108–12. <https://doi.org/10.1038/nature08460>.
+
+</div>
 
 <div id="ref-korotkevich-fast-2021" class="csl-entry">
 
