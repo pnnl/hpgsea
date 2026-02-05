@@ -9,8 +9,8 @@ link-citations: true
 ```{r include=FALSE}
 knitr::opts_chunk$set(
   fig.align = "center",
-  fig.height = 5.55,
-  fig.width = 7.8,
+  fig.height = 3 * 1.5,
+  fig.width = 5 * 1.5,
   dpi = 300
 )
 ```
@@ -141,7 +141,7 @@ Tests were performed on a desktop computer with an AMD Ryzen 5 7600X CPU running
 ### fast-ssGSEA
 
 ```{r, echo=FALSE}
-fig1_cap <- "Runtime of fast_ssgsea with A) 10,000, B) 100,000, or C) 1,000,000 permutations."
+fig1_cap <- "Runtime of fast_ssgsea with 10,000, 100,000, or 1,000,000 permutations."
 ```
 
 ```{r, echo=FALSE, fig.cap=fig1_cap}
@@ -153,7 +153,7 @@ knitr::include_graphics("./man/figures/README-figure-1.png")
 Like fast-ssGSEA, FGSEA-simple relies purely on the number of permutations to calculate p-values, which limits how small they can become. While FGSEA-simple is meant to be run with a smaller number of permutations and followed up by FGSEA-multilevel (the method capable of calculating arbitrarily small p-values), these results serve to illustrate the extreme difference in runtime between the two approaches. This difference is largely the result of changes to how the ES is defined.
 
 ```{r, echo=FALSE}
-fig2_cap <- "Runtime of fgsea::fgseaSimple with A) 10,000, B) 100,000, or C) 1,000,000 permutations."
+fig2_cap <- "Runtime of fgsea::fgseaSimple with 10,000, 100,000, or 1,000,000 permutations."
 ```
 
 ```{r, echo=FALSE, fig.cap=fig2_cap}

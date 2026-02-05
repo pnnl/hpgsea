@@ -105,7 +105,7 @@ The development version of `fast.ssgsea` can be installed with
 pak::pak("pnnl/fast.ssgsea")
 ```
 
-or 
+or
 
 ``` r
 # install.packages("devtools")
@@ -178,7 +178,7 @@ system.time({
 ```
 
     ##    user  system elapsed 
-    ##   2.245   0.377   2.376
+    ##   2.168   0.376   2.299
 
 ``` r
 str(res)
@@ -201,13 +201,13 @@ str(res)
 print(sessionInfo(), locale = FALSE, tzone = FALSE)
 ```
 
-    ## R version 4.3.3 (2024-02-29)
-    ## Platform: x86_64-pc-linux-gnu (64-bit)
-    ## Running under: Linux Mint 22.2
+    ## R version 4.5.2 (2025-10-31)
+    ## Platform: x86_64-pc-linux-gnu
+    ## Running under: Linux Mint 22.1
     ## 
     ## Matrix products: default
     ## BLAS:   /usr/lib/x86_64-linux-gnu/blas/libblas.so.3.12.0 
-    ## LAPACK: /usr/lib/x86_64-linux-gnu/openblas-pthread/liblapack.so.3;  LAPACK version 3.12.0
+    ## LAPACK: /usr/lib/x86_64-linux-gnu/lapack/liblapack.so.3.12.0  LAPACK version 3.12.0
     ## 
     ## attached base packages:
     ## [1] stats     graphics  grDevices utils     datasets  methods   base     
@@ -216,14 +216,13 @@ print(sessionInfo(), locale = FALSE, tzone = FALSE)
     ## [1] dqrng_0.4.1            fast.ssgsea_0.1.0.9025
     ## 
     ## loaded via a namespace (and not attached):
-    ##  [1] digest_0.6.39          RcppArmadillo_15.2.3-1 collapse_2.1.6        
-    ##  [4] fastmap_1.2.0          Matrix_1.6-5           xfun_0.55             
-    ##  [7] lattice_0.22-7         parallel_4.3.3         knitr_1.51            
-    ## [10] htmltools_0.5.9        rmarkdown_2.30         cli_3.6.5             
-    ## [13] grid_4.3.3             data.table_1.18.0      compiler_4.3.3        
-    ## [16] rstudioapi_0.17.1      tools_4.3.3            evaluate_1.0.5        
-    ## [19] Rcpp_1.1.1             yaml_2.3.12            otel_0.2.0            
-    ## [22] rlang_1.1.7
+    ##  [1] digest_0.6.37          RcppArmadillo_15.0.2-2 collapse_2.1.3        
+    ##  [4] fastmap_1.2.0          xfun_0.53              Matrix_1.7-4          
+    ##  [7] lattice_0.22-7         parallel_4.5.2         knitr_1.50            
+    ## [10] htmltools_0.5.8.1      rmarkdown_2.29         cli_3.6.5             
+    ## [13] grid_4.5.2             data.table_1.17.8      compiler_4.5.2        
+    ## [16] rstudioapi_0.17.1      tools_4.5.2            evaluate_1.0.5        
+    ## [19] Rcpp_1.1.0             yaml_2.3.10            rlang_1.1.6
 
 ## Performance
 
@@ -240,11 +239,10 @@ folder.
 
 <div class="figure" style="text-align: center">
 
-<img src="./man/figures/README-figure-1.png" alt="Runtime of fast_ssgsea with A) 10,000, B) 100,000, or C) 1,000,000 permutations." width="864" />
+<img src="./man/figures/README-figure-1.png" alt="Runtime of fast_ssgsea with 10,000, 100,000, or 1,000,000 permutations." width="720" />
 <p class="caption">
 
-Runtime of fast_ssgsea with A) 10,000, B) 100,000, or C) 1,000,000
-permutations.
+Runtime of fast_ssgsea with 10,000, 100,000, or 1,000,000 permutations.
 </p>
 
 </div>
@@ -262,11 +260,11 @@ defined.
 
 <div class="figure" style="text-align: center">
 
-<img src="./man/figures/README-figure-2.png" alt="Runtime of fgsea::fgseaSimple with A) 10,000, B) 100,000, or C) 1,000,000 permutations." width="864" />
+<img src="./man/figures/README-figure-2.png" alt="Runtime of fgsea::fgseaSimple with 10,000, 100,000, or 1,000,000 permutations." width="720" />
 <p class="caption">
 
-Runtime of fgsea::fgseaSimple with A) 10,000, B) 100,000, or C)
-1,000,000 permutations.
+Runtime of fgsea::fgseaSimple with 10,000, 100,000, or 1,000,000
+permutations.
 </p>
 
 </div>

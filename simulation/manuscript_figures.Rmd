@@ -26,37 +26,28 @@ library(latex2exp)
 ```{r fun-prepare-data}
 prepare_data <- function(path) {
   x <- readRDS(path) %>%
+    select(-c(alpha, nSamples)) %>% 
     mutate(replicate = as.integer(replicate)) %>%
-    arrange(nperm, nSamples, maxSetSize, nSets, replicate) %>%
+    arrange(nperm, maxSetSize, nSets, replicate) %>%
     mutate(
-      x_pos = (replicate - 2L) * 0.2 + as.numeric(factor(maxSetSize)),
+      x_pos = (replicate - 2L) * 0.15 + as.numeric(factor(maxSetSize)),
       across(
         .cols = c(nSets, nperm),
         .fns = ~ scales::comma_format()(.x)
       ),
       across(
-        .cols = c(nperm, nSamples, nSets),
+        .cols = c(nperm, nSets),
         .fns = ~ factor(.x, levels = unique(.x))
       )
     )
 
   levels(x$nperm) <- latex2exp::TeX(paste0("$\\pi$ = ", levels(x$nperm)))
 
-  levels(x$nSamples)[1] <- paste0("N samples = ", levels(x$nSamples)[1])
-
   return(x)
 }
 ```
 
 ```{r fun-plot-time}
-# Format number of seconds as minutes and seconds (min:sec)
-as_ms <- function(x) {
-  m <- floor(x / 60)
-  s <- x - (m * 60)
-
-  sprintf("%02g:%02g", m, s)
-}
-
 plot_time <- function(x, y_breaks, y_max = NULL, expand_upper = 0.05) {
   
   if (is.null(y_max)) {
@@ -69,9 +60,9 @@ plot_time <- function(x, y_breaks, y_max = NULL, expand_upper = 0.05) {
     color = nSets
   )) +
     geom_point(
-      shape = 3,
-      size = 1.5,
-      stroke = 0.8
+      shape = 1,
+      size = 1.2,
+      stroke = 0.6
     ) +
     facet_wrap(
       ~nperm,
@@ -87,8 +78,7 @@ plot_time <- function(x, y_breaks, y_max = NULL, expand_upper = 0.05) {
       breaks = y_breaks,
       limits = c(0, y_max),
       labels = scales::label_comma(),
-      # labels = as_ms,
-      expand = expansion(mult = c(0.02, expand_upper))
+      expand = expansion(mult = c(5e-3, expand_upper))
     ) +
     scale_color_manual(
       name = "Number of gene sets: ",
@@ -96,21 +86,22 @@ plot_time <- function(x, y_breaks, y_max = NULL, expand_upper = 0.05) {
       breaks = c("1,000", "10,000", "50,000")
     ) +
     labs(
-      x = "Maximum Set Size",
-      # y = "Runtime (min:sec)"
-      y = "Runtime (sec)"
+      x = "Maximum gene set size",
+      y = "Runtime (seconds)"
     ) +
-    theme_bw(base_size = 9) +
+    theme_bw(base_size = 10) +
     theme(
       axis.title.x = element_text(
+        color = "black",
+        size = 8,
         margin = margin(t = 8, unit = "pt")
       ),
-      axis.title.y = element_text(size = rel(0.9)),
+      axis.title.y = element_text(color = "black", size = 8),
       axis.ticks = element_line(
         color = "black",
         linewidth = 0.35
       ),
-      axis.text = element_text(color = "black"),
+      axis.text = element_text(color = "black", size = 8),
       panel.border = element_rect(
         linewidth = 0.35,
         fill = NA,
@@ -128,14 +119,22 @@ plot_time <- function(x, y_breaks, y_max = NULL, expand_upper = 0.05) {
       ),
       panel.spacing.x = unit(2, units = "pt"),
       strip.background = element_blank(),
-      strip.text = element_text(size = 7),
-      plot.margin = unit(c(12, 3, 0, 0), "pt"),
-      legend.margin = margin(t = 6, b = 0, unit = "pt")
+      strip.text = element_text(size = 9),
+      plot.margin = unit(c(1, 0, 1, 0), "pt"),
+      legend.margin = margin(t = 6, b = 0, unit = "pt"),
+      legend.title = element_text(color = "black", size = 8),
+      legend.text = element_text(color = "black", size = 8)
     )
 
   return(p)
 }
 ```
+
+```{r}
+height <- 3
+width <- 5
+```
+
 
 ```{r timing-ssgsea}
 # fast-ssGSEA
@@ -143,39 +142,40 @@ time_res <- prepare_data("../data/fast-ssGSEA_timing_results.rds")
 
 # 10,000 permutations
 pa <- filter(time_res, nperm == levels(nperm)[1L]) %>%
-  plot_time(y_breaks = seq(0, 4.5, 1), y_max = 4.3)
+  plot_time(y_breaks = seq(0, 4, 1), y_max = 4, expand_upper = 0.02) +
+  labs(x = "")
 
 # 100,000 permutations
 pb <- filter(time_res, nperm == levels(nperm)[2L]) %>%
-  plot_time(y_breaks = seq(0, 4.5, 1), y_max = 4.3)
+  plot_time(y_breaks = seq(0, 4, 1), y_max = 4, expand_upper = 0.02) +
+  labs(y = "")
 
 # 1,000,000 permutations
 pc <- filter(time_res, nperm == levels(nperm)[3L]) %>%
-  plot_time(y_breaks = seq(0, 20, 4), expand_upper = 5e-3)
+  plot_time(y_breaks = seq(0, 20, 4), y_max = 20, expand_upper = 5e-3) +
+  labs(x = "", y = "")
 
 # Combine plots
 p <- ggarrange(
   pa, pb, pc,
-  labels = c("A", "B", "C"),
   font.label = list(
     face = "bold"
   ),
   nrow = 1L,
   common.legend = TRUE,
-  legend = "bottom",
-  vjust = 1.2
+  legend = "bottom"
 )
 
 ggsave(
   filename = "../figures/figure-1.pdf",
-  plot = p, height = 3, width = 6,
-  bg = "white", dpi = 300
+  plot = p, height = height, width = width,
+  bg = "white"
 )
 
 # For package README
 ggsave(
   filename = "../../man/figures/README-figure-1.png",
-  plot = p, height = 3, width = 6,
+  plot = p, height = height, width = width,
   bg = "white", dpi = 450
 )
 ```
@@ -187,38 +187,40 @@ time_res <- prepare_data("../data/FGSEA_timing_results_nproc_1.rds")
 
 # 10,000 permutations
 pa <- filter(time_res, nperm == levels(nperm)[1L]) %>%
-  plot_time(y_breaks = seq(0, 30, 5), expand_upper = 5e-3)
+  plot_time(y_breaks = seq(0, 40, 10), y_max = 40, expand_upper = 5e-3) +
+  labs(x = "")
 
 # 100,000 permutations
 pb <- filter(time_res, nperm == levels(nperm)[2L]) %>%
-  plot_time(y_breaks = seq(0, 210, 30), y_max = 210, expand_upper = 5e-3)
+  plot_time(y_breaks = seq(0, 200, 40), y_max = 210, expand_upper = 5e-3) +
+  labs(y = "")
 
 # 1,000,000 permutations
 pc <- filter(time_res, nperm == levels(nperm)[3L]) %>%
-  plot_time(y_breaks = seq(0, 2100, 300), y_max = 2100, expand_upper = 5e-3)
+  plot_time(y_breaks = seq(0, 2000, 400), y_max = 2100, expand_upper = 5e-3) +
+  labs(x = "", y = "")
 
 # Combine plots
 p <- ggarrange(
   pa, pb, pc,
-  labels = c("A", "B", "C"),
   font.label = list(
     face = "bold"
   ),
   nrow = 1L,
   common.legend = TRUE,
   legend = "bottom",
-  vjust = 1.2
+  widths = c(32, 34, 36)
 )
 
 ggsave(
   filename = "../figures/figure-2.pdf",
-  plot = p, height = 3, width = 6,
-  bg = "white", dpi = 300
+  plot = p, height = height, width = width,
+  bg = "white"
 )
 
 ggsave(
   filename = "../../man/figures/README-figure-2.png",
-  plot = p, height = 3, width = 6,
+  plot = p, height = height, width = width,
   bg = "white", dpi = 450
 )
 ```
