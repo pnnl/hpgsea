@@ -132,6 +132,36 @@
 }
 
 
+#' @title Fast, specialized rep.int
+#'
+#' @param times integer vector of group sizes.
+#'
+#' @returns Integer vector. Equivalent to the result of
+#'   `rep.int(seq_along(times), times)`, but several times faster.
+#'
+#' @author Tyler Sagendorf
+#'
+#' @noRd
+.C_rep_int <- function(sizes) {
+  .Call("_C_rep_int", sizes)
+}
+
+
+#' @title Get indices of non-duplicate integer pairs
+#'
+#' @param x,y integer vectors. `y` is assumed to be sorted, and `x` is sorted
+#'   within groups of `y`. That is, any duplicate pairs are contiguous.
+#'
+#' @returns Integer vector of the indices of the non-duplicate (x, y) pairs.
+#'
+#' @author Tyler Sagendorf
+#'
+#' @noRd
+.C_pairs_not_duplicated <- function(x, y) {
+  .Call("_C_pairs_not_duplicated", x, y)
+}
+
+
 #' @title Create Sparse Incidence Matrices
 #'
 #' @description Create a list of sparse incidence matrices, where the unique
@@ -155,10 +185,9 @@
 #'
 #' @author Tyler Sagendorf
 #'
-#' @importFrom collapse alloc allv anyv fsubset funique groupid vec vlengths
-#'   vtypes whichNA whichv
+#' @importFrom collapse allv anyv fsubset funique groupid vec vlengths vtypes
+#'   whichNA whichv
 #' @importFrom data.table chmatch
-#' @importFrom Matrix sparseMatrix
 #'
 #' @noRd
 .sparseIncidence <- function(gene_sets,
@@ -242,11 +271,10 @@
   # Row indices for sparse matrix
   i <- chmatch(elements, unique_elements, nomatch = NA_integer_)
 
-  # Unique set names
   unique_sets <- names(gene_sets)
 
   # Column indices for sparse matrix
-  j <- rep.int(seq_along(unique_sets), set_sizes)
+  j <- .C_rep_int(set_sizes)
 
   if (anyNA(i)) {
     # Remove elements not in the background
@@ -255,60 +283,74 @@
     i <- fsubset(i, keep)
     j <- fsubset(j, keep)
 
+    if (any_dir) {
+      direction_down <- fsubset(direction_down, keep)
+    }
+
     unique_sets <- fsubset(unique_sets, funique(j))
 
-    j <- groupid(j) # this works because each set is a contiguous batch
+    j <- groupid(j) # this works because each set is a contiguous group
+    class(j) <- "integer"
   }
+
+  # Must sort to remove duplicates easily and to use the unsafe sparseMatrix
+  # function. This is the slowest part of this function.
+  o <- order(j, i, method = "radix")
+  i <- fsubset(i, o)
 
   dim_names <- list(unique_elements, unique_sets)
   dims <- vlengths(dim_names)
 
   # Split elements by direction of change to create two incidence matrices
   if (any_dir) {
+    direction_down <- fsubset(direction_down, o)
     idx_down <- whichv(direction_down, TRUE)
     direction_down <- NULL # signal that this is no longer needed
 
     i_down <- fsubset(i, idx_down)
     j_down <- fsubset(j, idx_down)
 
+    # Indices of unique (i_down, j_down) pairs
+    unique_pairs_idx <- .C_pairs_not_duplicated(i_down, j_down)
+
+    if (length(unique_pairs_idx) != length(i_down)) {
+      i_down <- fsubset(i_down, unique_pairs_idx)
+      j_down <- fsubset(j_down, unique_pairs_idx)
+    }
+
     i <- fsubset(i, -idx_down)
     j <- fsubset(j, -idx_down)
+  }
+
+  # Indices of unique (j, i) pairs
+  unique_pairs_idx <- .C_pairs_not_duplicated(i, j)
+
+  if (length(unique_pairs_idx) != length(i)) {
+    i <- fsubset(i, unique_pairs_idx)
+    j <- fsubset(j, unique_pairs_idx)
   }
 
   # Incidence matrix where a 1 indicates that the element is in the set. If
   # gene_sets is a directional database, then A will only contain elements that
   # are expected to be "up".
-  A <- sparseMatrix(
+  A <- .Cpp_unsafe_sparseMatrix(
     i = i,
     j = j,
-    x = alloc(1, length(i)),
     dims = dims,
-    dimnames = dim_names,
-    check = FALSE,
-    use.last.ij = FALSE
+    dimnames = dim_names
   )
-
-  # In the unlikely event where an element appears multiple times in the same
-  # set, some values of A will be > 1. Replace all values with 1. Could also use
-  # the use.last.ij parameter in sparseMatrix(), but this is faster.
-  attr(A, which = "x") <- alloc(1, length(attr(A, which = "x")))
 
   A_d <- NULL # default
 
   if (any_dir) {
     # Incidence matrix where a 1 indicates that an element is expected to be
     # down in the set
-    A_d <- sparseMatrix(
+    A_d <- .Cpp_unsafe_sparseMatrix(
       i = i_down,
       j = j_down,
-      x = alloc(1, length(i_down)),
       dims = dims,
-      dimnames = dim_names,
-      check = FALSE,
-      use.last.ij = FALSE
+      dimnames = dim_names
     )
-
-    attr(A_d, which = "x") <- alloc(1, length(attr(A_d, which = "x")))
 
     # The Hadamard product A * A_d should be a matrix of zeros, since genes can
     # not be "up" and "down" in the same set.

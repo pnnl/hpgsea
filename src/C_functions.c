@@ -3,6 +3,89 @@
 #include <Rinternals.h>
 
 
+SEXP _C_rep_int(SEXP times) {
+  const int *restrict ptimes = INTEGER(times);
+
+  const int n_times = Rf_length(times);
+
+  int n = 0;
+
+  for (int i = 0; i < n_times; ++i) {
+    n += ptimes[i];
+  }
+
+  SEXP out = PROTECT(Rf_allocVector(INTSXP, n));
+  int *restrict pout = INTEGER(out);
+
+  int val = 0;
+  int start = 0;
+  int end = 0;
+
+  for (int i = 0; i < n_times; ++i) {
+    ++val;
+    start = end;
+    end = start + ptimes[i];
+
+    for (int j = start; j < end; ++j) {
+      pout[j] = val;
+    }
+  }
+
+  UNPROTECT(1);
+
+  return out;
+}
+
+
+SEXP _C_pairs_not_duplicated(SEXP x, SEXP y) {
+  const int N = Rf_length(x);
+
+  if (N == 0) {
+    return R_NilValue;
+  }
+
+  if (N == 1) {
+    return Rf_ScalarInteger(1);
+  }
+
+  const int *restrict px = INTEGER(x);
+  const int *restrict py = INTEGER(y);
+
+  SEXP temp = PROTECT(Rf_allocVector(INTSXP, N));
+  int *restrict ptemp = INTEGER(temp);
+
+  ptemp[0] = 1; // the first pair is not a duplicate, by definition
+
+  int n_unique = 1;
+
+  // Due to how x and y are sorted, duplicate pairs will be contiguous
+  for (int i = 1; i < N; ++i) {
+    if (!((px[i] == px[i - 1]) & (py[i] == py[i - 1]))) { // not duplicated
+      ptemp[n_unique] = i + 1;
+      ++n_unique;
+    }
+  }
+
+  if (n_unique == N) {
+    UNPROTECT(1);
+
+    return temp;
+  }
+
+  // Subset to the first n_unique elements (indices of non-duplicate pairs)
+  SEXP out = PROTECT(Rf_allocVector(INTSXP, n_unique));
+  int *restrict pout = INTEGER(out);
+
+  for (int i = 0; i < n_unique; ++i) {
+    pout[i] = ptemp[i];
+  }
+
+  UNPROTECT(2);
+
+  return out;
+}
+
+
 /*
  * See Rcpp_functions.cpp for documentation.
  */

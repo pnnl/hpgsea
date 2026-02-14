@@ -5,6 +5,44 @@
 using namespace Rcpp;
 
 
+// [[Rcpp::export(.Cpp_unsafe_sparseMatrix)]]
+SEXP unsafe_sparseMatrix(IntegerVector& i,
+                         const IntegerVector& j,
+                         const IntegerVector dims,
+                         const List& dimnames) {
+  // j is sorted and i is sorted within j. Duplicate (i, j) pairs not allowed.
+  const int N = i.size();
+  const int NCOL = dims[1];
+
+  // Row indices need to be 0-based
+  for (int k = 0; k < N; ++k) {
+    --i[k];
+  }
+
+  // Column pointers
+  IntegerVector p(NCOL + 1, 0);
+
+  for (int k = 0; k < N; ++k) {
+    const int col = j[k];
+    ++p[col]; // column sums
+  }
+
+  for (int col = 0; col < NCOL; ++col) {
+    p[col + 1] += p[col]; // cumulative sum
+  }
+
+  // Create a dgCMatrix
+  S4 out("dgCMatrix");
+  out.slot("i") = i;
+  out.slot("p") = p;
+  out.slot("x") = NumericVector(N, 1.0);
+  out.slot("Dim") = dims;
+  out.slot("Dimnames") = dimnames;
+
+  return out;
+}
+
+
 //' @title Dense-Sparse Matrix Multiplication
 //'
 //' @description Multiply a dense matrix by a sparse matrix.

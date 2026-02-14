@@ -11,6 +11,20 @@ Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
 Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
+// unsafe_sparseMatrix
+SEXP unsafe_sparseMatrix(IntegerVector& i, const IntegerVector& j, const IntegerVector dims, const List& dimnames);
+RcppExport SEXP _fast_ssgsea_unsafe_sparseMatrix(SEXP iSEXP, SEXP jSEXP, SEXP dimsSEXP, SEXP dimnamesSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< IntegerVector& >::type i(iSEXP);
+    Rcpp::traits::input_parameter< const IntegerVector& >::type j(jSEXP);
+    Rcpp::traits::input_parameter< const IntegerVector >::type dims(dimsSEXP);
+    Rcpp::traits::input_parameter< const List& >::type dimnames(dimnamesSEXP);
+    rcpp_result_gen = Rcpp::wrap(unsafe_sparseMatrix(i, j, dims, dimnames));
+    return rcpp_result_gen;
+END_RCPP
+}
 // matmult_sparse
 arma::mat matmult_sparse(const arma::mat& X, const arma::sp_mat& Y);
 RcppExport SEXP _fast_ssgsea_matmult_sparse(SEXP XSEXP, SEXP YSEXP) {
@@ -91,11 +105,17 @@ BEGIN_RCPP
 END_RCPP
 }
 
+RcppExport SEXP _C_pairs_not_duplicated(SEXP, SEXP);
+RcppExport SEXP _C_rep_int(SEXP);
+
 static const R_CallMethodDef CallEntries[] = {
+    {"_fast_ssgsea_unsafe_sparseMatrix", (DL_FUNC) &_fast_ssgsea_unsafe_sparseMatrix, 4},
     {"_fast_ssgsea_matmult_sparse", (DL_FUNC) &_fast_ssgsea_matmult_sparse, 2},
     {"_fast_ssgsea_calcES", (DL_FUNC) &_fast_ssgsea_calcES, 7},
     {"_fast_ssgsea_calc_ES_perm", (DL_FUNC) &_fast_ssgsea_calc_ES_perm, 14},
     {"_fast_ssgsea_calc_ES_perm_dir", (DL_FUNC) &_fast_ssgsea_calc_ES_perm_dir, 18},
+    {"_C_pairs_not_duplicated", (DL_FUNC) &_C_pairs_not_duplicated, 2},
+    {"_C_rep_int",              (DL_FUNC) &_C_rep_int,              1},
     {NULL, NULL, 0}
 };
 

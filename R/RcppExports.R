@@ -184,6 +184,10 @@ NULL
 #' @noRd
 NULL
 
+.Cpp_unsafe_sparseMatrix <- function(i, j, dims, dimnames) {
+    .Call(`_fast_ssgsea_unsafe_sparseMatrix`, i, j, dims, dimnames)
+}
+
 .Cpp_matmult_sparse <- function(X, Y) {
     .Call(`_fast_ssgsea_matmult_sparse`, X, Y)
 }
