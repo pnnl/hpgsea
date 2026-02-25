@@ -4,14 +4,14 @@ source("simulation/scripts/function-generate_data.R")
 
 # Parameter combinations ----
 param_list <- list(
-  "nGenes" = 1e4L,
-  "nSamples" = 1L,
-  "minSetSize" = 10L,
   "maxSetSize" = c(500L, 1000L),
   "nSets" = c(1e3L, 1e4L, 5e4L),
-  "nperm" = c(1e4L, 1e5L, 1e6L),
-  "alpha" = 1
+  "nperm" = c(1e4L, 1e5L, 1e6L)
 )
+
+n_genes <- 1e4L
+min_size <- 10L
+alpha <- 1
 
 comb_df <- expand.grid(param_list)
 
@@ -31,24 +31,26 @@ time_df <- lapply(seq_len(3L), function(j) { # 3 replicates
     li <- with(
       row_i,
       generate_data(
-        nGenes, nSamples,
-        minSetSize, maxSetSize, nSets,
-        nperm, alpha
+        nGenes = n_genes,
+        minSetSize = min_size,
+        maxSetSize,
+        nSets,
+        nperm
       )
     )
 
-    X_i <- li[["X"]]
+    stats_i <- li[["stats"]]
     gene_sets_i <- li[["gene_sets"]]
 
     tic <- Sys.time()
 
     res <- fast_ssgsea(
-      X = X_i,
+      stats = stats_i,
       gene_sets = gene_sets_i,
-      alpha = row_i[["alpha"]],
+      alpha = alpha,
       nperm = row_i[["nperm"]],
-      batch_size = 1e3L,
-      min_size = row_i[["minSetSize"]],
+      min_size = min_size,
+      max_size = row_i[["maxSetSize"]],
       seed = 0L
     )
 

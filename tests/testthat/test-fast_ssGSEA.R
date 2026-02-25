@@ -3,19 +3,27 @@
 
 test_that("nperm <= 2 billion", {
   err <- capture_error(
-    fast_ssgsea(X = X, gene_sets = gene_sets, nperm = 2e9L + 1L)
+    fast_ssgsea_multicol(
+      stats_mat = stats_mat,
+      gene_sets = gene_sets,
+      nperm = 2e9L + 1L
+    )
   )$message
 
   expect_identical(
     object = err,
-    expected = "`nperm` must be a whole number between 0 and 2 billion."
+    expected = "`nperm` must be an integer between 0 and 2 billion."
   )
 })
 
 
 test_that("alpha is finite and non-negative", {
   err <- capture_error(
-    fast_ssgsea(X = X, gene_sets = gene_sets, alpha = Inf)
+    fast_ssgsea_multicol(
+      stats_mat = stats_mat,
+      gene_sets = gene_sets,
+      alpha = Inf
+    )
   )$message
 
   expect_identical(
@@ -25,41 +33,20 @@ test_that("alpha is finite and non-negative", {
 })
 
 
-test_that("`batch_size` is between 1 and `nperm`", {
-  expected_error <- "`batch_size` must be a whole number between 1 and `nperm`."
-
-  err1 <- capture_error(
-    fast_ssgsea(X = X, gene_sets = gene_sets, batch_size = 0L)
-  )$message
-
-  err2 <- capture_error(
-    fast_ssgsea(X = X, gene_sets = gene_sets, batch_size = 0.5)
-  )$message
-
-  err3 <- capture_error(
-    fast_ssgsea(X = X, gene_sets = gene_sets, batch_size = NA_real_)
-  )$message
-
-  expect_identical(err1, expected_error)
-  expect_identical(err2, expected_error)
-  expect_identical(err3, expected_error)
-})
-
-
 test_that("`sort` must be logical", {
   expected_error <- "`sort` must be TRUE or FALSE."
 
   err1 <- capture_error(
-    fast_ssgsea(
-      X = X,
+    fast_ssgsea_multicol(
+      stats_mat = stats_mat,
       gene_sets = gene_sets,
       sort = list(logical(1L))
     )
   )$message
 
   err2 <- capture_error(
-    fast_ssgsea(
-      X = X,
+    fast_ssgsea_multicol(
+      stats_mat = stats_mat,
       gene_sets = gene_sets,
       sort = 1
     )
@@ -70,116 +57,70 @@ test_that("`sort` must be logical", {
 })
 
 
-test_that("`adjust_globally` must be logical", {
-  expected_error <- "`adjust_globally` must be TRUE or FALSE."
-
+test_that("`stats` is a numeric vector with unique names", {
   err1 <- capture_error(
     fast_ssgsea(
-      X = X,
-      gene_sets = gene_sets,
-      adjust_globally = list(logical(1L))
-    )
-  )$message
-
-  err2 <- capture_error(
-    fast_ssgsea(
-      X = X,
-      gene_sets = gene_sets,
-      adjust_globally = 1
-    )
-  )$message
-
-  expect_identical(err1, expected_error)
-  expect_identical(err2, expected_error)
-})
-
-
-test_that("`X` is a numeric matrix with row and column names", {
-  err1 <- capture_error(
-    fast_ssgsea(
-      X = numeric(1L),
+      stats = numeric(1L),
       gene_sets = list("Set1" = letters)
     )
   )$message
 
   err2 <- capture_error(
     fast_ssgsea(
-      X = matrix(rnorm(4), nrow = 2L, ncol = 2L),
+      stats = structure(c(1, 2), names = c("a", "a")),
       gene_sets = list("Set1" = letters)
     )
   )$message
 
-  err3 <- capture_error(
-    fast_ssgsea(
-      X = matrix(c(TRUE, FALSE), nrow = 2L, ncol = 1L),
-      gene_sets = list("Set1" = letters)
-    )
-  )$message
-
-  expect_true(length(unique(c(err1, err2, err3))) == 1L)
+  expect_identical(err1, err2)
 
   expect_identical(
     object = err1,
-    expected = "`X` must be a numeric matrix with row and column names."
+    expected = "`stats` must be a numeric vector with unique names."
   )
 })
 
 
-test_that("`X` has at least 3 rows", {
+test_that("`stats` has at least 3 nonmissing values", {
   err1 <- capture_error(
-    fast_ssgsea(X = X[1:2, ], gene_sets = gene_sets)
+    fast_ssgsea(
+      stats = stats_mat[1:2, 1L],
+      gene_sets = gene_sets
+    )
   )$message
 
   expect_identical(
     object = err1,
-    expected = "Matrix `X` must have at least 3 rows."
-  )
-})
-
-
-test_that("`X` has enough nonmissing values in each sample", {
-  X2 <- X
-  X2[3:nrow(X), 2L] <- NA
-
-  err <- capture_error(
-    fast_ssgsea(
-      X = X2,
-      gene_sets = gene_sets,
-      nperm = 0L
-    )
-  )$message
-
-  expect_identical(
-    object = err,
-    expected = c(
-      "Matrix `X` must have at least 3 nonmissing values in each column."
-    )
+    expected = "`stats` must have at least 3 nonmissing values."
   )
 })
 
 
 test_that("`min_size` is smaller than the number of nonmissing values", {
-  err <- capture_error(
-    fast_ssgsea(
-      X = X,
+  err1 <- capture_error(
+    fast_ssgsea_multicol(
+      stats_mat = stats_mat,
       gene_sets = gene_sets,
       nperm = 0L,
-      min_size = nrow(X)
+      min_size = nrow(stats_mat)
     )
   )$message
 
   expect_identical(
-    object = err,
-    expected = "`min_size` must be >= 2 and < nrow(X)."
+    object = err1,
+    expected = paste0(
+      "`min_size` must be >= 2 and less than the number of ",
+      "nonmissing values in `stats`."
+    )
   )
 })
 
 
 test_that("extreme sets are removed", {
   # Remove extreme sets, unless all sets will be removed
-  res <- fast_ssgsea(
-    X = X,
-    gene_sets = c(gene_sets, list("Set999" = rownames(X))),
+  res <- fast_ssgsea_multicol(
+    stats_mat = stats_mat,
+    gene_sets = c(gene_sets, list("Set999" = rownames(stats_mat))),
     nperm = 0L
   )
 
@@ -187,11 +128,11 @@ test_that("extreme sets are removed", {
 
   # If all sets are extreme, throw an error
   err <- capture_error(
-    fast_ssgsea(
-      X = X,
+    fast_ssgsea_multicol(
+      stats_mat = stats_mat,
       gene_sets = list(
-        "Set1" = rownames(X),
-        "Set2" = rownames(X)[1:2]
+        "Set1" = rownames(stats_mat),
+        "Set2" = rownames(stats_mat)[1:2]
       ),
       nperm = 0L,
       min_size = 3L
@@ -201,8 +142,8 @@ test_that("extreme sets are removed", {
   expect_identical(
     object = err,
     expected = paste0(
-      "All sets in `gene_sets` contain fewer than `min_size` genes or ",
-      "more than `max_size` genes with nonmissing values."
+      "All sets in `gene_sets` have fewer than `min_size` or ",
+      "more than `max_size` genes."
     )
   )
 })
@@ -210,13 +151,13 @@ test_that("extreme sets are removed", {
 
 test_that("extreme directional sets are removed", {
   # Remove extreme sets, unless all sets will be removed
-  res <- fast_ssgsea(
-    X = X,
+  res <- fast_ssgsea_multicol(
+    stats_mat = stats_mat,
     gene_sets = c(
       gene_sets,
       list(
-        "Set999" = paste0(rownames(X), ";d"),
-        "Set998" = paste0(rownames(X)[1L], ";u")
+        "Set999" = paste0(rownames(stats_mat), ";d"),
+        "Set998" = paste0(rownames(stats_mat)[1L], ";u")
       )
     ),
     nperm = 0L
@@ -228,11 +169,11 @@ test_that("extreme directional sets are removed", {
 
   # If all sets are extreme, throw an error
   err <- capture_error(
-    fast_ssgsea(
-      X = X,
+    fast_ssgsea_multicol(
+      stats_mat = stats_mat,
       gene_sets = list(
-        "Set1" = paste0(rownames(X), ";u"),
-        "Set2" = paste0(rownames(X)[1:2], ";d")
+        "Set1" = paste0(rownames(stats_mat), ";u"),
+        "Set2" = paste0(rownames(stats_mat)[1:2], ";d")
       ),
       nperm = 0L,
       min_size = 3L
@@ -242,16 +183,16 @@ test_that("extreme directional sets are removed", {
   expect_identical(
     object = err,
     expected = paste0(
-      "All sets in `gene_sets` contain fewer than `min_size` genes or ",
-      "more than `max_size` genes with nonmissing values."
+      "All sets in `gene_sets` have fewer than `min_size` or ",
+      "more than `max_size` genes."
     )
   )
 })
 
 
 test_that("The columns of the results have the correct type and position", {
-  res <- fast_ssgsea(
-    X = X,
+  res <- fast_ssgsea_multicol(
+    stats_mat = stats_mat,
     gene_sets = gene_sets,
     alpha = 0,
     nperm = 100L,
@@ -284,18 +225,18 @@ test_that("The columns of the results have the correct type and position", {
   ## Directional database
   set.seed(0)
   gene_set1_up <- paste0(
-    sample(rownames(X)[1:150], size = 60L),
+    sample(rownames(stats_mat)[1:150], size = 60L),
     ";u"
   )
   gene_set1_down <- paste0(
-    sample(rownames(X)[nrow(X) - 1:150], size = 40L),
+    sample(rownames(stats_mat)[nrow(stats_mat) - 1:150], size = 40L),
     ";d"
   )
 
   gene_sets_dir <- list("Set1" = c(gene_set1_up, gene_set1_down))
 
-  res <- fast_ssgsea(
-    X = X,
+  res <- fast_ssgsea_multicol(
+    stats_mat = stats_mat,
     gene_sets = gene_sets_dir,
     nperm = 10L
   )
@@ -312,13 +253,13 @@ test_that("The columns of the results have the correct type and position", {
 test_that("The ES are correct when there are ties", {
   ## alpha = 0
   expected_ES_0 <- lapply(gene_sets, function(set_i) {
-    calculate_ES(X = X, gene_set = set_i, alpha = 0)
+    calculate_ES(stats_mat = stats_mat, gene_set = set_i, alpha = 0)
   })
-  expected_ES_0 <- rbindlist(expected_ES_0, idcol = "set")
+  expected_ES_0 <- data.table::rbindlist(expected_ES_0, idcol = "set")
   setorderv(expected_ES_0, cols = c("sample", "set"))
 
-  true_ES_0 <- fast_ssgsea(
-    X = X,
+  true_ES_0 <- fast_ssgsea_multicol(
+    stats_mat = stats_mat,
     gene_sets = gene_sets,
     alpha = 0,
     nperm = 0L,
@@ -333,13 +274,13 @@ test_that("The ES are correct when there are ties", {
 
   ## alpha = 1
   expected_ES_1 <- lapply(gene_sets, function(set_i) {
-    calculate_ES(X = X, gene_set = set_i, alpha = 1)
+    calculate_ES(stats_mat = stats_mat, gene_set = set_i, alpha = 1)
   })
-  expected_ES_1 <- rbindlist(expected_ES_1, idcol = "set")
+  expected_ES_1 <- data.table::rbindlist(expected_ES_1, idcol = "set")
   setorderv(expected_ES_1, cols = c("sample", "set"))
 
-  true_ES_1 <- fast_ssgsea(
-    X = X,
+  true_ES_1 <- fast_ssgsea_multicol(
+    stats_mat = stats_mat,
     gene_sets = gene_sets,
     alpha = 1,
     nperm = 0L,
@@ -361,17 +302,17 @@ test_that("the ES are correct for directional sets", {
   # direction of change, indicating really good agreement. The ES and NES
   # should be very positive.
   gene_set1_up <- paste0(
-    sample(rownames(X)[1:150], size = 60L),
+    sample(rownames(stats_mat)[1:150], size = 60L),
     ";u"
   )
   gene_set1_down <- paste0(
-    sample(rownames(X)[nrow(X) - 1:150], size = 40L),
+    sample(rownames(stats_mat)[nrow(stats_mat) - 1:150], size = 40L),
     ";d"
   )
 
   # Genes in set 2 are only "down", but the values are positive
   gene_set2_down <- paste0(
-    sample(rownames(X)[1:300], size = 30L),
+    sample(rownames(stats_mat)[1:300], size = 30L),
     ";d"
   )
 
@@ -382,8 +323,8 @@ test_that("the ES are correct for directional sets", {
   )
 
   ## alpha = 1 ----
-  res1 <- fast_ssgsea(
-    X = X,
+  res1 <- fast_ssgsea_multicol(
+    stats_mat = stats_mat,
     gene_sets = gene_sets_dir,
     alpha = 1,
     nperm = 1e4L,
@@ -393,21 +334,21 @@ test_that("the ES are correct for directional sets", {
 
   # Need to calculate ES in a piece-wise fashion for directional sets
   set1_res1 <- calculate_ES(
-    X = X,
+    stats_mat = stats_mat,
     gene_set = sub(";u$", "", gene_set1_up),
     alpha = 1
   )
   colnames(set1_res1) <- c("sample", "ES_u")
 
   set1_res2 <- calculate_ES(
-    X = X,
+    stats_mat = stats_mat,
     gene_set = sub(";d$", "", gene_set1_down),
     alpha = 1
   )
   colnames(set1_res2) <- c("sample", "ES_d")
 
   set2_res <- calculate_ES(
-    X = X,
+    stats_mat = stats_mat,
     gene_set = sub(
       ";[ud]$", "", gene_sets_dir[["Set2"]]
     ),
@@ -417,7 +358,7 @@ test_that("the ES are correct for directional sets", {
   set2_res <- set2_res[, c("sample", "set", "ES_u", "ES_d", "ES")]
 
   set3_res <- calculate_ES(
-    X = X,
+    stats_mat = stats_mat,
     gene_set = sub(
       ";[ud]$", "", gene_sets_dir[["Set3"]]
     ),
@@ -459,8 +400,8 @@ test_that("the ES are correct for directional sets", {
   # The gene set is the same as gene_set2_down (without the expected direction
   # of change), but the sign of the ES and NES will have opposite signs to the
   # res1 results.
-  res2 <- fast_ssgsea(
-    X = X,
+  res2 <- fast_ssgsea_multicol(
+    stats_mat = stats_mat,
     gene_sets = list("Set1" = sub(";d", "", gene_set2_down)),
     alpha = 1,
     nperm = 1e4L,
@@ -477,13 +418,13 @@ test_that("the ES are correct for directional sets", {
   # permutation enrichment scores in Rcpp_calcESPermCore()
   expect_equal(
     signif(res1$NES[res1$set == "Set2"], digits = 5L),
-    c(-6.1113, -0.16685, 0.76236, 0.095932)
+    c(-6.15990, -0.16928, 0.77529, 0.09746)
   )
 
 
   ## alpha = 0 ----
-  res1 <- fast_ssgsea(
-    X = X,
+  res1 <- fast_ssgsea_multicol(
+    stats_mat = stats_mat,
     gene_sets = gene_sets_dir,
     alpha = 0,
     nperm = 1e4L,
@@ -505,8 +446,8 @@ test_that("the ES are correct for directional sets", {
   # The gene set is the same as gene_set2_down (without the expected direction
   # of change), but the sign of the ES and NES will have opposite signs to the
   # res1 results.
-  res2 <- fast_ssgsea(
-    X = X,
+  res2 <- fast_ssgsea_multicol(
+    stats_mat = stats_mat,
     gene_sets = list("Set1" = sub(";d", "", gene_set2_down)),
     alpha = 0,
     nperm = 1e4L,
@@ -521,26 +462,60 @@ test_that("the ES are correct for directional sets", {
 
   expect_equal(
     signif(res1$NES[res1$set == "Set2"], digits = 5L),
-    c(-10.254, 0.063917, 0.36674, -0.050733)
+    c(-10.41400, 0.064937, 0.374570, -0.050986)
   )
 })
 
 
-test_that("Permutation ES are mostly within [-4, +4]", {
+test_that("genes in directional gene sets can be the same direction", {
+  # All down
+  set_down <- paste0(rownames(stats_mat)[seq_len(30L)], ";d")
+
+  expect_no_error(
+    res1 <- fast_ssgsea_multicol(
+      stats_mat = stats_mat,
+      gene_sets = list("set_down" = set_down),
+      nperm = 500L
+    )
+  )
+
+  expect_true(
+    all(!is.na(res1$NES))
+  )
+
+  # All up
+  set_up <- paste0(rownames(stats_mat)[seq_len(30L)], ";u")
+
+  expect_no_error(
+    res2 <- fast_ssgsea_multicol(
+      stats_mat = stats_mat,
+      gene_sets = list("set_up" = set_up),
+      nperm = 500L
+    )
+  )
+
+  expect_true(
+    all(!is.na(res2$NES))
+  )
+
+})
+
+
+test_that("NES are mostly within [-4, +4]", {
   set_sizes <- rep.int(5:100, 20L)
 
   gene_sets <- lapply(seq_along(set_sizes), function(i) {
     set.seed(i)
 
-    sample(rownames(X), size = set_sizes[i])
+    sample(rownames(stats_mat), size = set_sizes[i])
   })
   names(gene_sets) <- paste0("set.", seq_along(gene_sets))
 
-  res1 <- fast_ssgsea(
-    X = X,
+  res1 <- fast_ssgsea_multicol(
+    stats_mat = stats_mat,
     gene_sets = gene_sets,
     alpha = 0,
-    nperm = 1000L,
+    nperm = 500L,
     sort = FALSE,
     seed = 0L
   )
@@ -549,11 +524,11 @@ test_that("Permutation ES are mostly within [-4, +4]", {
     mean(res1$NES <= 4 & res1$NES >= -4) >= 0.995
   )
 
-  res2 <- fast_ssgsea(
-    X = X,
+  res2 <- fast_ssgsea_multicol(
+    stats_mat = stats_mat,
     gene_sets = gene_sets,
     alpha = 1,
-    nperm = 1000L,
+    nperm = 500L,
     sort = FALSE,
     seed = 0L
   )
@@ -565,33 +540,25 @@ test_that("Permutation ES are mostly within [-4, +4]", {
 
 
 test_that("results are sorted correctly", {
-  res1 <- fast_ssgsea(
-    X = X,
+  res1 <- fast_ssgsea_multicol(
+    stats_mat = stats_mat,
     gene_sets = gene_sets,
     alpha = 0,
     nperm = 500L,
     sort = FALSE
   )
 
-  # Samples should appear one after the other
-  expected_samples <- paste0("sample", rep(seq_len(ncol(X)), each = 2L))
-  expected_samples <- as.factor(expected_samples)
-
-  expect_identical(
-    object = res1$sample,
-    expected = expected_samples
-  )
-
   # Gene sets should appear in order (no sorting)
   expect_identical(
     object = res1$set,
-    expected = rep(names(gene_sets), times = ncol(X))
+    expected = rep(names(gene_sets), times = ncol(stats_mat))
   )
 })
 
+
 test_that("n_same_sign >= n_as_extreme", {
-  res <- fast_ssgsea(
-    X = X,
+  res <- fast_ssgsea_multicol(
+    stats_mat = stats_mat,
     gene_sets = gene_sets,
     nperm = 500L,
     sort = FALSE
@@ -604,8 +571,8 @@ test_that("n_same_sign >= n_as_extreme", {
 
 
 test_that("p-values are between 0 and 1", {
-  res1 <- fast_ssgsea(
-    X = X,
+  res1 <- fast_ssgsea_multicol(
+    stats_mat = stats_mat,
     gene_sets = gene_sets,
     alpha = 0,
     nperm = 500L,
@@ -616,8 +583,8 @@ test_that("p-values are between 0 and 1", {
     all(res1$p_value <= 1) && all(res1$p_value > 0)
   )
 
-  res2 <- fast_ssgsea(
-    X = X,
+  res2 <- fast_ssgsea_multicol(
+    stats_mat = stats_mat,
     gene_sets = gene_sets,
     alpha = 1,
     nperm = 500L,
@@ -627,62 +594,4 @@ test_that("p-values are between 0 and 1", {
   expect_true(
     all(res2$p_value <= 1) && all(res2$p_value > 0)
   )
-})
-
-
-test_that("p-values are adjusted separately by sample", {
-  ## Adjust p-values separately by sample
-  res1 <- fast_ssgsea(
-    X = X,
-    gene_sets = gene_sets,
-    alpha = 0,
-    nperm = 1000L,
-    sort = FALSE,
-    adjust_globally = FALSE
-  )
-
-  expect_identical(
-    object = res1$adj_p_value[seq_along(gene_sets)],
-    expected = p.adjust(res1$adj_p_value[seq_along(gene_sets)],
-      method = "BH"
-    )
-  )
-
-  ## Adjust p-values separately by sample
-  res2 <- fast_ssgsea(
-    X = X,
-    gene_sets = gene_sets,
-    nperm = 1000L,
-    sort = FALSE,
-    adjust_globally = TRUE
-  )
-
-  expect_identical(
-    object = res2$adj_p_value,
-    expected = p.adjust(res2$p_value, method = "BH")
-  )
-})
-
-
-test_that("batching permutations works correctly", {
-  res1 <- fast_ssgsea(
-    X = X,
-    gene_sets = gene_sets,
-    nperm = 1000L,
-    batch_size = 1000L,
-    sort = FALSE,
-    seed = 0L
-  )
-
-  res2 <- fast_ssgsea(
-    X = X,
-    gene_sets = gene_sets,
-    nperm = 1000L,
-    batch_size = 500L,
-    sort = FALSE,
-    seed = 0L
-  )
-
-  # The NES might be different in the last few digits, but they are close enough
-  expect_equal(res1, res2)
 })

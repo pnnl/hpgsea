@@ -126,24 +126,19 @@ and 1,000 genes.
 
 ``` r
 n_genes <- 10000L # number of genes
-n_samples <- 1L # number of samples (>= 1)
 genes <- paste0("gene", seq_len(n_genes))
-samples <- paste0("sample", seq_len(n_samples))
 
-## Simulate matrix of sample gene expression values
+# Simulate named vector of gene-level values
 set.seed(9001L)
-X <- matrix(
-  data = rnorm(n = n_genes * n_samples),
-  nrow = n_genes,
-  ncol = n_samples,
-  dimnames = list(genes, samples)
-)
+stats <- rnorm(n = n_genes)
+names(stats) <- genes
 
-## Simulate list of gene sets
+# Simulate list of gene sets
 n_sets <- 20000L # number of gene sets
 min_size <- 5L # size of smallest gene set
 max_size <- 1000L # size of largest gene set
 
+# Set sizes are uniformly distributed between min_size and max_size
 size_range <- max_size - min_size + 1L
 n_reps <- ceiling(n_sets / size_range)
 set_sizes <- rep(max_size:min_size, times = n_reps)[seq_len(n_sets)]
@@ -167,7 +162,7 @@ library(fast.ssgsea)
 # Runtime (in seconds)
 system.time({
   res <- fast_ssgsea(
-    X = X,
+    stats = stats,
     gene_sets = gene_sets,
     alpha = 1,
     nperm = 1e5L,
@@ -178,14 +173,13 @@ system.time({
 ```
 
     ##    user  system elapsed 
-    ##   2.168   0.376   2.299
+    ##   1.367   0.088   1.374
 
 ``` r
 str(res)
 ```
 
-    ## 'data.frame':    20000 obs. of  9 variables:
-    ##  $ sample      : Factor w/ 1 level "sample1": 1 1 1 1 1 1 1 1 1 1 ...
+    ## 'data.frame':    20000 obs. of  8 variables:
     ##  $ set         : chr  "set18791" "set2830" "set19084" "set18223" ...
     ##  $ set_size    : int  138 163 841 706 801 87 503 409 320 450 ...
     ##  $ ES          : num  -1866 1584 698 759 709 ...
@@ -213,16 +207,14 @@ print(sessionInfo(), locale = FALSE, tzone = FALSE)
     ## [1] stats     graphics  grDevices utils     datasets  methods   base     
     ## 
     ## other attached packages:
-    ## [1] dqrng_0.4.1            fast.ssgsea_0.1.0.9025
+    ## [1] dqrng_0.4.1            fast.ssgsea_0.1.0.9027
     ## 
     ## loaded via a namespace (and not attached):
-    ##  [1] digest_0.6.37          RcppArmadillo_15.0.2-2 collapse_2.1.3        
-    ##  [4] fastmap_1.2.0          xfun_0.53              Matrix_1.7-4          
-    ##  [7] lattice_0.22-7         parallel_4.5.2         knitr_1.50            
-    ## [10] htmltools_0.5.8.1      rmarkdown_2.29         cli_3.6.5             
-    ## [13] grid_4.5.2             data.table_1.17.8      compiler_4.5.2        
-    ## [16] rstudioapi_0.17.1      tools_4.5.2            evaluate_1.0.5        
-    ## [19] Rcpp_1.1.0             yaml_2.3.10            rlang_1.1.6
+    ##  [1] digest_0.6.37     collapse_2.1.3    fastmap_1.2.0     xfun_0.53        
+    ##  [5] knitr_1.50        parallel_4.5.2    htmltools_0.5.8.1 rmarkdown_2.29   
+    ##  [9] cli_3.6.5         data.table_1.17.8 compiler_4.5.2    rstudioapi_0.17.1
+    ## [13] tools_4.5.2       evaluate_1.0.5    Rcpp_1.1.0        yaml_2.3.10      
+    ## [17] rlang_1.1.6
 
 ## Performance
 
