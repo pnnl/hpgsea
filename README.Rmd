@@ -76,24 +76,19 @@ We will also generate 20,000 gene sets by randomly sampling between 5 and 1,000 
 
 ```{r simulate-data}
 n_genes <- 10000L # number of genes
-n_samples <- 1L # number of samples (>= 1)
 genes <- paste0("gene", seq_len(n_genes))
-samples <- paste0("sample", seq_len(n_samples))
 
-## Simulate matrix of sample gene expression values
+# Simulate named vector of gene-level values
 set.seed(9001L)
-X <- matrix(
-  data = rnorm(n = n_genes * n_samples),
-  nrow = n_genes,
-  ncol = n_samples,
-  dimnames = list(genes, samples)
-)
+stats <- rnorm(n = n_genes)
+names(stats) <- genes
 
-## Simulate list of gene sets
+# Simulate list of gene sets
 n_sets <- 20000L # number of gene sets
 min_size <- 5L # size of smallest gene set
 max_size <- 1000L # size of largest gene set
 
+# Set sizes are uniformly distributed between min_size and max_size
 size_range <- max_size - min_size + 1L
 n_reps <- ceiling(n_sets / size_range)
 set_sizes <- rep(max_size:min_size, times = n_reps)[seq_len(n_sets)]
@@ -115,7 +110,7 @@ library(fast.ssgsea)
 # Runtime (in seconds)
 system.time({
   res <- fast_ssgsea(
-    X = X,
+    stats = stats,
     gene_sets = gene_sets,
     alpha = 1,
     nperm = 1e5L,

@@ -2,15 +2,13 @@
 % Please edit documentation in R/fast_ssgsea.R
 \name{fast_ssgsea}
 \alias{fast_ssgsea}
-\title{Fast Single-Sample Gene Set Enrichment Analysis (ssGSEA)}
+\title{High-Performance Variant of Pre-Ranked Gene Set Enrichment Analysis}
 \usage{
 fast_ssgsea(
-  X,
+  stats,
   gene_sets,
   alpha = 1,
   nperm = 100000L,
-  batch_size = 1000L,
-  adjust_globally = FALSE,
   min_size = 2L,
   max_size = Inf,
   sort = TRUE,
@@ -19,46 +17,33 @@ fast_ssgsea(
 )
 }
 \arguments{
-\item{X}{a numeric matrix with genes/molecules as row names and one or more
-samples, coefficients, or contrasts as column names. Missing values are
-allowed.}
+\item{stats}{a numeric vector with genes/molecules as names. Missing values
+are allowed. Zeroes may cause some enrichment scores (ES) to be \code{NA}.}
 
-\item{gene_sets}{a named list of molecular signatures to test. Each element
-of the list must be a character vector. Most commonly, molecular signatures
-will be in the form of gene sets, though it is not a requirement. At least
-some elements of \code{gene_sets} must be in \code{rownames(X)}.}
+\item{gene_sets}{a named list of molecular signatures to test; usually gene
+sets. Each element of the list must be a character vector. At least some
+elements of \code{gene_sets} must be in \code{names(stats)}.}
 
 \item{alpha}{numeric (\eqn{\geq 0}); the power to which the absolute values
-of the entries of \code{X} will be raised. Affects the ES calculation. If
-\code{alpha=0}, computation time may be significantly reduced, though all
-genes/molecules in each set will contribute equally.}
+of the entries of \code{stats} will be raised. Affects the ES calculation.
+If \code{alpha=0}, all genes/molecules in each set will contribute equally.}
 
 \item{nperm}{integer (\eqn{\geq 0}); the number of permutations used to
 calculate the normalized enrichment scores (NES) and p-values. Between 0
 and 2 billion.}
 
-\item{batch_size}{integer (\eqn{\gg 1} and \eqn{\leq} \code{nperm}); the
-maximum number of permutations run as a single batch. It is not recommended
-to change this.}
+\item{min_size}{integer (\eqn{\geq 2}); the minimum set size. To be
+considered for testing, sets must have at least \code{min_size} elements
+with non-missing values in \code{stats}.}
 
-\item{adjust_globally}{logical; whether p-values from different columns of
-\code{X} should be adjusted together. Default is \code{FALSE}.}
+\item{max_size}{integer or \code{Inf}; the maximum set size. A value of 500
+is recommended.}
 
-\item{min_size}{integer; the minimum set size. To be considered for testing,
-sets must have at least \code{min_size} elements with non-missing values in
-\emph{all} columns of \code{X}. The default value of 2 is the minimum
-possible set size required for testing, though higher values tend to
-produce more robust results.}
+\item{sort}{logical; should the results be sorted by p-value? Default is
+\code{TRUE}.}
 
-\item{max_size}{integer or \code{Inf}; the maximum set size. Recommended to
-set this to 500.}
-
-\item{sort}{logical; should the results for each column of \code{X} be sorted
-by p-value? Default is \code{TRUE}.}
-
-\item{seed}{integer or \code{NULL}; passed to \code{\link[base]{set.seed}}.
-If \code{NULL} (default), the normalized enrichment scores and p-values
-will vary between runs.}
+\item{seed}{integer or \code{NULL}; if \code{NULL} (default), the normalized
+enrichment scores and p-values will vary between runs.}
 
 \item{alternative}{character; the alternative hypothesis. One of
 "\code{two.sided}" (default), "\code{less}", or "\code{greater}". The
@@ -68,26 +53,25 @@ latter two will perform one-sided tests.}
 A \code{data.frame} with the following columns:
 
 \describe{
-  \item{sample}{factor; one of \code{colnames(X)}.}
-
-  \item{set}{character; the gene set being tested.}
+  \item{set}{character; the gene set that was tested.}
 
   \item{set_size}{integer; number of genes in the set with non-missing values
-  in the \code{mat} matrix for a given column.}
+  in \code{stats}.}
 
   \item{ES_u}{numeric; only included if \code{gene_sets} is a directional
-  database. The enrichment score for the elements that are expected to be
-  up-regulated.}
+  database. The enrichment score for the elements of the set that are
+  expected to be up-regulated.}
 
   \item{ES_d}{numeric; only included if \code{gene_sets} is a directional
-  database. The enrichment score for the elements that are expected to be
-  down-regulated.}
+  database. The enrichment score for the elements of the set that are
+  expected to be down-regulated.}
 
   \item{ES}{numeric; the enrichment score (ES). The area under the running
-  sum. If \code{gene_sets} is a directional database, it is calculated as
-  \code{ES_u - ES_d}, where more positive values indicate better agreement
-  between the true and expected directions of change and more negative values
-  indicate worse agreement.}
+  sum. This differs from the classic definition of the ES, which is the most
+  extreme value of the cumulative sum. If \code{gene_sets} is a directional
+  database, the ES is calculated as \code{ES_u - ES_d}, where more positive
+  values indicate strong agreement between the true and expected directions
+  of change and more negative values indicate strong disagreement.}
 
   \item{NES}{numeric; normalized enrichment score (NES). The ratio of the ES
   to the absolute mean of the permutation ES with the same sign. If
@@ -97,50 +81,31 @@ A \code{data.frame} with the following columns:
   as the true ES. At most \code{nperm}. If \code{nperm=0}, all values will be
   \code{NA}.}
 
-  \item{n_as_extreme}{integer; the number of permutation ES with the same
-  sign as the true ES that are at least as extreme as the true ES. At most
-  \code{n_same_sign}. If \code{nperm=0}, all values will be \code{NA}.}
+  \item{n_as_extreme}{integer; the number of permutation ES that are at least
+  as extreme as the true ES. At most \code{n_same_sign}. If \code{nperm=0},
+  all values will be \code{NA}.}
 
   \item{p_value}{numeric; permutation p-value. Calculated as
   \code{(n_as_extreme + 1L) / (n_same_sign + 1L)} if
-  \code{alternative="two.sided"}.}
+  \code{alternative="two.sided"} (default). If \code{nperm=0}, all values
+  will be \code{NA}.}
 
   \item{adj_p_value}{numeric; Benjamini and Hochberg FDR adjusted p-value.}
 }
 }
 \description{
-Highly optimized version of the ssGSEA algorithm (Barbie
-  \emph{et al.}, 2009; Krug \emph{et al.}, 2019).
-}
-\details{
-Unlike the original ssGSEA implementation, p-values are computed as
-  described by Phipson and Smyth (2010).
+A high-Performance variant of pre-ranked Gene Set Enrichment
+  Analysis (GSEA) that is capable of testing gene sets where each gene has an
+  expected direction of change (Krug \emph{et al.}, 2019).
 }
 \references{
-Barbie, D. A., Tamayo, P., Boehm, J. S., Kim, S. Y., Moody, S.
-  E., Dunn, I. F., Schinzel, A. C., Sandy, P., Meylan, E., Scholl, C.,
-  Fröhling, S., Chan, E. M., Sos, M. L., Michel, K., Mermel, C., Silver, S.
-  J., Weir, B. A., Reiling, J. H., Sheng, Q., Gupta, P. B., … Hahn, W. C.
-  (2009). Systematic RNA interference reveals that oncogenic KRAS-driven
-  cancers require TBK1. \emph{Nature, 462}(7269), 108–112.
-  doi:\href{https://doi.org/10.1038/nature08460}{10.1038/nature08460}
-
-  Phipson, B., and Smyth, G. K. (2010). Permutation \emph{p}-values should
-  never be zero: calculating exact p-values when permutations are randomly
-  drawn. \emph{Stat. Appl. Genet. Molec. Biol.} Volume 9, Issue 1, Article
-  39.
-
-  Krug, K., Mertins, P., Zhang, B., Hornbeck, P., Raju, R., Ahmad, R., Szucs,
-  M., Mundt, F., Forestier, D., Jane-Valbuena, J., Keshishian, H., Gillette,
-  M. A., Tamayo, P., Mesirov, J. P., Jaffe, J. D., Carr, S. A., & Mani, D. R.
-  (2019). A Curated Resource for Phosphosite-specific Signature Analysis.
-  \emph{Molecular & cellular proteomics : MCP, 18}(3), 576–593.
+Krug, K., Mertins, P., Zhang, B., Hornbeck, P., Raju, R., Ahmad,
+  R., Szucs, M., Mundt, F., Forestier, D., Jane-Valbuena, J., Keshishian, H.,
+  Gillette, M. A., Tamayo, P., Mesirov, J. P., Jaffe, J. D., Carr, S. A., &
+  Mani, D. R. (2019). A Curated Resource for Phosphosite-specific Signature
+  Analysis. \emph{Molecular & cellular proteomics : MCP, 18}(3), 576–593.
   doi:\href{https://doi.org/10.1074/mcp.TIR118.000943}{
   10.1074/mcp.TIR118.000943}
-
-  Korotkevich, G., Sukhov, V., Budin, N., Shpak, B., Artyomov, M. N., &
-  Sergushichev, A. (2021). Fast gene set enrichment analysis. \emph{bioRxiv},
-  060012. doi:\href{https://doi.org/10.1101/060012}{10.1101/060012}
 }
 \author{
 Tyler Sagendorf

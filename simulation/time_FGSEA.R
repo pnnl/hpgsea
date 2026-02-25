@@ -4,14 +4,14 @@ source("simulation/scripts/function-generate_data.R")
 
 # Parameter combinations ----
 param_list <- list(
-  "nGenes" = 1e4L,
-  "nSamples" = 1L,
-  "minSetSize" = 10L,
   "maxSetSize" = c(500L, 1000L),
   "nSets" = c(1e3L, 1e4L, 5e4L),
-  "nperm" = c(1e4L, 1e5L, 1e6L),
-  "alpha" = 1
+  "nperm" = c(1e4L, 1e5L, 1e6L)
 )
+
+n_genes <- 1e4L
+min_size <- 10L
+alpha <- 1
 
 comb_df <- expand.grid(param_list)
 
@@ -33,25 +33,27 @@ for (nproc in c(0L, 1L)) {
       li <- with(
         row_i,
         generate_data(
-          nGenes, nSamples,
-          minSetSize, maxSetSize, nSets,
-          nperm, alpha
+          nGenes = n_genes,
+          minSetSize = min_size,
+          maxSetSize,
+          nSets,
+          nperm
         )
       )
 
-      X_i <- li[["X"]][, 1L, drop = TRUE]
-      gene_sets_i <- li[["gene_sets"]]
+      stats_i <- li[["stats"]]
+      gene_sets_i <- stats[["gene_sets"]]
 
       tic <- Sys.time()
 
       invisible({
         capture.output({
           res <- fgseaSimple(
-            stats = X_i,
+            stats = stats_i,
             pathways = gene_sets_i,
-            gseaParam = row_i[["alpha"]],
+            gseaParam = alpha,
             nperm = row_i[["nperm"]],
-            minSize = row_i[["minSetSize"]],
+            minSize = min_size,
             maxSize = row_i[["maxSetSize"]],
             nproc = nproc
           )
@@ -86,5 +88,5 @@ for (nproc in c(0L, 1L)) {
     )
   )
 
-  Sys.sleep(30)
+  Sys.sleep(30) # CPU cool down
 }

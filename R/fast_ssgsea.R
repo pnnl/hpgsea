@@ -1,69 +1,55 @@
-#' @title Fast Single-Sample Gene Set Enrichment Analysis (ssGSEA)
+#' @title High-Performance Variant of Pre-Ranked Gene Set Enrichment Analysis
 #'
-#' @description Highly optimized version of the ssGSEA algorithm (Barbie
-#'   \emph{et al.}, 2009; Krug \emph{et al.}, 2019).
+#' @description A high-Performance variant of pre-ranked Gene Set Enrichment
+#'   Analysis (GSEA) that is capable of testing gene sets where each gene has an
+#'   expected direction of change (Krug \emph{et al.}, 2019).
 #'
-#' @param X a numeric matrix with genes/molecules as row names and one or more
-#'   samples, coefficients, or contrasts as column names. Missing values are
-#'   allowed.
-#' @param gene_sets a named list of molecular signatures to test. Each element
-#'   of the list must be a character vector. Most commonly, molecular signatures
-#'   will be in the form of gene sets, though it is not a requirement. At least
-#'   some elements of \code{gene_sets} must be in \code{rownames(X)}.
+#' @param stats a numeric vector with genes/molecules as names. Missing values
+#'   are allowed. Zeroes may cause some enrichment scores (ES) to be \code{NA}.
+#' @param gene_sets a named list of molecular signatures to test; usually gene
+#'   sets. Each element of the list must be a character vector. At least some
+#'   elements of \code{gene_sets} must be in \code{names(stats)}.
 #' @param alpha numeric (\eqn{\geq 0}); the power to which the absolute values
-#'   of the entries of \code{X} will be raised. Affects the ES calculation. If
-#'   \code{alpha=0}, computation time may be significantly reduced, though all
-#'   genes/molecules in each set will contribute equally.
+#'   of the entries of \code{stats} will be raised. Affects the ES calculation.
+#'   If \code{alpha=0}, all genes/molecules in each set will contribute equally.
 #' @param nperm integer (\eqn{\geq 0}); the number of permutations used to
 #'   calculate the normalized enrichment scores (NES) and p-values. Between 0
 #'   and 2 billion.
-#' @param batch_size integer (\eqn{\gg 1} and \eqn{\leq} \code{nperm}); the
-#'   maximum number of permutations run as a single batch. It is not recommended
-#'   to change this.
-#' @param adjust_globally logical; whether p-values from different columns of
-#'   \code{X} should be adjusted together. Default is \code{FALSE}.
-#' @param min_size integer; the minimum set size. To be considered for testing,
-#'   sets must have at least \code{min_size} elements with non-missing values in
-#'   \emph{all} columns of \code{X}. The default value of 2 is the minimum
-#'   possible set size required for testing, though higher values tend to
-#'   produce more robust results.
-#' @param max_size integer or \code{Inf}; the maximum set size. Recommended to
-#'   set this to 500.
-#' @param sort logical; should the results for each column of \code{X} be sorted
-#'   by p-value? Default is \code{TRUE}.
-#' @param seed integer or \code{NULL}; passed to \code{\link[base]{set.seed}}.
-#'   If \code{NULL} (default), the normalized enrichment scores and p-values
-#'   will vary between runs.
+#' @param min_size integer (\eqn{\geq 2}); the minimum set size. To be
+#'   considered for testing, sets must have at least \code{min_size} elements
+#'   with non-missing values in \code{stats}.
+#' @param max_size integer or \code{Inf}; the maximum set size. A value of 500
+#'   is recommended.
+#' @param sort logical; should the results be sorted by p-value? Default is
+#'   \code{TRUE}.
+#' @param seed integer or \code{NULL}; if \code{NULL} (default), the normalized
+#'   enrichment scores and p-values will vary between runs.
 #' @param alternative character; the alternative hypothesis. One of
 #'   "\code{two.sided}" (default), "\code{less}", or "\code{greater}". The
 #'   latter two will perform one-sided tests.
 #'
-#' @details Unlike the original ssGSEA implementation, p-values are computed as
-#'   described by Phipson and Smyth (2010).
-#'
 #' @returns A \code{data.frame} with the following columns:
 #'
 #' \describe{
-#'   \item{sample}{factor; one of \code{colnames(X)}.}
-#'
-#'   \item{set}{character; the gene set being tested.}
+#'   \item{set}{character; the gene set that was tested.}
 #'
 #'   \item{set_size}{integer; number of genes in the set with non-missing values
-#'   in the \code{mat} matrix for a given column.}
+#'   in \code{stats}.}
 #'
 #'   \item{ES_u}{numeric; only included if \code{gene_sets} is a directional
-#'   database. The enrichment score for the elements that are expected to be
-#'   up-regulated.}
+#'   database. The enrichment score for the elements of the set that are
+#'   expected to be up-regulated.}
 #'
 #'   \item{ES_d}{numeric; only included if \code{gene_sets} is a directional
-#'   database. The enrichment score for the elements that are expected to be
-#'   down-regulated.}
+#'   database. The enrichment score for the elements of the set that are
+#'   expected to be down-regulated.}
 #'
 #'   \item{ES}{numeric; the enrichment score (ES). The area under the running
-#'   sum. If \code{gene_sets} is a directional database, it is calculated as
-#'   \code{ES_u - ES_d}, where more positive values indicate better agreement
-#'   between the true and expected directions of change and more negative values
-#'   indicate worse agreement.}
+#'   sum. This differs from the classic definition of the ES, which is the most
+#'   extreme value of the cumulative sum. If \code{gene_sets} is a directional
+#'   database, the ES is calculated as \code{ES_u - ES_d}, where more positive
+#'   values indicate strong agreement between the true and expected directions
+#'   of change and more negative values indicate strong disagreement.}
 #'
 #'   \item{NES}{numeric; normalized enrichment score (NES). The ratio of the ES
 #'   to the absolute mean of the permutation ES with the same sign. If
@@ -73,167 +59,79 @@
 #'   as the true ES. At most \code{nperm}. If \code{nperm=0}, all values will be
 #'   \code{NA}.}
 #'
-#'   \item{n_as_extreme}{integer; the number of permutation ES with the same
-#'   sign as the true ES that are at least as extreme as the true ES. At most
-#'   \code{n_same_sign}. If \code{nperm=0}, all values will be \code{NA}.}
+#'   \item{n_as_extreme}{integer; the number of permutation ES that are at least
+#'   as extreme as the true ES. At most \code{n_same_sign}. If \code{nperm=0},
+#'   all values will be \code{NA}.}
 #'
 #'   \item{p_value}{numeric; permutation p-value. Calculated as
 #'   \code{(n_as_extreme + 1L) / (n_same_sign + 1L)} if
-#'   \code{alternative="two.sided"}.}
+#'   \code{alternative="two.sided"} (default). If \code{nperm=0}, all values
+#'   will be \code{NA}.}
 #'
 #'   \item{adj_p_value}{numeric; Benjamini and Hochberg FDR adjusted p-value.}
 #' }
 #'
 #' @author Tyler Sagendorf
 #'
-#' @references Barbie, D. A., Tamayo, P., Boehm, J. S., Kim, S. Y., Moody, S.
-#'   E., Dunn, I. F., Schinzel, A. C., Sandy, P., Meylan, E., Scholl, C.,
-#'   Fröhling, S., Chan, E. M., Sos, M. L., Michel, K., Mermel, C., Silver, S.
-#'   J., Weir, B. A., Reiling, J. H., Sheng, Q., Gupta, P. B., … Hahn, W. C.
-#'   (2009). Systematic RNA interference reveals that oncogenic KRAS-driven
-#'   cancers require TBK1. \emph{Nature, 462}(7269), 108–112.
-#'   doi:\href{https://doi.org/10.1038/nature08460}{10.1038/nature08460}
-#'
-#'   Phipson, B., and Smyth, G. K. (2010). Permutation \emph{p}-values should
-#'   never be zero: calculating exact p-values when permutations are randomly
-#'   drawn. \emph{Stat. Appl. Genet. Molec. Biol.} Volume 9, Issue 1, Article
-#'   39.
-#'
-#'   Krug, K., Mertins, P., Zhang, B., Hornbeck, P., Raju, R., Ahmad, R., Szucs,
-#'   M., Mundt, F., Forestier, D., Jane-Valbuena, J., Keshishian, H., Gillette,
-#'   M. A., Tamayo, P., Mesirov, J. P., Jaffe, J. D., Carr, S. A., & Mani, D. R.
-#'   (2019). A Curated Resource for Phosphosite-specific Signature Analysis.
-#'   \emph{Molecular & cellular proteomics : MCP, 18}(3), 576–593.
+#' @references Krug, K., Mertins, P., Zhang, B., Hornbeck, P., Raju, R., Ahmad,
+#'   R., Szucs, M., Mundt, F., Forestier, D., Jane-Valbuena, J., Keshishian, H.,
+#'   Gillette, M. A., Tamayo, P., Mesirov, J. P., Jaffe, J. D., Carr, S. A., &
+#'   Mani, D. R. (2019). A Curated Resource for Phosphosite-specific Signature
+#'   Analysis. \emph{Molecular & cellular proteomics : MCP, 18}(3), 576–593.
 #'   doi:\href{https://doi.org/10.1074/mcp.TIR118.000943}{
 #'   10.1074/mcp.TIR118.000943}
 #'
-#'   Korotkevich, G., Sukhov, V., Budin, N., Shpak, B., Artyomov, M. N., &
-#'   Sergushichev, A. (2021). Fast gene set enrichment analysis. \emph{bioRxiv},
-#'   060012. doi:\href{https://doi.org/10.1101/060012}{10.1101/060012}
-#'
 #' @export fast_ssgsea
 
-fast_ssgsea <- function(X,
+fast_ssgsea <- function(stats,
                         gene_sets,
                         alpha = 1,
                         nperm = 1e5L,
-                        batch_size = 1000L,
-                        adjust_globally = FALSE,
                         min_size = 2L,
                         max_size = Inf,
                         sort = TRUE,
                         seed = NULL,
                         alternative = c("two.sided", "less", "greater")) {
-  # Validate X, sort genes alphabetically, and transpose
-  X <- .prepareX(X)
-
-  # Validate function parameters
-  .validateParams(
-    alpha = alpha,
-    nperm = nperm,
-    batch_size = batch_size,
-    adjust_globally = adjust_globally,
-    min_size = min_size,
-    max_size = max_size,
-    sort = sort,
-    seed = seed,
-    n_genes = ncol(X)
-  )
-
-  batch_size <- max(1L, min(batch_size, nperm))
-
   alternative <- match.arg(
     arg = alternative,
     choices = c("two.sided", "less", "greater")
   )
 
-  # List of one or two sparse incidence matrices. Genes (rows) are sorted
-  # alphabetically.
-  A_list <- .sparseIncidence(
-    gene_sets = gene_sets,
-    background = colnames(X),
-    min_size = min_size
+  stats <- .prepare_stats(stats)
+  n_genes <- length(stats)
+
+  .validate_params(
+    alpha = alpha,
+    nperm = nperm,
+    min_size = min_size,
+    max_size = max_size,
+    sort = sort,
+    seed = seed,
+    n_genes = n_genes
   )
 
-  list2env(x = A_list, envir = environment()) # A, A_d
-
-  Y <- abs(X)^alpha
-  R <- .calcRankMatrix(X = X)
-
-  # Avoid propagating NA's when multiplying matrices later
-  Z <- !is.na(X)
-  storage.mode(Z) <- "numeric"
-
-  NA_idx <- which(Z == 0)
-  Y[NA_idx] <- 0
-  R[NA_idx] <- 0
-
-  n <- rowSums(Z) # number of nonmissing genes in each sample
-
-  # Sum of the ranks of genes with nonmissing values
-  sumRanks <- n * (n + 1L) / 2L # vector of triangular numbers
-
-  # Calculate set size matrices and remove extreme sets
-  M_list <- .calcSetSize(
-    n = n,
-    Z_prime = Z[, rownames(A), drop = FALSE], # Z'
-    A = A,
-    A_d = A_d,
+  ES_list <- .calc_ES(
+    stats = stats,
+    alpha = alpha,
+    n_genes = n_genes,
+    gene_sets = gene_sets,
     min_size = min_size,
     max_size = max_size
   )
 
-  # Extract list components: M, W, M_d, W_d, A, A_d
-  list2env(x = M_list, envir = environment())
-
-  # Enrichment score matrices with samples as rows and gene sets as columns
-  ES_list <- .calcES(
-    Y_prime = Y[, rownames(A), drop = FALSE], # Y'
-    R_prime = R[, rownames(A), drop = FALSE], # R'
-    sumRanks = sumRanks,
-    A = A,
-    M = M,
-    W = W,
-    A_d = A_d,
-    M_d = M_d,
-    W_d = W_d,
-    min_size = min_size
+  tab <- .calc_ES_perm(
+    seed = seed,
+    nperm = nperm,
+    y = y,
+    r = r,
+    n_genes = n_genes,
+    ES_list = ES_list
   )
 
-  # Extract matrices ES, ES_u, and ES_d
-  list2env(x = ES_list, envir = environment())
-
-  # List of results for each sample
-  tab <- lapply(seq_len(nrow(X)), function(i) {
-    # Calculate permutation ES and generate table of results
-    tab_i <- .makeResultsTable(
-      seed = seed,
-      nperm = nperm,
-      batch_size = batch_size,
-      min_size = min_size,
-      y = Y[i, , drop = TRUE],
-      r = R[i, , drop = TRUE],
-      n = n[i],
-      sumRanks = sumRanks[i],
-      m = M[i, , drop = TRUE],
-      m_d = M_d[i, , drop = TRUE], # may be NULL
-      sets = colnames(A),
-      ES = ES[i, , drop = TRUE],
-      # These may be NULL
-      ES_u = ES_u[i, , drop = TRUE],
-      ES_d = ES_d[i, , drop = TRUE]
-    )
-
-    return(tab_i)
-  })
-
-  names(tab) <- rownames(X) # sample names
-
-  tab <- .stackResults(
+  tab <- .calc_pvals(
     tab = tab,
     nperm = nperm,
     sort = sort,
-    adjust_globally = adjust_globally,
     alternative = alternative
   )
 

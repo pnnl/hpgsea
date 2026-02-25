@@ -1,23 +1,17 @@
 generate_data <- function(nGenes,
-                          nSamples,
                           minSetSize,
                           maxSetSize,
                           nSets,
-                          nperm,
-                          alpha) {
+                          nperm) {
   on.exit(invisible(gc()))
 
-  # Numeric matrix with genes as rows and samples as columns
   set.seed(0)
 
   n_digits <- floor(log10(nGenes)) + 1L
   genes <- sprintf(paste0("gene%0", n_digits, "d"), seq_len(nGenes))
-  samples <- paste0("sample", seq_len(nSamples))
 
-  # Sample values from a standard normal distribution
-  X <- rnorm(n = nGenes * nSamples)
-  dim(X) <- c(nGenes, nSamples)
-  dimnames(X) <- list(genes, samples)
+  # Gene-level values
+  stats <- structure(rnorm(n = nGenes), names = genes)
 
   # List of gene sets
   size_range <- maxSetSize - minSetSize + 1L
@@ -32,7 +26,7 @@ generate_data <- function(nGenes,
 
   # Results
   out <- list(
-    "X" = X,
+    "stats" = stats,
     "gene_sets" = gene_sets
   )
 

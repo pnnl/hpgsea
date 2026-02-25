@@ -1,6 +1,4 @@
 #' @import dqrng
-#' @import Matrix
-#' @import RcppArmadillo
 #' @importFrom Rcpp evalCpp
 #'
 #' @useDynLib fast.ssgsea, .registration=TRUE

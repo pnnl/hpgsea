@@ -1,8 +1,8 @@
-test_that("Szudzik pairing function is correctly specified", {
+test_that("Szudzik's pairing function is correctly specified", {
   x <- seq_len(5L)
   y <- 5L - x + 1L
 
-  out <- .szudzikPairing(x, y)
+  out <- .pair_szudzik(x, y)
 
   expect_identical(
     object = out,
