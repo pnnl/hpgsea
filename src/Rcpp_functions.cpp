@@ -1,8 +1,6 @@
 // [[Rcpp::depends(dqrng)]]
 #include <dqrng.h>
 
-// using namespace Rcpp;
-
 
 //' @title Get the Index of the First Positive ES for Every Unique Gene Set Size
 //'
@@ -268,7 +266,10 @@ void calc_ES_perm(SEXP n_same_sign,
   dqrng::dqset_seed(seed);
 
   for (int perm = 0; perm < nperm; ++perm) {
-    Rcpp::checkUserInterrupt();
+    // Checking for interrupt commands every permutation is extremely slow
+    if (nperm % 20000) {
+      Rcpp::checkUserInterrupt();
+    }
 
     // Random sample of max_size integers from 0 to n_genes - 1. Used to select
     // pairs of elements from the vectors y and r.
@@ -523,7 +524,10 @@ void calc_ES_perm_dir(SEXP n_same_sign,
   dqrng::dqset_seed(seed);
 
   for (int perm = 0; perm < nperm; ++perm) {
-    Rcpp::checkUserInterrupt();
+    // Checking for interrupt commands every permutation is extremely slow
+    if (nperm % 20000) {
+      Rcpp::checkUserInterrupt();
+    }
 
     // Random sample of max_size integers from 0 to n_genes - 1. Used to select
     // pairs of elements from the vectors y and r.
