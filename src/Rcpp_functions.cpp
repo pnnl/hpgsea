@@ -267,7 +267,7 @@ void calc_ES_perm(SEXP n_same_sign,
 
   for (int perm = 0; perm < nperm; ++perm) {
     // Checking for interrupt commands every permutation is extremely slow
-    if (nperm % 20000) {
+    if (perm % 50000 == 0) {
       Rcpp::checkUserInterrupt();
     }
 
@@ -525,7 +525,7 @@ void calc_ES_perm_dir(SEXP n_same_sign,
 
   for (int perm = 0; perm < nperm; ++perm) {
     // Checking for interrupt commands every permutation is extremely slow
-    if (nperm % 20000) {
+    if (perm % 50000 == 0) {
       Rcpp::checkUserInterrupt();
     }
 
