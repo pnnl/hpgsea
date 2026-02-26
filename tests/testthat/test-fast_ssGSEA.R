@@ -250,6 +250,37 @@ test_that("The columns of the results have the correct type and position", {
 })
 
 
+test_that("The ES is NA when all gene-level values are 0", {
+  n_genes <- 100L
+  genes <- paste0("gene", seq_len(n_genes))
+
+  set.seed(0L)
+  stats <- structure(rnorm(n_genes), names = genes)
+  stats[1:5] <- 0
+
+  gene_sets <- list(
+    "set1" = genes[1:5],
+    "set2" = genes[2:6]
+  )
+
+  res <- fast_ssgsea(
+    stats = stats,
+    gene_sets = gene_sets,
+    nperm = 100L
+  )
+
+  expect_identical(
+    is.na(res$ES),
+    c(TRUE, FALSE)
+  )
+
+  expect_identical(
+    is.na(res$p_value),
+    c(TRUE, FALSE)
+  )
+})
+
+
 test_that("The ES are correct when there are ties", {
   ## alpha = 0
   expected_ES_0 <- lapply(gene_sets, function(set_i) {
@@ -497,7 +528,44 @@ test_that("genes in directional gene sets can be the same direction", {
   expect_true(
     all(!is.na(res2$NES))
   )
+})
 
+
+test_that("ES_u or ES_d is 0 when there are fewer than min_size up- or down-regulated genes", {
+  gene_sets <- list(
+    "Set1" = paste0(
+      rownames(stats_mat)[1:7],
+      rep(c(";d", ";u"), c(2L, 5L))
+    ),
+    "Set2" = paste0(
+      rownames(stats_mat)[1:7],
+      rep(c(";d", ";u"), c(5L, 2L))
+    )
+  )
+
+  res <- fast_ssgsea(
+    stats = stats_mat[, 1L],
+    gene_sets = gene_sets,
+    nperm = 500L,
+    min_size = 3L,
+    seed = 0L,
+    sort = FALSE
+  )
+
+  expect_equal(
+    round(res$ES_u, digits = 5L),
+    c(998.04833, 0)
+  )
+
+  expect_equal(
+    round(res$ES_d, digits = 5L),
+    c(0, 1000.07507)
+  )
+
+  expect_equal(
+    res$set_size,
+    c(5L, 5L)
+  )
 })
 
 

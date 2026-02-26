@@ -162,6 +162,7 @@
 #' @param m integer vector; the number of genes in each set. Used to select
 #'   elements of `i`.
 #' @param w integer vector; the number of genes that are not in each set.
+#' @inheritParams fast_ssgsea
 #'
 #' @returns Numeric vector of enrichment scores with the same length as `m`. If
 #'   all elements of `y_prime` are 0 for a particular set, the ES for that set
@@ -170,8 +171,8 @@
 #' @author Tyler Sagendorf
 #'
 #' @noRd
-.C_calc_ES <- function(y_prime, r_prime, sum_ranks, i, m, w) {
-  .Call("_C_calc_ES", y_prime, r_prime, sum_ranks, i, m, w)
+.C_calc_ES <- function(y_prime, r_prime, sum_ranks, i, m, w, min_size) {
+  .Call("_C_calc_ES", y_prime, r_prime, sum_ranks, i, m, w, min_size)
 }
 
 
@@ -390,7 +391,8 @@
       sum_ranks = sum_ranks,
       i = i,
       m = m,
-      w = w
+      w = w,
+      min_size = min_size
     )
 
     ES_d <- .C_calc_ES(
@@ -399,7 +401,8 @@
       sum_ranks = sum_ranks,
       i = i_down,
       m = m_d,
-      w = w_d
+      w = w_d,
+      min_size = min_size
     )
 
     ES <- ES_u - ES_d
@@ -410,7 +413,8 @@
       sum_ranks = sum_ranks,
       i = i,
       m = m,
-      w = w
+      w = w,
+      min_size = min_size
     )
 
     ES_u <- ES_d <- NULL
