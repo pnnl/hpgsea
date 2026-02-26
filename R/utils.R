@@ -16,14 +16,14 @@
       is.null(names(stats)) ||
       any_duplicated(names(stats))
   ) {
-    stop("`stats` must be a numeric vector with unique names.")
+    stop("`stats` must be a numeric vector with unique names.", call. = FALSE)
   }
 
   # Remove missing values
   idx_not_NA <- whichNA(stats, invert = TRUE)
 
   if (length(idx_not_NA) < 3L) {
-    stop("`stats` must have at least 3 nonmissing values.")
+    stop("`stats` must have at least 3 nonmissing values.", call. = FALSE)
   }
 
   genes <- fsubset(names(stats), idx_not_NA)
@@ -63,7 +63,7 @@
       is.infinite(alpha) ||
       alpha < 0
   ) {
-    stop("`alpha` must be a single non-negative real number.")
+    stop("`alpha` must be a single non-negative real number.", call. = FALSE)
   }
 
   if (
@@ -204,17 +204,17 @@
   err <- "`gene_sets` must be a named list of character vectors."
 
   if (!is.list(gene_sets)) {
-    stop(err)
+    stop(err, call. = FALSE)
   }
 
   if (is.null(names(gene_sets))) {
-    stop(err)
+    stop(err, call. = FALSE)
   }
 
   all_char <- allv(vtypes(gene_sets, use.names = FALSE), "character")
 
   if (!all_char) {
-    stop(err)
+    stop(err, call. = FALSE)
   }
 
   # Pre-filter to remove gene sets that are too small. We can not remove gene
@@ -228,9 +228,7 @@
 
   if (length(keep_sets) != length(gene_sets)) {
     if (length(keep_sets) == 0L) {
-      stop(
-        "No gene sets with at least `min_size` elements."
-      )
+      stop("No gene sets with at least `min_size` elements.", call. = FALSE)
     }
 
     gene_sets <- gene_sets[keep_sets]
@@ -269,7 +267,10 @@
   unique_elements <- intersect(names(stats), unique_elements)
 
   if (length(unique_elements) == 0L) {
-    stop("No elements of `gene_sets` are present in rownames(X).")
+    stop(
+      "No elements of `gene_sets` are present in names(stats).",
+      call. = FALSE
+    )
   }
 
   # Indices of the genes in each set
@@ -339,7 +340,8 @@
     if (length(extreme_sets) == n_sets) {
       stop(
         "All sets in `gene_sets` have fewer than `min_size` ",
-        "or more than `max_size` genes."
+        "or more than `max_size` genes.",
+        call. = FALSE
       )
     }
 
