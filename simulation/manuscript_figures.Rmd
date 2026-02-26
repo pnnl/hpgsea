@@ -141,7 +141,7 @@ time_res <- prepare_data("../data/fast-ssGSEA_timing_results.rds")
 
 # 10,000 permutations
 pa <- filter(time_res, nperm == levels(nperm)[1L]) %>%
-  plot_time(y_breaks = seq(0, 1, 0.2), y_max = 1, expand_upper = 5e-3) +
+  plot_time(y_breaks = seq(0, 1, 0.25), y_max = 1, expand_upper = 5e-3) +
   labs(x = "")
 
 # 100,000 permutations

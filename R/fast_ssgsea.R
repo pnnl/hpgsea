@@ -145,8 +145,6 @@ fast_ssgsea <- function(stats,
   tab <- .calc_ES_perm(
     seed = seed,
     nperm = nperm,
-    y = y,
-    r = r,
     n_genes = n_genes,
     ES_list = ES_list
   )

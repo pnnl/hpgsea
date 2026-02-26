@@ -143,7 +143,7 @@ test_that("extreme sets are removed", {
     object = err,
     expected = paste0(
       "All sets in `gene_sets` have fewer than `min_size` or ",
-      "more than `max_size` genes."
+      "more than `max_size` genes in `stats`."
     )
   )
 })
@@ -184,7 +184,7 @@ test_that("extreme directional sets are removed", {
     object = err,
     expected = paste0(
       "All sets in `gene_sets` have fewer than `min_size` or ",
-      "more than `max_size` genes."
+      "more than `max_size` genes in `stats`."
     )
   )
 })

@@ -14,6 +14,7 @@
   if (
     !is.vector(stats, mode = "numeric") ||
       is.null(names(stats)) ||
+      anyNA(names(stats)) ||
       any_duplicated(names(stats))
   ) {
     stop("`stats` must be a numeric vector with unique names.", call. = FALSE)
@@ -118,7 +119,7 @@
 #' @title Fast, specialized rep.int
 #'
 #' @description Equivalent to `rep.int(seq_along(times), times)`, but several
-#' times faster.
+#' times faster for when the output is large.
 #'
 #' @param times integer vector of group sizes.
 #'
@@ -166,7 +167,8 @@
 #'
 #' @returns Numeric vector of enrichment scores with the same length as `m`. If
 #'   all elements of `y_prime` are 0 for a particular set, the ES for that set
-#'   will be `NA`. If any `m` are 0, the correspond ES will be 0.
+#'   will be `NA`. If any `m` are less than `min_size`, the correspond ES will
+#'   be 0.
 #'
 #' @author Tyler Sagendorf
 #'
@@ -340,7 +342,7 @@
     if (length(extreme_sets) == n_sets) {
       stop(
         "All sets in `gene_sets` have fewer than `min_size` ",
-        "or more than `max_size` genes.",
+        "or more than `max_size` genes in `stats`.",
         call. = FALSE
       )
     }
@@ -480,7 +482,7 @@
 #'
 #' @author Tyler Sagendorf
 #'
-#' @importFrom collapse fmatch
+#' @importFrom collapse fmatch funique
 #'
 #' @noRd
 .unique_set_sizes <- function(n_genes,
@@ -495,7 +497,7 @@
     # Level 2 ----
 
     # Unique number of genes in each set
-    L2_m <- unique(m)
+    L2_m <- funique(m)
 
     # Unique number of genes not in each set
     L2_w <- n_genes - L2_m
@@ -539,13 +541,13 @@
     # non-directional gene sets.
 
     # Up-regulated, in the set
-    L3_m <- unique(L2_m)
+    L3_m <- funique(L2_m)
 
     # Not up-regulated (includes genes not in the set)
     L3_w <- n_genes - L3_m
 
     # Down-regulated, in the set
-    L3_m_d <- sort(unique(L2_m_d))
+    L3_m_d <- funique(L2_m_d, sort = TRUE)
 
     # Not down-regulated (includes genes not in the set)
     L3_w_d <- n_genes - L3_m_d
@@ -591,8 +593,6 @@
 #' @noRd
 .calc_ES_perm <- function(seed = NULL,
                           nperm = 1e5L,
-                          y,
-                          r,
                           n_genes,
                           ES_list) {
   list2env(ES_list, envir = environment())
