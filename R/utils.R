@@ -14,16 +14,17 @@
   if (
     !is.vector(stats, mode = "numeric") ||
       is.null(names(stats)) ||
+      anyNA(names(stats)) ||
       any_duplicated(names(stats))
   ) {
-    stop("`stats` must be a numeric vector with unique names.")
+    stop("`stats` must be a numeric vector with unique names.", call. = FALSE)
   }
 
   # Remove missing values
   idx_not_NA <- whichNA(stats, invert = TRUE)
 
   if (length(idx_not_NA) < 3L) {
-    stop("`stats` must have at least 3 nonmissing values.")
+    stop("`stats` must have at least 3 nonmissing values.", call. = FALSE)
   }
 
   genes <- fsubset(names(stats), idx_not_NA)
@@ -63,7 +64,7 @@
       is.infinite(alpha) ||
       alpha < 0
   ) {
-    stop("`alpha` must be a single non-negative real number.")
+    stop("`alpha` must be a single non-negative real number.", call. = FALSE)
   }
 
   if (
@@ -118,7 +119,7 @@
 #' @title Fast, specialized rep.int
 #'
 #' @description Equivalent to `rep.int(seq_along(times), times)`, but several
-#' times faster.
+#' times faster for when the output is large.
 #'
 #' @param times integer vector of group sizes.
 #'
@@ -162,16 +163,18 @@
 #' @param m integer vector; the number of genes in each set. Used to select
 #'   elements of `i`.
 #' @param w integer vector; the number of genes that are not in each set.
+#' @inheritParams fast_ssgsea
 #'
 #' @returns Numeric vector of enrichment scores with the same length as `m`. If
 #'   all elements of `y_prime` are 0 for a particular set, the ES for that set
-#'   will be `NA`. If any `m` are 0, the correspond ES will be 0.
+#'   will be `NA`. If any `m` are less than `min_size`, the correspond ES will
+#'   be 0.
 #'
 #' @author Tyler Sagendorf
 #'
 #' @noRd
-.C_calc_ES <- function(y_prime, r_prime, sum_ranks, i, m, w) {
-  .Call("_C_calc_ES", y_prime, r_prime, sum_ranks, i, m, w)
+.C_calc_ES <- function(y_prime, r_prime, sum_ranks, i, m, w, min_size) {
+  .Call("_C_calc_ES", y_prime, r_prime, sum_ranks, i, m, w, min_size)
 }
 
 
@@ -203,17 +206,17 @@
   err <- "`gene_sets` must be a named list of character vectors."
 
   if (!is.list(gene_sets)) {
-    stop(err)
+    stop(err, call. = FALSE)
   }
 
   if (is.null(names(gene_sets))) {
-    stop(err)
+    stop(err, call. = FALSE)
   }
 
   all_char <- allv(vtypes(gene_sets, use.names = FALSE), "character")
 
   if (!all_char) {
-    stop(err)
+    stop(err, call. = FALSE)
   }
 
   # Pre-filter to remove gene sets that are too small. We can not remove gene
@@ -227,9 +230,7 @@
 
   if (length(keep_sets) != length(gene_sets)) {
     if (length(keep_sets) == 0L) {
-      stop(
-        "No gene sets with at least `min_size` elements."
-      )
+      stop("No gene sets with at least `min_size` elements.", call. = FALSE)
     }
 
     gene_sets <- gene_sets[keep_sets]
@@ -268,7 +269,10 @@
   unique_elements <- intersect(names(stats), unique_elements)
 
   if (length(unique_elements) == 0L) {
-    stop("No elements of `gene_sets` are present in rownames(X).")
+    stop(
+      "No elements of `gene_sets` are present in names(stats).",
+      call. = FALSE
+    )
   }
 
   # Indices of the genes in each set
@@ -338,7 +342,8 @@
     if (length(extreme_sets) == n_sets) {
       stop(
         "All sets in `gene_sets` have fewer than `min_size` ",
-        "or more than `max_size` genes."
+        "or more than `max_size` genes in `stats`.",
+        call. = FALSE
       )
     }
 
@@ -390,7 +395,8 @@
       sum_ranks = sum_ranks,
       i = i,
       m = m,
-      w = w
+      w = w,
+      min_size = min_size
     )
 
     ES_d <- .C_calc_ES(
@@ -399,7 +405,8 @@
       sum_ranks = sum_ranks,
       i = i_down,
       m = m_d,
-      w = w_d
+      w = w_d,
+      min_size = min_size
     )
 
     ES <- ES_u - ES_d
@@ -410,7 +417,8 @@
       sum_ranks = sum_ranks,
       i = i,
       m = m,
-      w = w
+      w = w,
+      min_size = min_size
     )
 
     ES_u <- ES_d <- NULL
@@ -474,7 +482,7 @@
 #'
 #' @author Tyler Sagendorf
 #'
-#' @importFrom collapse fmatch
+#' @importFrom collapse fmatch funique
 #'
 #' @noRd
 .unique_set_sizes <- function(n_genes,
@@ -489,7 +497,7 @@
     # Level 2 ----
 
     # Unique number of genes in each set
-    L2_m <- unique(m)
+    L2_m <- funique(m)
 
     # Unique number of genes not in each set
     L2_w <- n_genes - L2_m
@@ -533,13 +541,13 @@
     # non-directional gene sets.
 
     # Up-regulated, in the set
-    L3_m <- unique(L2_m)
+    L3_m <- funique(L2_m)
 
     # Not up-regulated (includes genes not in the set)
     L3_w <- n_genes - L3_m
 
     # Down-regulated, in the set
-    L3_m_d <- sort(unique(L2_m_d))
+    L3_m_d <- funique(L2_m_d, sort = TRUE)
 
     # Not down-regulated (includes genes not in the set)
     L3_w_d <- n_genes - L3_m_d
@@ -585,8 +593,6 @@
 #' @noRd
 .calc_ES_perm <- function(seed = NULL,
                           nperm = 1e5L,
-                          y,
-                          r,
                           n_genes,
                           ES_list) {
   list2env(ES_list, envir = environment())

@@ -28,9 +28,8 @@ elements of \code{gene_sets} must be in \code{names(stats)}.}
 of the entries of \code{stats} will be raised. Affects the ES calculation.
 If \code{alpha=0}, all genes/molecules in each set will contribute equally.}
 
-\item{nperm}{integer (\eqn{\geq 0}); the number of permutations used to
-calculate the normalized enrichment scores (NES) and p-values. Between 0
-and 2 billion.}
+\item{nperm}{integer; the number of permutations used to calculate the
+normalized enrichment scores (NES) and p-values. Between 0 and 2 billion.}
 
 \item{min_size}{integer (\eqn{\geq 2}); the minimum set size. To be
 considered for testing, sets must have at least \code{min_size} elements
@@ -97,6 +96,31 @@ A \code{data.frame} with the following columns:
 A high-Performance variant of pre-ranked Gene Set Enrichment
   Analysis (GSEA) that is capable of testing gene sets where each gene has an
   expected direction of change (Krug \emph{et al.}, 2019).
+}
+\examples{
+# Simulate named vector of gene-level values
+n_genes <- 1000L
+genes <- paste0("gene", seq_len(n_genes))
+
+set.seed(0L)
+stats <- rnorm(n_genes)
+names(stats) <- genes
+head(stats)
+
+# Simulate named list of gene-sets
+gene_sets <- lapply(10:500, function(size_i) {
+  sample(genes, size_i)
+})
+names(gene_sets) <- paste0("set", seq_along(gene_sets))
+
+df <- fast_ssgsea(
+  stats = stats,
+  gene_sets = gene_sets,
+  seed = 0L # reproducible results
+)
+
+head(df)
+
 }
 \references{
 Krug, K., Mertins, P., Zhang, B., Hornbeck, P., Raju, R., Ahmad,

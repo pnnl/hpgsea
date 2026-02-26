@@ -8,8 +8,9 @@ SEXP _C_calc_ES(const SEXP y_prime,
                 const SEXP r_prime,
                 const SEXP Rsum_ranks,
                 const SEXP i,
-                const SEXP m,
-                const SEXP w) {
+                SEXP m,
+                const SEXP w,
+                const SEXP Rmin_size) {
   const int n_sets = Rf_length(m);
 
   SEXP ES = PROTECT(Rf_allocVector(REALSXP, n_sets));
@@ -27,19 +28,27 @@ SEXP _C_calc_ES(const SEXP y_prime,
   const double *restrict py_prime = REAL(y_prime);
   const double *restrict pr_prime = REAL(r_prime);
   const int *restrict pi = INTEGER(i);
-  const int *restrict pm = INTEGER(m);
+  int *restrict pm = INTEGER(m);
   const int *restrict pw = INTEGER(w);
 
   const double sum_ranks = REAL(Rsum_ranks)[0];
+  const int min_size = INTEGER(Rmin_size)[0];
 
   int start = 0;
   int end = 0;
 
   for (int j = 0; j < n_sets; ++j) {
-
     // Window of indices for genes in the j-th set
     start = end;
     end = start + pm[j];
+
+    // This only happens with directional gene sets when fewer than min_size
+    // genes are up or down.
+    if ((end - start) < min_size) {
+      pm[j] = 0;
+
+      continue;
+    }
 
     double sum_r = 0.0;
     double sum_y = 0.0;
@@ -56,10 +65,8 @@ SEXP _C_calc_ES(const SEXP y_prime,
       sum_ry += r_k * y_k;
     }
 
-    // Directional gene sets may be empty (all genes in the set are up or down).
-    // sum_y is 0 if all values for genes in the set are 0.
-    pES[j] = (start == end) ? 0.0 :
-      (sum_y == 0.0) ? R_NaReal :
+    // sum_y is 0 if all values for genes in the set are 0
+    pES[j] = (sum_y == 0.0) ? NA_REAL :
       sum_ry / sum_y + (sum_r - sum_ranks) / (double)pw[j];
   }
 
@@ -92,6 +99,7 @@ SEXP _C_group_sizes(const SEXP group_ids,
   return group_sizes;
 }
 
+
 // Faster rep.int(seq_along(times), times)
 SEXP _C_rep_int(SEXP times) {
   const int *restrict ptimes = INTEGER(times);
@@ -112,6 +120,7 @@ SEXP _C_rep_int(SEXP times) {
   for (int i = 0; i < n_times; ++i) {
     start = end;
     end = start + ptimes[i];
+
     const int val = i + 1;
 
     for (int j = start; j < end; ++j) {

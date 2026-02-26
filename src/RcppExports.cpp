@@ -59,14 +59,14 @@ BEGIN_RCPP
 END_RCPP
 }
 
-RcppExport SEXP _C_calc_ES(SEXP, SEXP, SEXP, SEXP, SEXP, SEXP);
+RcppExport SEXP _C_calc_ES(SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP);
 RcppExport SEXP _C_group_sizes(SEXP, SEXP);
 RcppExport SEXP _C_rep_int(SEXP);
 
 static const R_CallMethodDef CallEntries[] = {
     {"_fast_ssgsea_calc_ES_perm", (DL_FUNC) &_fast_ssgsea_calc_ES_perm, 13},
     {"_fast_ssgsea_calc_ES_perm_dir", (DL_FUNC) &_fast_ssgsea_calc_ES_perm_dir, 17},
-    {"_C_calc_ES",     (DL_FUNC) &_C_calc_ES,     6},
+    {"_C_calc_ES",     (DL_FUNC) &_C_calc_ES,     7},
     {"_C_group_sizes", (DL_FUNC) &_C_group_sizes, 2},
     {"_C_rep_int",     (DL_FUNC) &_C_rep_int,     1},
     {NULL, NULL, 0}
