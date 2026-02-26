@@ -12,9 +12,8 @@
 #' @param alpha numeric (\eqn{\geq 0}); the power to which the absolute values
 #'   of the entries of \code{stats} will be raised. Affects the ES calculation.
 #'   If \code{alpha=0}, all genes/molecules in each set will contribute equally.
-#' @param nperm integer (\eqn{\geq 0}); the number of permutations used to
-#'   calculate the normalized enrichment scores (NES) and p-values. Between 0
-#'   and 2 billion.
+#' @param nperm integer; the number of permutations used to calculate the
+#'   normalized enrichment scores (NES) and p-values. Between 0 and 2 billion.
 #' @param min_size integer (\eqn{\geq 2}); the minimum set size. To be
 #'   considered for testing, sets must have at least \code{min_size} elements
 #'   with non-missing values in \code{stats}.
@@ -82,7 +81,31 @@
 #'   10.1074/mcp.TIR118.000943}
 #'
 #' @export fast_ssgsea
-
+#'
+#' @examples
+#' # Simulate named vector of gene-level values
+#' n_genes <- 1000L
+#' genes <- paste0("gene", seq_len(n_genes))
+#'
+#' set.seed(0L)
+#' stats <- rnorm(n_genes)
+#' names(stats) <- genes
+#' head(stats)
+#'
+#' # Simulate named list of gene-sets
+#' gene_sets <- lapply(10:500, function(size_i) {
+#'   sample(genes, size_i)
+#' })
+#' names(gene_sets) <- paste0("set", seq_along(gene_sets))
+#'
+#' df <- fast_ssgsea(
+#'   stats = stats,
+#'   gene_sets = gene_sets,
+#'   seed = 0L # reproducible results
+#' )
+#'
+#' head(df)
+#'
 fast_ssgsea <- function(stats,
                         gene_sets,
                         alpha = 1,
