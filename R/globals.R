@@ -1,6 +1,7 @@
 utils::globalVariables(
   c(
     "adj_p_value",
+    "directional_sets",
     "ES",
     "ES_d",
     "ES_end",
@@ -16,13 +17,17 @@ utils::globalVariables(
     "max_size",
     "n_as_extreme",
     "n_same_sign",
-    "r",
-    "sum_ES_perm",
-    "sum_ranks",
+    "n_sets",
     "NES",
     "p_value",
+    "r",
+    "set_indices",
+    "set_indices_down",
     "set_size",
     "sets",
+    "sum_ES_perm",
+    "sum_ranks",
+    "unique_genes",
     "y"
   )
 )

@@ -7,7 +7,7 @@
 SEXP _C_calc_ES(const SEXP y_prime,
                 const SEXP r_prime,
                 const SEXP Rsum_ranks,
-                const SEXP i,
+                const SEXP gene_indices,
                 SEXP m,
                 const SEXP w,
                 const SEXP Rmin_size) {
@@ -19,7 +19,7 @@ SEXP _C_calc_ES(const SEXP y_prime,
 
   // This only happens with directional gene sets when the genes from all sets
   // are only up-regulated or only down-regulated.
-  if ((int)Rf_length(i) == 0) {
+  if ((int)Rf_length(gene_indices) == 0) {
     UNPROTECT(1);
 
     return ES;
@@ -27,7 +27,7 @@ SEXP _C_calc_ES(const SEXP y_prime,
 
   const double *restrict py_prime = REAL(y_prime);
   const double *restrict pr_prime = REAL(r_prime);
-  const int *restrict pi = INTEGER(i);
+  const int *restrict pgene_indices = INTEGER(gene_indices);
   int *restrict pm = INTEGER(m);
   const int *restrict pw = INTEGER(w);
 
@@ -44,7 +44,7 @@ SEXP _C_calc_ES(const SEXP y_prime,
 
     // This only happens with directional gene sets when fewer than min_size
     // genes are up or down.
-    if ((end - start) < min_size) {
+    if (pm[j] < min_size) {
       pm[j] = 0;
 
       continue;
@@ -56,7 +56,7 @@ SEXP _C_calc_ES(const SEXP y_prime,
 
     for (int k = start; k < end; ++k) {
       // Subtract 1 to convert from 1-based to 0-based index
-      const int idx = pi[k] - 1;
+      const int idx = pgene_indices[k] - 1;
       const double r_k = pr_prime[idx];
       const double y_k = py_prime[idx];
 
@@ -101,17 +101,12 @@ SEXP _C_group_sizes(const SEXP group_ids,
 
 
 // Faster rep.int(seq_along(times), times)
-SEXP _C_rep_int(SEXP times) {
+SEXP _C_rep_int(SEXP times, SEXP Rlength_out) {
   const int *restrict ptimes = INTEGER(times);
   const int n_times = Rf_length(times);
+  const int length_out = INTEGER(Rlength_out)[0]; // sum(times)
 
-  int n = 0;
-
-  for (int i = 0; i < n_times; ++i) {
-    n += ptimes[i];
-  }
-
-  SEXP out = PROTECT(Rf_allocVector(INTSXP, n));
+  SEXP out = PROTECT(Rf_allocVector(INTSXP, length_out));
   int *restrict pout = INTEGER(out);
 
   int start = 0;
@@ -126,6 +121,29 @@ SEXP _C_rep_int(SEXP times) {
     for (int j = start; j < end; ++j) {
       pout[j] = val;
     }
+  }
+
+  UNPROTECT(1);
+
+  return out;
+}
+
+
+// Integer pairing function by Matthew Szudzik. See utils.R for documentation.
+SEXP _C_pair_szudzik(const SEXP x,
+                     const SEXP y) {
+  const int N = Rf_length(x);
+
+  const int *restrict px = INTEGER(x);
+  const int *restrict py = INTEGER(y);
+
+  SEXP out = PROTECT(Rf_allocVector(INTSXP, N));
+  int *restrict pout = INTEGER(out);
+
+  for (int i = 0; i < N; ++i) {
+    pout[i] = px[i] < py[i] ?
+      py[i] * py[i] + px[i] :
+      px[i] * (px[i] + 1) + py[i];
   }
 
   UNPROTECT(1);

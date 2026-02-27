@@ -218,15 +218,15 @@ void calc_ES_perm(SEXP n_same_sign,
 
   SEXP n_perm_neg = PROTECT(Rf_allocVector(INTSXP, n_sizes)); ++nprotect;
   int *pn_perm_neg = INTEGER(n_perm_neg);
-  memset(pn_perm_neg, 0.0, n_sizes * sizeof(int));
+  memset(pn_perm_neg, 0, n_sizes * sizeof(int));
 
   SEXP sum_perm_pos = PROTECT(Rf_allocVector(REALSXP, n_sizes)); ++nprotect;
   double *psum_perm_pos = REAL(sum_perm_pos);
-  memset(psum_perm_pos, 0.0, n_sizes * sizeof(double));
+  memset(psum_perm_pos, 0, n_sizes * sizeof(double));
 
   SEXP sum_perm_neg = PROTECT(Rf_allocVector(REALSXP, n_sizes)); ++nprotect;
   double *psum_perm_neg = REAL(sum_perm_neg);
-  memset(psum_perm_neg, 0.0, n_sizes * sizeof(double));
+  memset(psum_perm_neg, 0, n_sizes * sizeof(double));
 
   // Index of the first ES in each unique set size group
   SEXP ES_start = PROTECT(Rf_allocVector(INTSXP, n_sizes)); ++nprotect;
@@ -440,15 +440,15 @@ void calc_ES_perm_dir(SEXP n_same_sign,
 
   SEXP n_perm_neg = PROTECT(Rf_allocVector(INTSXP, n_pairs)); ++nprotect;
   int *pn_perm_neg = INTEGER(n_perm_neg);
-  memset(pn_perm_neg, 0.0, n_pairs * sizeof(int));
+  memset(pn_perm_neg, 0, n_pairs * sizeof(int));
 
   SEXP sum_perm_pos = PROTECT(Rf_allocVector(REALSXP, n_pairs)); ++nprotect;
   double *psum_perm_pos = REAL(sum_perm_pos);
-  memset(psum_perm_pos, 0.0, n_pairs * sizeof(double));
+  memset(psum_perm_pos, 0, n_pairs * sizeof(double));
 
   SEXP sum_perm_neg = PROTECT(Rf_allocVector(REALSXP, n_pairs)); ++nprotect;
   double *psum_perm_neg = REAL(sum_perm_neg);
-  memset(psum_perm_neg, 0.0, n_pairs * sizeof(double));
+  memset(psum_perm_neg, 0, n_pairs * sizeof(double));
 
   // Index of the first ES in each unique group of up and down genes
   SEXP ES_start = PROTECT(Rf_allocVector(INTSXP, n_pairs)); ++nprotect;

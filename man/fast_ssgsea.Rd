@@ -2,7 +2,7 @@
 % Please edit documentation in R/fast_ssgsea.R
 \name{fast_ssgsea}
 \alias{fast_ssgsea}
-\title{High-Performance Variant of Pre-Ranked Gene Set Enrichment Analysis}
+\title{High-Performance Pre-Ranked Gene Set Enrichment Analysis}
 \usage{
 fast_ssgsea(
   stats,

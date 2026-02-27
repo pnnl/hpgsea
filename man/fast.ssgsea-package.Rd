@@ -4,9 +4,9 @@
 \name{fast.ssgsea-package}
 \alias{fast.ssgsea}
 \alias{fast.ssgsea-package}
-\title{fast.ssgsea: Fast Single-Sample Gene Set Enrichment Analysis (ssGSEA)}
+\title{fast.ssgsea: High-Performance Gene Set Enrichment Analysis (HP-GSEA)}
 \description{
-Highly optimized implementation of Single-Sample Gene Set Enrichment Analysis (ssGSEA). Supports directional databases such as the Post-Translational Modification Signatures Database (PTMsigDB).
+High-performance variant of Gene Set Enrichment Analysis that is capable of testing gene sets where each gene has an expected direction of change.
 }
 \author{
 \strong{Maintainer}: Tyler Sagendorf \email{tyler.sagendorf@pnnl.gov} (\href{https://orcid.org/0000-0003-1552-4870}{ORCID})

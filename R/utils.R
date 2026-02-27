@@ -116,20 +116,156 @@
 }
 
 
+#' @title Convert gene sets to a list of indices for .calcES
+#'
+#' @inheritParams fast_ssgsea
+#'
+#' @returns A named list.
+#'
+#' @author Tyler Sagendorf
+#'
+#' @noRd
+.gene_sets_to_indices <- function(stats,
+                                  gene_sets,
+                                  min_size = 2L) {
+  err <- "`gene_sets` must be a named list of character vectors."
+
+  if (!is.list(gene_sets)) {
+    stop(err, call. = FALSE)
+  }
+
+  if (is.null(names(gene_sets))) {
+    stop(err, call. = FALSE)
+  }
+
+  all_char <- allv(vtypes(gene_sets, use.names = FALSE), "character")
+
+  if (!all_char) {
+    stop(err, call. = FALSE)
+  }
+
+  # Pre-filter to remove gene sets that are too small. We can not remove gene
+  # sets that are too large without first restricting the genes to the
+  # background.
+  set_sizes <- vlengths(gene_sets)
+
+  keep_sets <- whichv(set_sizes >= min_size, TRUE)
+
+  if (length(keep_sets) == 0L) {
+    stop("No gene sets with at least `min_size` elements.", call. = FALSE)
+  } else if (length(keep_sets) < length(gene_sets)) {
+    gene_sets <- gene_sets[keep_sets]
+    set_sizes <- fsubset(set_sizes, keep_sets)
+  }
+
+  genes <- vec(gene_sets)
+  unique_genes <- funique(genes)
+
+  # Determine if any elements have an expected direction of change
+  directional_sets <- 0L != length(
+    grep(";[ud]{1}", unique_genes, perl = TRUE)
+  )
+
+  if (directional_sets) {
+    # Determine which genes are expected to be "down" and remove the direction
+    # of change from the gene names
+    gene_indices <- fmatch(genes, unique_genes)
+
+    direction_down <- fsubset(
+      .x = grepl(";d$", unique_genes, perl = TRUE),
+      subset = gene_indices
+    )
+
+    unique_genes <- sub(";[ud]{1}$", "", unique_genes)
+
+    genes <- fsubset(unique_genes, gene_indices)
+  }
+
+  # names(stats) is first because it was sorted lexicographically to deal with
+  # ties in the gene-level values
+  unique_genes <- intersect(names(stats), unique_genes)
+
+  if (length(unique_genes) == 0L) {
+    stop(
+      "No elements of `gene_sets` are present in names(stats).",
+      call. = FALSE
+    )
+  }
+
+  # Indices of the genes in each set
+  gene_indices <- fmatch(genes, unique_genes, nomatch = NA_integer_)
+
+  # Unique integers for each set
+  set_indices <- .C_rep_int(set_sizes, length(genes))
+
+  unique_sets <- names(gene_sets)
+
+  if (anyNA(gene_indices)) {
+    # Remove genes not in names(stats)
+    keep_genes <- whichNA(gene_indices, invert = TRUE)
+
+    gene_indices <- fsubset(gene_indices, keep_genes)
+    set_indices <- fsubset(set_indices, keep_genes)
+
+    unique_sets <- fsubset(unique_sets, funique(set_indices))
+
+    set_indices <- groupid(set_indices)
+    class(set_indices) <- "integer"
+
+    if (directional_sets) {
+      direction_down <- fsubset(direction_down, keep_genes)
+    }
+  }
+
+  n_sets <- length(unique_sets)
+
+  # Split index vectors by direction of change
+  if (directional_sets) {
+    idx_down <- whichv(direction_down, TRUE)
+
+    if (length(idx_down)) {
+      gene_indices_down <- fsubset(gene_indices, idx_down)
+      set_indices_down <- fsubset(set_indices, idx_down)
+
+      gene_indices <- fsubset(gene_indices, -idx_down)
+      set_indices <- fsubset(set_indices, -idx_down)
+    } else {
+      gene_indices_down <- set_indices_down <- integer(0L)
+    }
+  } else {
+    gene_indices_down <- set_indices_down <- NULL
+  }
+
+  out <- list(
+    "n_sets" = n_sets,
+    "unique_genes" = unique_genes,
+    "unique_sets" = unique_sets,
+    "gene_indices" = gene_indices,
+    "set_indices" = set_indices,
+    "directional_sets" = directional_sets,
+    "gene_indices_down" = gene_indices_down,
+    "set_indices_down" = set_indices_down
+  )
+
+  return(out)
+}
+
+
 #' @title Fast, specialized rep.int
 #'
 #' @description Equivalent to `rep.int(seq_along(times), times)`, but several
-#' times faster for when the output is large.
+#'   times faster when the output is large.
 #'
 #' @param times integer vector of group sizes.
+#' @param length integer; the length of the result. Equal to `sum(times)`.
 #'
 #' @returns Integer vector.
 #'
 #' @author Tyler Sagendorf
 #'
 #' @noRd
-.C_rep_int <- function(sizes) {
-  .Call("_C_rep_int", sizes)
+.C_rep_int <- function(sizes, length) {
+  .Call("_C_rep_int", sizes, length)
 }
 
 
@@ -173,8 +309,23 @@
 #' @author Tyler Sagendorf
 #'
 #' @noRd
-.C_calc_ES <- function(y_prime, r_prime, sum_ranks, i, m, w, min_size) {
-  .Call("_C_calc_ES", y_prime, r_prime, sum_ranks, i, m, w, min_size)
+.C_calc_ES <- function(y_prime,
+                       r_prime,
+                       sum_ranks,
+                       gene_indices,
+                       m,
+                       w,
+                       min_size) {
+  .Call(
+    "_C_calc_ES",
+    y_prime,
+    r_prime,
+    sum_ranks,
+    gene_indices,
+    m,
+    w,
+    min_size
+  )
 }
 
 
@@ -203,157 +354,57 @@
 
   storage.mode(min_size) <- storage.mode(max_size) <- "integer"
 
-  err <- "`gene_sets` must be a named list of character vectors."
+  index_list <- .gene_sets_to_indices(
+    stats = stats,
+    gene_sets = gene_sets,
+    min_size = min_size
+  )
 
-  if (!is.list(gene_sets)) {
-    stop(err, call. = FALSE)
-  }
-
-  if (is.null(names(gene_sets))) {
-    stop(err, call. = FALSE)
-  }
-
-  all_char <- allv(vtypes(gene_sets, use.names = FALSE), "character")
-
-  if (!all_char) {
-    stop(err, call. = FALSE)
-  }
-
-  # Pre-filter to remove gene sets that are too small. We can not remove gene
-  # sets that are too large without first restricting the genes to the
-  # background. Additionally, duplicate elements may cause gene sets to contain
-  # at least min_size genes. In this case, the gene sets will survive the
-  # initial filter, but they will be removed toward the end of this function.
-  set_sizes <- vlengths(gene_sets)
-
-  keep_sets <- whichv(set_sizes >= min_size, TRUE)
-
-  if (length(keep_sets) != length(gene_sets)) {
-    if (length(keep_sets) == 0L) {
-      stop("No gene sets with at least `min_size` elements.", call. = FALSE)
-    }
-
-    gene_sets <- gene_sets[keep_sets]
-    set_sizes <- fsubset(set_sizes, keep_sets)
-  }
-
-  elements <- vec(gene_sets)
-  unique_elements <- funique(elements)
-
-  # Determine if any elements have an expected direction of change
-  any_dir <- anyv(grepl(";[ud]{1}", unique_elements, perl = TRUE), TRUE)
-
-  if (any_dir) {
-    # Convert elements to an integer vector to index direction_down
-    elements <- fmatch(elements, unique_elements)
-
-    # Determine which elements are expected to be "down", if any. grepl will be
-    # slower than indexing, so apply grepl to the unique elements and then
-    # expand the logical vector by indexing with the elements integer vector.
-    direction_down <- grepl(";d$", unique_elements, perl = TRUE)
-    direction_down <- fsubset(direction_down, elements)
-
-    # Strip information about direction of change. This may reduce the number of
-    # levels if an element is both "up" and "down": "gene;u" and "gene;d" become
-    # "gene".
-    unique_elements <- sub(";[ud]{1}$", "", unique_elements)
-
-    # Convert elements back to a character vector for fmatch
-    elements <- fsubset(unique_elements, elements)
-  } else {
-    direction_down <- NULL # signal that this should not be used later
-  }
-
-  # Only need to check those elements of the background that overlap with the
-  # elements of x
-  unique_elements <- intersect(names(stats), unique_elements)
-
-  if (length(unique_elements) == 0L) {
-    stop(
-      "No elements of `gene_sets` are present in names(stats).",
-      call. = FALSE
-    )
-  }
-
-  # Indices of the genes in each set
-  i <- fmatch(elements, unique_elements, nomatch = NA_integer_)
-
-  unique_sets <- names(gene_sets)
-
-  # Unique integers for each set
-  j <- .C_rep_int(set_sizes)
-
-  if (anyNA(i)) {
-    # Remove elements not in the background
-    keep <- whichNA(i, invert = TRUE)
-
-    i <- fsubset(i, keep)
-    j <- fsubset(j, keep)
-
-    if (any_dir) {
-      direction_down <- fsubset(direction_down, keep)
-    }
-
-    unique_sets <- fsubset(unique_sets, funique(j))
-
-    j <- groupid(j)
-    class(j) <- "integer" # necessary for .C_group_sizes()
-  }
-
-  # Split by direction of change
-  if (any_dir) {
-    idx_down <- whichv(direction_down, TRUE)
-    direction_down <- NULL # signal that this is no longer needed
-
-    if (length(idx_down)) {
-      i_down <- fsubset(i, idx_down)
-      j_down <- fsubset(j, idx_down)
-
-      i <- fsubset(i, -idx_down)
-      j <- fsubset(j, -idx_down)
-    } else {
-      i_down <- j_down <- integer(0L)
-    }
-  }
-
-  n_sets <- length(unique_sets)
+  list2env(index_list, envir = environment())
 
   # Number of genes in each set, or the number of genes expected to be
   # up-regulated in each set
-  m <- .C_group_sizes(j, n_sets)
+  m <- .C_group_sizes(set_indices, n_sets)
 
-  if (any_dir) {
+  if (directional_sets) {
     # Number of genes expected to be down-regulated in each set
-    m_d <- .C_group_sizes(j_down, n_sets)
+    m_d <- .C_group_sizes(set_indices_down, n_sets)
 
-    extreme_sets <- which(
+    extreme_set_indices <- which(
       (m < min_size & m_d < min_size) | (m + m_d) > max_size
     )
   } else {
     m_d <- NULL
 
-    extreme_sets <- which(
+    extreme_set_indices <- which(
       m < min_size | m > max_size
     )
   }
 
   # Remove gene sets that are too small or too large
-  if (length(extreme_sets)) {
-    if (length(extreme_sets) == n_sets) {
-      stop(
-        "All sets in `gene_sets` have fewer than `min_size` ",
-        "or more than `max_size` genes in `stats`.",
-        call. = FALSE
+  if (length(extreme_set_indices) == n_sets) {
+    stop(
+      "All sets in `gene_sets` have fewer than `min_size` ",
+      "or more than `max_size` genes in `stats`.",
+      call. = FALSE
+    )
+  } else if (length(extreme_set_indices)) {
+    unique_sets <- fsubset(unique_sets, -extreme_set_indices)
+
+    m <- fsubset(m, -extreme_set_indices)
+
+    gene_indices <- fsubset(
+      .x = gene_indices,
+      subset = set_indices %!iin% extreme_set_indices
+    )
+
+    if (directional_sets) {
+      m_d <- fsubset(m_d, -extreme_set_indices)
+
+      gene_indices_down <- fsubset(
+        .x = gene_indices_down,
+        subset = set_indices_down %!iin% extreme_set_indices
       )
-    }
-
-    unique_sets <- fsubset(unique_sets, -extreme_sets)
-    m <- fsubset(m, -extreme_sets)
-    i <- fsubset(i, j %!iin% extreme_sets)
-
-    if (any_dir) {
-      m_d <- fsubset(m_d, -extreme_sets)
-      i_down <- fsubset(i_down, j_down %!iin% extreme_sets)
     }
   }
 
@@ -361,7 +412,7 @@
   # the set and expected to be up-regulated
   w <- n_genes - m
 
-  if (any_dir) {
+  if (directional_sets) {
     # A smaller max_size will speed up the permutation tests
     max_size <- fmax(m + m_d)
 
@@ -379,21 +430,21 @@
 
   y <- abs(stats)^alpha
   r <- frank(stats, ties.method = "last")
-  names(r) <- names(y)
   storage.mode(r) <- "double"
 
   # Subset to the genes that are elements of at least one gene set
-  y_prime <- y[unique_elements]
-  r_prime <- r[unique_elements]
+  genes_in_sets <- fmatch(unique_genes, names(y))
+  y_prime <- fsubset(y, genes_in_sets)
+  r_prime <- fsubset(r, genes_in_sets)
 
-  if (any_dir) {
+  if (directional_sets) {
     # Calculate enrichment scores separately for the up-regulated and
     # down-regulated genes
     ES_u <- .C_calc_ES(
       y_prime = y_prime,
       r_prime = r_prime,
       sum_ranks = sum_ranks,
-      i = i,
+      gene_indices = gene_indices,
       m = m,
       w = w,
       min_size = min_size
@@ -403,7 +454,7 @@
       y_prime = y_prime,
       r_prime = r_prime,
       sum_ranks = sum_ranks,
-      i = i_down,
+      gene_indices = gene_indices_down,
       m = m_d,
       w = w_d,
       min_size = min_size
@@ -415,7 +466,7 @@
       y_prime = y_prime,
       r_prime = r_prime,
       sum_ranks = sum_ranks,
-      i = i,
+      gene_indices = gene_indices,
       m = m,
       w = w,
       min_size = min_size
@@ -437,7 +488,8 @@
     "m" = m,
     "w" = w,
     "m_d" = m_d,
-    "w_d" = w_d
+    "w_d" = w_d,
+    "directional_sets" = directional_sets
   )
 
   return(out)
@@ -455,22 +507,15 @@
 #' @returns A vector of non-negative integers that uniquely identifies each pair
 #'   of values (\code{x}, \code{y}).
 #'
-#' @author Tyler Sagendorf
+#' @author Pairing function devised by Matthew Szudzik. Code written by Tyler
+#'   Sagendorf.
 #'
 #' @references Szudzik, M. (2006). An Elegant Pairing Function. Wolfram Science
 #'   Conference. \url{http://szudzik.com/ElegantPairing.pdf}
 #'
 #' @noRd
-.pair_szudzik <- function(x, y) {
-  # Do not need to validate x and y, since this function is only used with
-  # integer vectors by other internal functions. Note that x * x prevents
-  # integer overflow, unlike x ^ 2.
-  x +
-    ifelse(
-      x < y,
-      y * y, # y ^ 2 + x
-      x * x + y # x ^ 2 + x + y
-    )
+.C_pair_szudzik <- function(x, y) {
+  .Call("_C_pair_szudzik", x, y)
 }
 
 
@@ -554,8 +599,8 @@
 
     # Indices to map from lower levels to higher levels ----
     map_L2_to_L1 <- fmatch(
-      .pair_szudzik(m, m_d),
-      .pair_szudzik(L2_m, L2_m_d)
+      .C_pair_szudzik(m, m_d),
+      .C_pair_szudzik(L2_m, L2_m_d)
     )
 
     map_L3_to_L2 <- fmatch(L2_m, L3_m) # up-regulated
@@ -608,10 +653,10 @@
     stringsAsFactors = FALSE
   )
 
-  if (is.null(m_d)) {
-    tab[, set_size := m]
-  } else {
+  if (directional_sets) {
     tab[, set_size := m + m_d]
+  } else {
+    tab[, set_size := m]
   }
 
   # Sorting by set size and then ES allows for major optimizations
@@ -631,26 +676,23 @@
   # The ES will be NA if the y for all genes in the set are 0
   idx_not_NA <- whichNA(ES, invert = TRUE)
 
-  if (length(idx_not_NA) != length(ES)) {
-    if (length(idx_not_NA) == 0L) {
-      nperm <- 0L
-    } else {
-      m <- fsubset(m, idx_not_NA)
-      ES <- fsubset(ES, idx_not_NA)
+  if (length(idx_not_NA) == 0L) {
+    nperm <- 0L
+  } else if (length(idx_not_NA) < length(ES)) {
+    m <- fsubset(m, idx_not_NA)
+    ES <- fsubset(ES, idx_not_NA)
 
-      if (!is.null(m_d)) {
-        m_d <- fsubset(m_d, idx_not_NA)
-      }
+    if (directional_sets) {
+      m_d <- fsubset(m_d, idx_not_NA)
     }
   }
 
-  # Vectors needed to store information from the permutation tests to calculate
-  # NES and p-values
+  # Vectors updated by permutation tests
   n_same_sign <- alloc(0L, length(ES))
   n_as_extreme <- alloc(0L, length(ES))
   sum_ES_perm <- alloc(0, length(ES))
 
-  if (nperm != 0L) {
+  if (nperm > 0L) {
     size_list <- .unique_set_sizes(
       n_genes = n_genes,
       m = m,
@@ -659,23 +701,7 @@
 
     list2env(x = size_list, envir = environment())
 
-    if (is.null(m_d)) {
-      .Cpp_calc_ES_perm(
-        n_same_sign,
-        n_as_extreme,
-        sum_ES_perm,
-        seed,
-        nperm,
-        ES,
-        ES_end,
-        y,
-        r,
-        max_size,
-        sum_ranks,
-        L2_m,
-        L2_w
-      )
-    } else {
+    if (directional_sets) {
       .Cpp_calc_ES_perm_dir(
         n_same_sign,
         n_as_extreme,
@@ -695,6 +721,22 @@
         map_L3_to_L2,
         map_L3_to_L2_d
       )
+    } else {
+      .Cpp_calc_ES_perm(
+        n_same_sign,
+        n_as_extreme,
+        sum_ES_perm,
+        seed,
+        nperm,
+        ES,
+        ES_end,
+        y,
+        r,
+        max_size,
+        sum_ranks,
+        L2_m,
+        L2_w
+      )
     }
   }
 
@@ -713,17 +755,13 @@
 #' @title Calculate P-values and Normalized Enrichment Scores
 #'
 #' @param tab a `data.table`. The output of `.calc_ES_perm()`.
-#' @param nperm integer; the number of permutations.
-#' @param sort logical; whether to sort rows in descending order by p-value.
-#' @param alternative character; the alternative hypothesis. One of "two.sided"
-#'   (default), "less", or "greater". The latter two will perform one-sided
-#'   tests.
+#' @inheritParams fast_ssgsea
 #'
 #' @returns A `data.frame`.
 #'
 #' @author Tyler Sagendorf
 #'
-#' @importFrom collapse whichNA
+#' @importFrom collapse whichNA whichv
 #' @importFrom data.table := setorderv setDF
 #' @importFrom stats p.adjust
 #'
@@ -732,10 +770,7 @@
                         nperm = 1e5L,
                         sort = TRUE,
                         alternative = "two.sided") {
-  tab[, `:=`(
-    set_size = set_size,
-    NES = ES / (sum_ES_perm / n_same_sign)
-  )]
+  tab[, NES := ES / (sum_ES_perm / n_same_sign)]
 
   switch(
     EXPR = alternative,
@@ -746,23 +781,29 @@
       ]
     },
     less = {
-      tab[whichNA(ES, invert = TRUE), p_value := ifelse(
-        ES < 0,
-        n_as_extreme + 1L,
-        nperm - n_as_extreme + 1L
-      ) / (nperm + 1L)]
+      tab[
+        whichNA(ES, invert = TRUE),
+        p_value := ifelse(
+          ES < 0,
+          n_as_extreme + 1L,
+          nperm - n_as_extreme + 1L
+        ) / (nperm + 1L)
+      ]
     },
     greater = {
-      tab[whichNA(ES, invert = TRUE), p_value := ifelse(
-        ES >= 0,
-        n_as_extreme + 1L,
-        nperm - n_as_extreme + 1L
-      ) / (nperm + 1L)]
+      tab[
+        whichNA(ES, invert = TRUE),
+        p_value := ifelse(
+          ES >= 0,
+          n_as_extreme + 1L,
+          nperm - n_as_extreme + 1L
+        ) / (nperm + 1L)
+      ]
     }
   )
 
   tab[
-    n_same_sign == 0L, # only happens when nperm is very small
+    whichv(n_same_sign, 0L), # only happens when nperm is very small
     `:=`(
       NES = NA_real_,
       p_value = NA_real_

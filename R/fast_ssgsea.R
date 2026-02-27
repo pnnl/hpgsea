@@ -1,4 +1,4 @@
-#' @title High-Performance Variant of Pre-Ranked Gene Set Enrichment Analysis
+#' @title High-Performance Pre-Ranked Gene Set Enrichment Analysis
 #'
 #' @description A high-Performance variant of pre-ranked Gene Set Enrichment
 #'   Analysis (GSEA) that is capable of testing gene sets where each gene has an
