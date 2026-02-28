@@ -3,6 +3,57 @@
 #include <Rinternals.h>
 
 
+SEXP _C_remove_extreme_gene_sets(const SEXP gene_indices,
+                                 const SEXP extreme_set_indices,
+                                 const SEXP m) {
+  const int n_genes = Rf_length(gene_indices);
+  const int n_sets = Rf_length(m);
+  const int n_extreme_sets = Rf_length(extreme_set_indices);
+
+  const int *restrict pgene_indices = INTEGER(gene_indices);
+  const int *restrict pextreme_set_indices = INTEGER(extreme_set_indices);
+  const int *restrict pm = INTEGER(m);
+
+  int length_out = 0;
+
+  for (int j = 0; j < n_extreme_sets; ++j) {
+    length_out += pm[pextreme_set_indices[j] - 1];
+  }
+
+  length_out = n_genes - length_out;
+
+  SEXP out = PROTECT(Rf_allocVector(INTSXP, length_out));
+  int *restrict pout = INTEGER(out);
+
+  int start = 0;
+  int end = 0;
+  int j = 0;
+  int shift_backward = 0;
+
+  for (int i = 0; i < n_sets && j < n_extreme_sets; ++i) {
+    start = end;
+    end = start + pm[i];
+
+    if (i != (pextreme_set_indices[j] - 1)) {
+      for (int k = start; k < end; ++k) {
+        pout[k - shift_backward] = pgene_indices[k];
+      }
+    } else {
+      shift_backward += pm[i];
+      ++j;
+    }
+  }
+
+  for (int k = end; k < n_genes; ++k) {
+    pout[k - shift_backward] = pgene_indices[k];
+  }
+
+  UNPROTECT(1);
+
+  return out;
+}
+
+
 // Calculate enrichment scores for all gene sets
 SEXP _C_calc_ES(const SEXP y_prime,
                 const SEXP r_prime,

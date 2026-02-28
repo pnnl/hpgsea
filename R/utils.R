@@ -116,13 +116,16 @@
 }
 
 
-#' @title Convert gene sets to a list of indices for .calcES
+#' @title Convert gene sets to a list of indices for `.calc_ES`
 #'
 #' @inheritParams fast_ssgsea
 #'
 #' @returns A named list.
 #'
 #' @author Tyler Sagendorf
+#'
+#' @importFrom collapse allv anyv fmatch fsubset funique groupid vec vlengths
+#'   vtypes whichNA whichv
 #'
 #' @noRd
 .gene_sets_to_indices <- function(stats,
@@ -145,8 +148,7 @@
   }
 
   # Pre-filter to remove gene sets that are too small. We can not remove gene
-  # sets that are too large without first restricting the genes to the
-  # background.
+  # sets that are too large without first restricting genes to names(stats).
   set_sizes <- vlengths(gene_sets)
 
   keep_sets <- whichv(set_sizes >= min_size, TRUE)
@@ -161,10 +163,8 @@
   genes <- vec(gene_sets)
   unique_genes <- funique(genes)
 
-  # Determine if any elements have an expected direction of change
-  directional_sets <- 0L != length(
-    grep(";[ud]{1}", unique_genes, perl = TRUE)
-  )
+  # Determine if any genes have an expected direction of change
+  directional_sets <- anyv(grepl(";[ud]{1}", unique_genes, perl = TRUE), TRUE)
 
   if (directional_sets) {
     # Determine which genes are expected to be "down" and remove the direction
@@ -182,7 +182,7 @@
   }
 
   # names(stats) is first because it was sorted lexicographically to deal with
-  # ties in the gene-level values
+  # ties in stats
   unique_genes <- intersect(names(stats), unique_genes)
 
   if (length(unique_genes) == 0L) {
@@ -200,8 +200,8 @@
 
   unique_sets <- names(gene_sets)
 
+  # Remove genes not in names(stats)
   if (anyNA(gene_indices)) {
-    # Remove genes not in names(stats)
     keep_genes <- whichNA(gene_indices, invert = TRUE)
 
     gene_indices <- fsubset(gene_indices, keep_genes)
@@ -251,7 +251,7 @@
 }
 
 
-#' @title Fast, specialized rep.int
+#' @title Fast, specialized `rep.int`
 #'
 #' @description Equivalent to `rep.int(seq_along(times), times)`, but several
 #'   times faster when the output is large.
@@ -287,6 +287,39 @@
 }
 
 
+#' @title Remove gene sets that are too small or too large
+#'
+#' @param gene_indices integer vector; indices of the genes in each set,
+#'   arranged in contiguous blocks by gene set.
+#' @param extreme_set_indices integer vector; indices of gene sets that are too
+#'   small or too large to test. Indices can range from 1 to `length(m)`.
+#' @param m integer vector; the number of genes in each set, where
+#'   `length(gene_indices) == sum(m)`.
+#'
+#' @returns The vector `gene_indices` with blocks of genes from the extreme gene
+#'   sets removed.
+#'
+#' @details This function is not called when all or no gene sets are extreme. If
+#'   all gene sets are extreme, an error will be thrown by `.calc_ES`.
+#'
+#'   The runtime of this function decreases as the number of extreme sets
+#'   increases.
+#'
+#' @author Tyler Sagendorf
+#'
+#' @noRd
+.C_remove_extreme_gene_sets <- function(gene_indices,
+                                        extreme_set_indices,
+                                        m) {
+  .Call(
+    "_C_remove_extreme_gene_sets",
+    gene_indices,
+    extreme_set_indices,
+    m
+  )
+}
+
+
 #' @title Calculate Enrichment Scores
 #'
 #' @param y_prime numeric vector of absolute gene-level values raised to the
@@ -294,10 +327,10 @@
 #' @param r_prime numeric vector of the ranks of the gene-level values for genes
 #'   that are members of at least one gene set.
 #' @param sum_ranks numeric; the sum of all ranks.
-#' @param i integer vector; indices of the genes in all sets. Used to index
-#'   vectors `y_prime` and `r_prime`.
+#' @param gene_indices integer vector; indices of the genes in all sets. Used to
+#'   index vectors `y_prime` and `r_prime`.
 #' @param m integer vector; the number of genes in each set. Used to select
-#'   elements of `i`.
+#'   elements of `gene_indices`.
 #' @param w integer vector; the number of genes that are not in each set.
 #' @inheritParams fast_ssgsea
 #'
@@ -339,8 +372,7 @@
 #'
 #' @author Tyler Sagendorf
 #'
-#' @importFrom collapse %!iin% allv anyv fmatch fmax fsubset funique groupid vec
-#'   vlengths vtypes whichNA whichv
+#' @importFrom collapse fmatch fmax fsubset
 #' @importFrom data.table frank
 #'
 #' @noRd
@@ -350,7 +382,7 @@
                      gene_sets,
                      min_size = 2L,
                      max_size = Inf) {
-  max_size <- max(min_size, min(max_size, n_genes - 1L))
+  max_size <- min(max_size, n_genes - 1L)
 
   storage.mode(min_size) <- storage.mode(max_size) <- "integer"
 
@@ -391,20 +423,22 @@
   } else if (length(extreme_set_indices)) {
     unique_sets <- fsubset(unique_sets, -extreme_set_indices)
 
-    m <- fsubset(m, -extreme_set_indices)
-
-    gene_indices <- fsubset(
-      .x = gene_indices,
-      subset = set_indices %!iin% extreme_set_indices
+    gene_indices <- .C_remove_extreme_gene_sets(
+      gene_indices = gene_indices,
+      extreme_set_indices = extreme_set_indices,
+      m = m
     )
 
-    if (directional_sets) {
-      m_d <- fsubset(m_d, -extreme_set_indices)
+    m <- fsubset(m, -extreme_set_indices)
 
-      gene_indices_down <- fsubset(
-        .x = gene_indices_down,
-        subset = set_indices_down %!iin% extreme_set_indices
+    if (directional_sets) {
+      gene_indices_down <- .C_remove_extreme_gene_sets(
+        gene_indices = gene_indices_down,
+        extreme_set_indices = extreme_set_indices,
+        m = m_d
       )
+
+      m_d <- fsubset(m_d, -extreme_set_indices)
     }
   }
 
@@ -439,7 +473,8 @@
 
   if (directional_sets) {
     # Calculate enrichment scores separately for the up-regulated and
-    # down-regulated genes
+    # down-regulated genes. Elements of m and m_d that are < min_size will be
+    # replaced with 0.
     ES_u <- .C_calc_ES(
       y_prime = y_prime,
       r_prime = r_prime,
