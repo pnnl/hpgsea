@@ -569,89 +569,58 @@
                               m,
                               m_d = NULL) {
   if (is.null(m_d)) {
-    # Level 1 ----
+    unique_m <- funique(m)
+    unique_w <- n_genes - unique_m
 
-    # All gene sets, even if the number of genes is not unique (m). Set sizes
-    # are sorted.
+    map_unique_to_all_sets <- fmatch(m, unique_m)
 
-    # Level 2 ----
-
-    # Unique number of genes in each set
-    L2_m <- funique(m)
-
-    # Unique number of genes not in each set
-    L2_w <- n_genes - L2_m
-
-    # Indices to map from level 2 to level 1 ----
-    map_L2_to_L1 <- fmatch(m, L2_m)
+    ES_end <- which(!duplicated(map_unique_to_all_sets, fromLast = TRUE))
 
     out <- list(
-      "L2_m" = L2_m,
-      "L2_w" = L2_w
+      "unique_m" = unique_m,
+      "unique_w" = unique_w,
+      "ES_end" = ES_end
     )
   } else {
-    # Level 1 ----
-
-    # All gene sets, even if the number of up and down-regulated genes in the
-    # set is not unique (m and m_d).
-
-    # Level 2 ----
-
     # Unique combinations of the number of up and down genes. Sorted by the
     # number of up-regulated genes and then by the number of down-regulated
     # genes.
     unique_pairs <- unique(cbind(m, m_d))
 
-    # Up-regulated, in the set
-    L2_m <- unique_pairs[, 1L]
+    unique_pairs_m_up <- unique_pairs[, 1L]
+    unique_pairs_w_up <- n_genes - unique_pairs_m_up
 
-    # Not up-regulated (includes genes not in the set)
-    L2_w <- n_genes - L2_m
-
-    # Down-regulated, in the set
-    L2_m_d <- unique_pairs[, 2L]
-
-    # Not down-regulated (includes genes not in the set)
-    L2_w_d <- n_genes - L2_m_d
-
-    # Level 3 ----
+    unique_pairs_m_down <- unique_pairs[, 2L]
+    unique_pairs_w_down <- n_genes - unique_pairs_m_down
 
     # Unique number of up-regulated genes and the unique number of
-    # down-regulated genes (separate, sorted vectors). Same as level 2 for
-    # non-directional gene sets.
+    # down-regulated genes (separate, sorted vectors)
+    unique_m_up <- funique(unique_pairs_m_up)
+    unique_w_up <- n_genes - unique_m_up
 
-    # Up-regulated, in the set
-    L3_m <- funique(L2_m)
+    unique_m_down <- funique(unique_pairs_m_down, sort = TRUE)
+    unique_w_down <- n_genes - unique_m_down
 
-    # Not up-regulated (includes genes not in the set)
-    L3_w <- n_genes - L3_m
-
-    # Down-regulated, in the set
-    L3_m_d <- funique(L2_m_d, sort = TRUE)
-
-    # Not down-regulated (includes genes not in the set)
-    L3_w_d <- n_genes - L3_m_d
-
-    # Indices to map from lower levels to higher levels ----
-    map_L2_to_L1 <- fmatch(
+    map_pairs_to_all_sets <- fmatch(
       .C_pair_szudzik(m, m_d),
-      .C_pair_szudzik(L2_m, L2_m_d)
+      .C_pair_szudzik(unique_pairs_m_up, unique_pairs_m_down)
     )
 
-    map_L3_to_L2 <- fmatch(L2_m, L3_m) # up-regulated
-    map_L3_to_L2_d <- fmatch(L2_m_d, L3_m_d) # down-regulated
+    map_unique_to_pairs_up <- fmatch(unique_pairs_m_up, unique_m_up)
+    map_unique_to_pairs_down <- fmatch(unique_pairs_m_down, unique_m_down)
+
+    ES_end <- which(!duplicated(map_pairs_to_all_sets, fromLast = TRUE))
 
     out <- list(
-      "L3_m" = L3_m,
-      "L3_w" = L3_w,
-      "L3_m_d" = L3_m_d,
-      "L3_w_d" = L3_w_d,
-      "map_L3_to_L2" = map_L3_to_L2,
-      "map_L3_to_L2_d" = map_L3_to_L2_d
+      "unique_m_up" = unique_m_up,
+      "unique_w_up" = unique_w_up,
+      "unique_m_down" = unique_m_down,
+      "unique_w_down" = unique_w_down,
+      "map_unique_to_pairs_up" = map_unique_to_pairs_up,
+      "map_unique_to_pairs_down" = map_unique_to_pairs_down,
+      "ES_end" = ES_end
     )
   }
-
-  out[["ES_end"]] <- which(!duplicated(map_L2_to_L1, fromLast = TRUE))
 
   return(out)
 }
@@ -749,12 +718,12 @@
         r,
         max_size,
         sum_ranks,
-        L3_m,
-        L3_w,
-        L3_m_d,
-        L3_w_d,
-        map_L3_to_L2,
-        map_L3_to_L2_d
+        unique_m_up,
+        unique_w_up,
+        unique_m_down,
+        unique_w_down,
+        map_unique_to_pairs_up,
+        map_unique_to_pairs_down
       )
     } else {
       .Cpp_calc_ES_perm(
@@ -769,8 +738,8 @@
         r,
         max_size,
         sum_ranks,
-        L2_m,
-        L2_w
+        unique_m,
+        unique_w
       )
     }
   }

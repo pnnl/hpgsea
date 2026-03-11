@@ -91,10 +91,11 @@ NULL
 #' @param max_size integer; the size of the largest gene set.
 #' @param sum_ranks the sum of the ranks of all gene-level statistics (sum of
 #'   the vector \code{r}).
-#' @param L2_m integer vector of unique gene set sizes, sorted in ascending
+#' @param unique_m integer vector of unique gene set sizes, sorted in ascending
 #'   order.
-#' @param L2_w integer vector; the differences between the total number of
-#'   genes and the elements of \code{L2_m} (number of genes not in the set).
+#' @param unique_w integer vector; the differences between the total number of
+#'   genes and the elements of \code{unique_m} (number of genes not in the
+#'   set).
 #'
 #' @returns Nothing. The vectors \code{n_same_sign}, \code{n_as_extreme}, and
 #'   \code{sum_ES_perm} are modified in place.
@@ -113,20 +114,21 @@ NULL
 #'   sets and update vectors needed to calculate NES and p-values.
 #'
 #' @inheritParams calc_ES_perm
-#' @param L3_m_up integer vector of the unique number of up-regulated genes
+#' @param unique_m_up integer vector of the unique number of up-regulated genes
 #'   found in the directional gene sets, sorted in ascending order.
-#' @param L3_w_up integer vector; the differences between the total number of
-#'   genes and the elements of \code{L3_m_up} (number of genes not up-regulated
-#'   in the set).
-#' @param L3_m_down integer vector of the unique number of down-regulated genes
-#'   found in the directional gene sets, sorted in ascending order.
-#' @param L3_w_down integer vector; the differences between the total number of
-#'   genes and the elements of \code{L3_m_down} (number of genes not
-#'   down-regulated in the set).
-#' @param map_L3_to_L2 a 1-based integer vector that maps each unique number of
-#'   up-regulated genes to the unique pairs of up- and down-regulated genes.
-#' @param map_L3_to_L2_down a 1-based integer vector that maps each unique
-#'   number of down-regulated genes to the unique pairs of up- and
+#' @param unique_w_up integer vector; the differences between the total number
+#'   of genes and the elements of \code{unique_m_up} (unique number of genes
+#'   not up-regulated in the set).
+#' @param unique_m_down integer vector of the unique number of down-regulated
+#'   genes found in the directional gene sets, sorted in ascending order.
+#' @param unique_w_down integer vector; the differences between the total
+#'   number of genes and the elements of \code{unique_m_down} (unique number of
+#'   genes not down-regulated in the set).
+#' @param map_unique_to_pairs_up a 1-based integer vector that maps each unique
+#'   number of up-regulated genes to the unique pairs of up- and down-regulated
+#'   genes.
+#' @param map_unique_to_pairs_down a 1-based integer vector that maps each
+#'   unique number of down-regulated genes to the unique pairs of up- and
 #'   down-regulated genes.
 #'
 #' @returns Nothing. The vectors \code{n_same_sign}, \code{n_as_extreme}, and
@@ -137,11 +139,11 @@ NULL
 #' @noRd
 NULL
 
-.Cpp_calc_ES_perm <- function(n_same_sign, n_as_extreme, sum_ES_perm, seed, nperm, ES, ES_end, y, r, max_size, sum_ranks, L2_m, L2_w) {
-    invisible(.Call(`_fast_ssgsea_calc_ES_perm`, n_same_sign, n_as_extreme, sum_ES_perm, seed, nperm, ES, ES_end, y, r, max_size, sum_ranks, L2_m, L2_w))
+.Cpp_calc_ES_perm <- function(n_same_sign, n_as_extreme, sum_ES_perm, seed, nperm, ES, ES_end, y, r, max_size, sum_ranks, unique_m, unique_w) {
+    invisible(.Call(`_fast_ssgsea_calc_ES_perm`, n_same_sign, n_as_extreme, sum_ES_perm, seed, nperm, ES, ES_end, y, r, max_size, sum_ranks, unique_m, unique_w))
 }
 
-.Cpp_calc_ES_perm_dir <- function(n_same_sign, n_as_extreme, sum_ES_perm, seed, nperm, ES, ES_end, y, r, max_size, sum_ranks, L3_m_up, L3_w_up, L3_m_down, L3_w_down, map_L3_to_L2_up, map_L3_to_L2_down) {
-    invisible(.Call(`_fast_ssgsea_calc_ES_perm_dir`, n_same_sign, n_as_extreme, sum_ES_perm, seed, nperm, ES, ES_end, y, r, max_size, sum_ranks, L3_m_up, L3_w_up, L3_m_down, L3_w_down, map_L3_to_L2_up, map_L3_to_L2_down))
+.Cpp_calc_ES_perm_dir <- function(n_same_sign, n_as_extreme, sum_ES_perm, seed, nperm, ES, ES_end, y, r, max_size, sum_ranks, unique_m_up, unique_w_up, unique_m_down, unique_w_down, map_unique_to_pairs_up, map_unique_to_pairs_down) {
+    invisible(.Call(`_fast_ssgsea_calc_ES_perm_dir`, n_same_sign, n_as_extreme, sum_ES_perm, seed, nperm, ES, ES_end, y, r, max_size, sum_ranks, unique_m_up, unique_w_up, unique_m_down, unique_w_down, map_unique_to_pairs_up, map_unique_to_pairs_down))
 }
 

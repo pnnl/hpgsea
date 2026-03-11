@@ -173,7 +173,7 @@ system.time({
 ```
 
     ##    user  system elapsed 
-    ##   1.367   0.088   1.374
+    ##   1.323   0.106   1.348
 
 ``` r
 str(res)
@@ -207,14 +207,14 @@ print(sessionInfo(), locale = FALSE, tzone = FALSE)
     ## [1] stats     graphics  grDevices utils     datasets  methods   base     
     ## 
     ## other attached packages:
-    ## [1] dqrng_0.4.1            fast.ssgsea_0.1.0.9027
+    ## [1] dqrng_0.4.1            fast.ssgsea_0.1.0.9030
     ## 
     ## loaded via a namespace (and not attached):
-    ##  [1] digest_0.6.37     collapse_2.1.3    fastmap_1.2.0     xfun_0.53        
+    ##  [1] digest_0.6.37     collapse_2.1.3    fastmap_1.2.0     xfun_0.56        
     ##  [5] knitr_1.50        parallel_4.5.2    htmltools_0.5.8.1 rmarkdown_2.29   
     ##  [9] cli_3.6.5         data.table_1.17.8 compiler_4.5.2    rstudioapi_0.17.1
     ## [13] tools_4.5.2       evaluate_1.0.5    Rcpp_1.1.0        yaml_2.3.10      
-    ## [17] rlang_1.1.6
+    ## [17] rlang_1.1.7
 
 ## Performance
 

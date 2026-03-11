@@ -16,7 +16,7 @@ alpha <- 1
 comb_df <- expand.grid(param_list)
 
 # nproc = 0 for multithreading; nproc = 1 for single threading
-for (nproc in c(0L, 1L)) {
+for (nproc in c(1L, 0L)) {
   time_df <- lapply(seq_len(3L), function(j) { # 3 replicates
     # Randomize order of runs
     set.seed(j)
@@ -42,7 +42,9 @@ for (nproc in c(0L, 1L)) {
       )
 
       stats_i <- li[["stats"]]
-      gene_sets_i <- stats[["gene_sets"]]
+      gene_sets_i <- li[["gene_sets"]]
+
+      invisible(gc())
 
       tic <- Sys.time()
 

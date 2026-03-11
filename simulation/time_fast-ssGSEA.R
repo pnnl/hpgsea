@@ -42,6 +42,8 @@ time_df <- lapply(seq_len(3L), function(j) { # 3 replicates
     stats_i <- li[["stats"]]
     gene_sets_i <- li[["gene_sets"]]
 
+    invisible(gc())
+
     tic <- Sys.time()
 
     res <- fast_ssgsea(
