@@ -48,22 +48,25 @@ No Windows binary is available, so [Rtools](https://cran.r-project.org/bin/windo
 
 ### Linux
 
-Most Linux distributions come pre-packaged with tools to compile C and C++ code, so no extra work needs to be done. Users can install the development version of `fast.ssgsea` on Linux by running the code below.
+Most Linux distributions come pre-packaged with tools to compile C and C++ code, so no extra work is needed. Users can install the development version of `fast.ssgsea` on Linux by running the code below.
 
 ### Install
 
-The development version of `fast.ssgsea` can be installed with
+The development version of `fast.ssgsea` can be installed with any of the following
 
 ``` r
 # install.packages("pak")
 pak::pak("pnnl/fast.ssgsea")
 ```
 
-or
-
 ``` r
 # install.packages("devtools")
 devtools::install_github("pnnl/fast.ssgsea")
+```
+
+``` r
+# install.packages("renv")
+renv::install("pnnl/fast.ssgsea")
 ```
 
 ## Usage
@@ -131,7 +134,7 @@ print(sessionInfo(), locale = FALSE, tzone = FALSE)
 
 ## Performance
 
-Tests were performed on a desktop computer with an AMD Ryzen 5 7600X CPU running at 4.7 GHz, single threaded, to measure the runtime of fast-ssGSEA (`fast.ssgsea::fast_ssgsea`) and FGSEA-simple (`fgsea::fgseaSimple`). Different combinations of the number of gene sets, maximum gene set size, and the number of permutations were tested in a random order (3 replicates each) to minimize the influence of previous runs. The R scripts and data are available in the simulation/ folder.
+Tests were performed on a desktop computer with an AMD Ryzen 5 7600X CPU running at 4.7 GHz, single threaded, to measure the runtime of fast-ssGSEA (`fast.ssgsea::fast_ssgsea`) and FGSEA-simple (`fgsea::fgseaSimple`). Different combinations of the number of gene sets, maximum gene set size, and the number of permutations ($\pi$) were tested in a random order (3 replicates each) to minimize the influence of previous runs. The R scripts and data are available in the simulation/ folder.
 
 ### fast-ssGSEA
 

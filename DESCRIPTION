@@ -1,8 +1,8 @@
 Package: fast.ssgsea
 Type: Package
 Title: High-Performance Gene Set Enrichment Analysis (HP-GSEA)
-Version: 0.1.0.9030
-Date: 2026-03-10
+Version: 0.1.0.9031
+Date: 2026-03-15
 Authors@R: 
       person(given = "Tyler", family = "Sagendorf", 
              email = "tyler.sagendorf@pnnl.gov", 

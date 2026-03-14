@@ -93,23 +93,27 @@ installed to compile C and C++ code. Then, the development version of
 ### Linux
 
 Most Linux distributions come pre-packaged with tools to compile C and
-C++ code, so no extra work needs to be done. Users can install the
-development version of `fast.ssgsea` on Linux by running the code below.
+C++ code, so no extra work is needed. Users can install the development
+version of `fast.ssgsea` on Linux by running the code below.
 
 ### Install
 
-The development version of `fast.ssgsea` can be installed with
+The development version of `fast.ssgsea` can be installed with any of
+the following
 
 ``` r
 # install.packages("pak")
 pak::pak("pnnl/fast.ssgsea")
 ```
 
-or
-
 ``` r
 # install.packages("devtools")
 devtools::install_github("pnnl/fast.ssgsea")
+```
+
+``` r
+# install.packages("renv")
+renv::install("pnnl/fast.ssgsea")
 ```
 
 ## Usage
@@ -173,7 +177,7 @@ system.time({
 ```
 
     ##    user  system elapsed 
-    ##   1.323   0.106   1.348
+    ##   1.209   0.090   1.224
 
 ``` r
 str(res)
@@ -207,14 +211,15 @@ print(sessionInfo(), locale = FALSE, tzone = FALSE)
     ## [1] stats     graphics  grDevices utils     datasets  methods   base     
     ## 
     ## other attached packages:
-    ## [1] dqrng_0.4.1            fast.ssgsea_0.1.0.9030
+    ## [1] dqrng_0.4.1            fast.ssgsea_0.1.0.9031
     ## 
     ## loaded via a namespace (and not attached):
-    ##  [1] digest_0.6.37     collapse_2.1.3    fastmap_1.2.0     xfun_0.56        
-    ##  [5] knitr_1.50        parallel_4.5.2    htmltools_0.5.8.1 rmarkdown_2.29   
-    ##  [9] cli_3.6.5         data.table_1.17.8 compiler_4.5.2    rstudioapi_0.17.1
-    ## [13] tools_4.5.2       evaluate_1.0.5    Rcpp_1.1.0        yaml_2.3.10      
-    ## [17] rlang_1.1.7
+    ##  [1] digest_0.6.39       collapse_2.1.6      fastmap_1.2.0      
+    ##  [4] xfun_0.56           parallel_4.5.2      knitr_1.51         
+    ##  [7] htmltools_0.5.8.1   rmarkdown_2.29      cli_3.6.5          
+    ## [10] data.table_1.18.2.1 compiler_4.5.2      rstudioapi_0.18.0  
+    ## [13] tools_4.5.2         evaluate_1.0.5      Rcpp_1.1.1         
+    ## [16] yaml_2.3.12         otel_0.2.0          rlang_1.1.7
 
 ## Performance
 
@@ -222,10 +227,10 @@ Tests were performed on a desktop computer with an AMD Ryzen 5 7600X CPU
 running at 4.7 GHz, single threaded, to measure the runtime of
 fast-ssGSEA (`fast.ssgsea::fast_ssgsea`) and FGSEA-simple
 (`fgsea::fgseaSimple`). Different combinations of the number of gene
-sets, maximum gene set size, and the number of permutations were tested
-in a random order (3 replicates each) to minimize the influence of
-previous runs. The R scripts and data are available in the simulation/
-folder.
+sets, maximum gene set size, and the number of permutations ($\pi$) were
+tested in a random order (3 replicates each) to minimize the influence
+of previous runs. The R scripts and data are available in the
+simulation/ folder.
 
 ### fast-ssGSEA
 
