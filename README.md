@@ -10,7 +10,7 @@
     - [Simulate Data](#simulate-data)
     - [Runtime and Results](#runtime-and-results)
     - [Session Information](#session-information)
-  - [Performance](#performance)
+  - [Benchmarking](#benchmarking)
     - [fast-ssGSEA](#fast-ssgsea)
     - [FGSEA-simple](#fgsea-simple)
   - [References](#references)
@@ -39,8 +39,10 @@ a highly optimized variant of pre-ranked Gene Set Enrichment Analysis
 standard GSEA, fast-ssGSEA is capable of testing gene sets where each
 gene has an expected direction of change (up- or down-regulation;
 indicated by appending a “;u” or “;d” to the end of every gene in a set)
-from a prior experiment. fast-ssGSEA is based on Post-Translational
-Modification Signature Enrichment Analysis (PTM-SEA) ([Krug et al.
+from a prior experiment.
+
+fast-ssGSEA is based on Post-Translational Modification Signature
+Enrichment Analysis (PTM-SEA) ([Krug et al.
 2019](#ref-krug-curated-2019)), and it borrows optimization techniques
 from the simple implementation of Fast Gene Set Enrichment Analysis
 (FGSEA-simple) ([Korotkevich et al. 2021](#ref-korotkevich-fast-2021)).
@@ -48,19 +50,17 @@ Also, while the enrichment score (ES) for standard GSEA is the most
 extreme value of the running sum (see any GSEA paper for details), the
 ES for fast-ssGSEA is the sum of all values of the running sum. This
 change allows the ES to be computed much more quickly, making
-fast-ssGSEA 1-2 orders of magnitude faster than FGSEA-simple (see
-runtime measurements below). However, fast-ssGSEA it not able to
-calculate arbitrarily small p-values like FGSEA-multilevel ([Korotkevich
-et al. 2021](#ref-korotkevich-fast-2021)).
+fast-ssGSEA 1-2 orders of magnitude faster than FGSEA-simple (see the
+Benchmarking section). However, fast-ssGSEA it not able to calculate
+arbitrarily small p-values like FGSEA-multilevel ([Korotkevich et al.
+2021](#ref-korotkevich-fast-2021)).
 
-The primary function, `fast_ssgsea`, accepts a numeric matrix with genes
-or other molecules as rows and either samples, contrasts, or some other
-meaningful representation of the data as columns. The values in each
-column must be approximately symmetric around zero, with more extreme
-values indicating greater importance. A named list of gene sets (more
-generally, molecular signatures) is also required. Other arguments
-control the behavior of fast-ssGSEA, and they are described in the
-function documentation.
+The primary function, `fast_ssgsea`, accepts a vector of signed
+statistics with genes or other molecules as names. The values must be
+approximately symmetric around zero, with more extreme values indicating
+greater importance. A named list of gene sets (more generally, molecular
+signatures) is also required. Other arguments control the behavior of
+fast-ssGSEA, and they are described in the function documentation.
 
 The package also contains a `read_gmt` function, which reads a Gene
 Matrix Transposed (GMT) file to construct a named list of gene sets for
@@ -120,13 +120,9 @@ renv::install("pnnl/fast.ssgsea")
 
 ### Simulate Data
 
-We will simulate a matrix with 10,000 genes as rows and one column.
-These simulated values represent signed gene-level statistics that might
-be produced from a package such as
-[limma](https://bioconductor.org/packages//release/bioc/html/limma.html).
-
-We will also generate 20,000 gene sets by randomly sampling between 5
-and 1,000 genes.
+We will simulate a vector of 10,000 signed gene-level statistics. We
+will also simulate 20,000 gene sets by randomly sampling between 5 and
+1,000 genes.
 
 ``` r
 n_genes <- 10000L # number of genes
@@ -177,7 +173,7 @@ system.time({
 ```
 
     ##    user  system elapsed 
-    ##   1.209   0.090   1.224
+    ##   1.200   0.087   1.210
 
 ``` r
 str(res)
@@ -221,10 +217,10 @@ print(sessionInfo(), locale = FALSE, tzone = FALSE)
     ## [13] tools_4.5.2         evaluate_1.0.5      Rcpp_1.1.1         
     ## [16] yaml_2.3.12         otel_0.2.0          rlang_1.1.7
 
-## Performance
+## Benchmarking
 
-Tests were performed on a desktop computer with an AMD Ryzen 5 7600X CPU
-running at 4.7 GHz, single threaded, to measure the runtime of
+Benchmarking was performed on a desktop computer with an AMD Ryzen 5
+7600X CPU (4.7 GHz), single threaded, to measure the runtime of
 fast-ssGSEA (`fast.ssgsea::fast_ssgsea`) and FGSEA-simple
 (`fgsea::fgseaSimple`). Different combinations of the number of gene
 sets, maximum gene set size, and the number of permutations ($\pi$) were
@@ -250,10 +246,10 @@ Like fast-ssGSEA, FGSEA-simple relies purely on the number of
 permutations to calculate p-values, which limits how small they can
 become. While FGSEA-simple is meant to be run with a smaller number of
 permutations and followed up by FGSEA-multilevel (the method capable of
-calculating arbitrarily small p-values), these results serve to
-illustrate the extreme difference in runtime between the two approaches.
-This difference is largely the result of changes to how the ES is
-defined.
+calculating arbitrarily small p-values) ([Korotkevich et al.
+2021](#ref-korotkevich-fast-2021)), these results serve to illustrate
+the extreme difference in runtime between the two approaches. This
+difference is largely the result of changes to how the ES is defined.
 
 <div class="figure" style="text-align: center">
 

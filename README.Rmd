@@ -25,9 +25,11 @@ knitr::opts_chunk$set(
 
 ## Overview
 
-`fast.ssgsea` is an R package [@R-core-team] for a highly optimized variant of pre-ranked Gene Set Enrichment Analysis (GSEA) [@subramanian-gene-2005]. Unlike standard GSEA, fast-ssGSEA is capable of testing gene sets where each gene has an expected direction of change (up- or down-regulation; indicated by appending a ";u" or ";d" to the end of every gene in a set) from a prior experiment. fast-ssGSEA is based on Post-Translational Modification Signature Enrichment Analysis (PTM-SEA) [@krug-curated-2019], and it borrows optimization techniques from the simple implementation of Fast Gene Set Enrichment Analysis (FGSEA-simple) [@korotkevich-fast-2021]. Also, while the enrichment score (ES) for standard GSEA is the most extreme value of the running sum (see any GSEA paper for details), the ES for fast-ssGSEA is the sum of all values of the running sum. This change allows the ES to be computed much more quickly, making fast-ssGSEA 1-2 orders of magnitude faster than FGSEA-simple (see runtime measurements below). However, fast-ssGSEA it not able to calculate arbitrarily small p-values like FGSEA-multilevel [@korotkevich-fast-2021].
+`fast.ssgsea` is an R package [@R-core-team] for a highly optimized variant of pre-ranked Gene Set Enrichment Analysis (GSEA) [@subramanian-gene-2005]. Unlike standard GSEA, fast-ssGSEA is capable of testing gene sets where each gene has an expected direction of change (up- or down-regulation; indicated by appending a ";u" or ";d" to the end of every gene in a set) from a prior experiment.
 
-The primary function, `fast_ssgsea`, accepts a numeric matrix with genes or other molecules as rows and either samples, contrasts, or some other meaningful representation of the data as columns. The values in each column must be approximately symmetric around zero, with more extreme values indicating greater importance. A named list of gene sets (more generally, molecular signatures) is also required. Other arguments control the behavior of fast-ssGSEA, and they are described in the function documentation.
+fast-ssGSEA is based on Post-Translational Modification Signature Enrichment Analysis (PTM-SEA) [@krug-curated-2019], and it borrows optimization techniques from the simple implementation of Fast Gene Set Enrichment Analysis (FGSEA-simple) [@korotkevich-fast-2021]. Also, while the enrichment score (ES) for standard GSEA is the most extreme value of the running sum (see any GSEA paper for details), the ES for fast-ssGSEA is the sum of all values of the running sum. This change allows the ES to be computed much more quickly, making fast-ssGSEA 1-2 orders of magnitude faster than FGSEA-simple (see the Benchmarking section). However, fast-ssGSEA it not able to calculate arbitrarily small p-values like FGSEA-multilevel [@korotkevich-fast-2021].
+
+The primary function, `fast_ssgsea`, accepts a vector of signed statistics with genes or other molecules as names. The values must be approximately symmetric around zero, with more extreme values indicating greater importance. A named list of gene sets (more generally, molecular signatures) is also required. Other arguments control the behavior of fast-ssGSEA, and they are described in the function documentation.
 
 The package also contains a `read_gmt` function, which reads a Gene Matrix Transposed (GMT) file to construct a named list of gene sets for use with `fast_ssgsea`.
 
@@ -73,9 +75,7 @@ renv::install("pnnl/fast.ssgsea")
 
 ### Simulate Data
 
-We will simulate a matrix with 10,000 genes as rows and one column. These simulated values represent signed gene-level statistics that might be produced from a package such as [limma](https://bioconductor.org/packages//release/bioc/html/limma.html). 
-
-We will also generate 20,000 gene sets by randomly sampling between 5 and 1,000 genes.
+We will simulate a vector of 10,000 signed gene-level statistics. We will also simulate 20,000 gene sets by randomly sampling between 5 and 1,000 genes.
 
 ```{r simulate-data}
 n_genes <- 10000L # number of genes
@@ -132,9 +132,9 @@ print(sessionInfo(), locale = FALSE, tzone = FALSE)
 ```
 
 
-## Performance
+## Benchmarking
 
-Tests were performed on a desktop computer with an AMD Ryzen 5 7600X CPU running at 4.7 GHz, single threaded, to measure the runtime of fast-ssGSEA (`fast.ssgsea::fast_ssgsea`) and FGSEA-simple (`fgsea::fgseaSimple`). Different combinations of the number of gene sets, maximum gene set size, and the number of permutations ($\pi$) were tested in a random order (3 replicates each) to minimize the influence of previous runs. The R scripts and data are available in the simulation/ folder.
+Benchmarking was performed on a desktop computer with an AMD Ryzen 5 7600X CPU (4.7 GHz), single threaded, to measure the runtime of fast-ssGSEA (`fast.ssgsea::fast_ssgsea`) and FGSEA-simple (`fgsea::fgseaSimple`). Different combinations of the number of gene sets, maximum gene set size, and the number of permutations ($\pi$) were tested in a random order (3 replicates each) to minimize the influence of previous runs. The R scripts and data are available in the simulation/ folder.
 
 ### fast-ssGSEA
 
@@ -148,7 +148,7 @@ knitr::include_graphics("./man/figures/README-figure-1.png")
 
 ### FGSEA-simple
 
-Like fast-ssGSEA, FGSEA-simple relies purely on the number of permutations to calculate p-values, which limits how small they can become. While FGSEA-simple is meant to be run with a smaller number of permutations and followed up by FGSEA-multilevel (the method capable of calculating arbitrarily small p-values), these results serve to illustrate the extreme difference in runtime between the two approaches. This difference is largely the result of changes to how the ES is defined.
+Like fast-ssGSEA, FGSEA-simple relies purely on the number of permutations to calculate p-values, which limits how small they can become. While FGSEA-simple is meant to be run with a smaller number of permutations and followed up by FGSEA-multilevel (the method capable of calculating arbitrarily small p-values) [@korotkevich-fast-2021], these results serve to illustrate the extreme difference in runtime between the two approaches. This difference is largely the result of changes to how the ES is defined.
 
 ```{r, echo=FALSE}
 fig2_cap <- "Runtime of fgsea::fgseaSimple with 10,000, 100,000, or 1,000,000 permutations."
