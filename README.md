@@ -173,7 +173,7 @@ system.time({
 ```
 
     ##    user  system elapsed 
-    ##   1.200   0.087   1.210
+    ##   1.132   0.093   1.147
 
 ``` r
 str(res)
@@ -184,7 +184,7 @@ str(res)
     ##  $ set_size    : int  138 163 841 706 801 87 503 409 320 450 ...
     ##  $ ES          : num  -1866 1584 698 759 709 ...
     ##  $ NES         : num  -5.34 4.78 4.66 4.67 4.62 ...
-    ##  $ n_same_sign : int  49235 51107 52907 52784 52813 50461 52351 51847 51728 47859 ...
+    ##  $ n_same_sign : int  49235 51108 52907 52785 52814 50462 52351 51847 51728 47860 ...
     ##  $ n_as_extreme: int  1 3 8 9 12 12 16 19 19 19 ...
     ##  $ p_value     : num  4.06e-05 7.83e-05 1.70e-04 1.89e-04 2.46e-04 ...
     ##  $ adj_p_value : num  0.783 0.783 0.836 0.836 0.836 ...
@@ -195,7 +195,7 @@ str(res)
 print(sessionInfo(), locale = FALSE, tzone = FALSE)
 ```
 
-    ## R version 4.5.2 (2025-10-31)
+    ## R version 4.5.3 (2026-03-11)
     ## Platform: x86_64-pc-linux-gnu
     ## Running under: Linux Mint 22.1
     ## 
@@ -207,14 +207,14 @@ print(sessionInfo(), locale = FALSE, tzone = FALSE)
     ## [1] stats     graphics  grDevices utils     datasets  methods   base     
     ## 
     ## other attached packages:
-    ## [1] dqrng_0.4.1            fast.ssgsea_0.1.0.9031
+    ## [1] dqrng_0.4.1            fast.ssgsea_0.1.0.9032
     ## 
     ## loaded via a namespace (and not attached):
     ##  [1] digest_0.6.39       collapse_2.1.6      fastmap_1.2.0      
-    ##  [4] xfun_0.56           parallel_4.5.2      knitr_1.51         
+    ##  [4] xfun_0.56           parallel_4.5.3      knitr_1.51         
     ##  [7] htmltools_0.5.8.1   rmarkdown_2.29      cli_3.6.5          
-    ## [10] data.table_1.18.2.1 compiler_4.5.2      rstudioapi_0.18.0  
-    ## [13] tools_4.5.2         evaluate_1.0.5      Rcpp_1.1.1         
+    ## [10] data.table_1.18.2.1 compiler_4.5.3      rstudioapi_0.18.0  
+    ## [13] tools_4.5.3         evaluate_1.0.5      Rcpp_1.1.1         
     ## [16] yaml_2.3.12         otel_0.2.0          rlang_1.1.7
 
 ## Benchmarking
