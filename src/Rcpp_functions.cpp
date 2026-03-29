@@ -1,7 +1,7 @@
 // [[Rcpp::depends(dqrng)]]
 #include <dqrng.h>
 
-const int BLOCK_SIZE = 32; // size of permutation ES blocks
+#define BLOCK_SIZE 32
 
 
 //' @title Get the Index of the First Positive ES for Every Unique Gene Set Size
@@ -150,8 +150,6 @@ inline void calc_ES_perm_internal(float *pES_perm_mat,
                                   const float sum_ranks,
                                   const int *punique_m,
                                   const float *punique_w_float) {
-  int idx = 0;
-
   for (int b = 0; b < block_size; ++b) {
     const Rcpp::IntegerVector rand_idx = dqrng::dqsample_int(
       n_genes,
@@ -166,7 +164,9 @@ inline void calc_ES_perm_internal(float *pES_perm_mat,
 
     int start = 0;
 
-    for (int s = 0; s < n_sizes; ++s, ++idx) {
+    int idx = b;
+
+    for (int s = 0; s < n_sizes; ++s, idx += block_size) {
       const int end = punique_m[s];
 
       // Prefix sums
@@ -189,10 +189,70 @@ inline void calc_ES_perm_internal(float *pES_perm_mat,
 }
 
 
+//' @title Sort permutation ES by sign
+//'
+//' @param pn_perm_neg a pointer to an integer vector that stores the number of
+//'   negative permutation ES for each unique gene set size.
+//' @param pES_perm_pos_idx a pointer to an integer vector that stores the index
+//'   of the first positive permutation ES for each unique gene set size for a
+//'   given block of permutation ES.
+//' @param pES_perm_mat a pointer to a float vector containing permutation ES.
+//'   Permutation ES for gene sets of the same size are arranged in blocks of
+//'   (at most) 32 consecutive elements.
+//' @param n_sizes integer; the number of unique gene set sizes.
+//' @param block_size integer; the size of a block of permutation ES. Between 1
+//'   and 32.
+//'
+//' @details For each unique gene set size, sort permutation ES by sign. This is
+//'   done in one pass by swapping elements. By sorting the permutation ES and
+//'   keeping track of the index of the first positive element for each unique
+//'   set size, we can update n_perm_neg in one pass per block of (at most 32)
+//'   permutation ES. Additionally, we can skip needing to check the sign of the
+//'   permutation ES in update_n_same_sign(); instead, the permutation ES loop
+//'   is split to separately iterate over the negative and positive elements.
+//'
+//' @author Tyler Sagendorf
+//'
+//' @noRd
+inline void update_n_perm_neg(int *pn_perm_neg,
+                              int *pES_perm_pos_idx,
+                              float *pES_perm_mat,
+                              const int n_sizes,
+                              const int block_size) {
+  float swap;
+
+  int start_perm = 0;
+
+  for (int s = 0; s < n_sizes; ++s) {
+    const int end_perm = start_perm + block_size;
+
+    int swap_index = start_perm - 1;
+
+    for (int k = start_perm; k < end_perm; ++k) {
+
+      if (pES_perm_mat[k] < 0.0f) {
+        ++swap_index;
+
+        swap = pES_perm_mat[k];
+        pES_perm_mat[k] = pES_perm_mat[swap_index];
+        pES_perm_mat[swap_index] = swap;
+      }
+    }
+
+    swap_index += 1 - start_perm; // between 0 and block_size
+
+    pn_perm_neg[s] += swap_index;
+    pES_perm_pos_idx[s] = swap_index;
+
+    start_perm = end_perm;
+  }
+}
+
+
 inline void update_n_as_extreme(int *pn_as_extreme,
-                                int *pn_perm_neg,
                                 float *psum_perm_neg,
                                 float *psum_perm_pos,
+                                const int *pES_perm_pos_idx,
                                 const float *pES_perm_mat,
                                 const float *pES,
                                 const int *pES_start,
@@ -200,60 +260,69 @@ inline void update_n_as_extreme(int *pn_as_extreme,
                                 const int *pES_end,
                                 const int n_sizes,
                                 const int block_size) {
-  int start_block, end_block;
+  int start_block;
+
+  int idx = 0;
 
   for (int s = 0; s < n_sizes; ++s) {
     const int ES_start_s = pES_start[s];
     const int ES_pos_idx_s = pES_pos_idx[s];
     const int ES_end_s = pES_end[s];
 
-    int idx = s - n_sizes;
+    const int ES_perm_pos_idx_s = pES_perm_pos_idx[s];
 
-    for (int b = 0; b < block_size; ++b) {
-      idx += n_sizes;
+    // Negative permutation ES ----
+    float sum_perm = 0.0f;
 
+    const int end_block_neg = ES_pos_idx_s - 3;
+
+    for (int b = 0; b < ES_perm_pos_idx_s; ++b, ++idx) {
       const float ES_perm = pES_perm_mat[idx];
 
-      if (ES_perm < 0.0f) {
-        ++pn_perm_neg[s];
-        psum_perm_neg[s] -= ES_perm;
+      sum_perm -= ES_perm;
 
-        // Iterate over negative ES
-        start_block = ES_start_s;
-        end_block = ES_pos_idx_s - 4;
+      start_block = ES_start_s;
 
-        while (start_block < end_block) {
-          for (int k = 0; k < 4; ++k) { // vectorized by compiler
-            pn_as_extreme[start_block] += ES_perm <= pES[start_block];
-            ++start_block;
-          }
+      // Negative ES
+      while (start_block < end_block_neg) {
+        for (int k = 0; k < 4; ++k, ++start_block) { // vectorized by compiler
+          pn_as_extreme[start_block] += ES_perm <= pES[start_block];
         }
-
-        for (int k = start_block; k < ES_pos_idx_s; ++k) {
-          pn_as_extreme[k] += ES_perm <= pES[k];
-        }
-
-      } else {
-        psum_perm_pos[s] += ES_perm;
-
-        // Iterate over positive ES
-        start_block = ES_pos_idx_s;
-        end_block = ES_end_s - 4;
-
-        while (start_block < end_block) {
-          for (int k = 0; k < 4; ++k) {
-            pn_as_extreme[start_block] += ES_perm >= pES[start_block];
-            ++start_block;
-          }
-        }
-
-        for (int k = start_block; k < ES_end_s; ++k) {
-          pn_as_extreme[k] += ES_perm >= pES[k];
-        }
-
       }
 
-    } // end block ES loop
+      for (int k = start_block; k < ES_pos_idx_s; ++k) {
+        pn_as_extreme[k] += ES_perm <= pES[k];
+      }
+    }
+
+    psum_perm_neg[s] += sum_perm;
+
+    // Positive permutation ES ----
+    sum_perm = 0.0f;
+
+    const int end_block_pos = ES_end_s - 3;
+
+    for (int b = ES_perm_pos_idx_s; b < block_size; ++b, ++idx) {
+      const float ES_perm = pES_perm_mat[idx];
+
+      sum_perm += ES_perm;
+
+      start_block = ES_pos_idx_s;
+
+      // Positive ES
+      while (start_block < end_block_pos) {
+        for (int k = 0; k < 4; ++k, ++start_block) {
+          pn_as_extreme[start_block] += ES_perm >= pES[start_block];
+        }
+      }
+
+      for (int k = start_block; k < ES_end_s; ++k) {
+        pn_as_extreme[k] += ES_perm >= pES[k];
+      }
+    }
+
+    psum_perm_pos[s] += sum_perm;
+
   } // end unique set size loop
 
   // n_as_extreme, n_perm_neg, sum_perm_neg, sum_perm_pos are modified in place
@@ -357,15 +426,15 @@ void calc_ES_perm(SEXP n_same_sign,
   // Vectors updated with each permutation
   std::vector<int> n_perm_neg(n_sizes);
   int *pn_perm_neg = &n_perm_neg[0];
-  memset(pn_perm_neg, 0, n_sizes * sizeof(int));
+
+  std::vector<int> ES_perm_pos_idx(n_sizes);
+  int *pES_perm_pos_idx = &ES_perm_pos_idx[0];
 
   std::vector<float> sum_perm_neg(n_sizes);
   float *psum_perm_neg = &sum_perm_neg[0];
-  memset(psum_perm_neg, 0, n_sizes * sizeof(float));
 
   std::vector<float> sum_perm_pos(n_sizes, 0.0f);
   float *psum_perm_pos = &sum_perm_pos[0];
-  memset(psum_perm_pos, 0, n_sizes * sizeof(float));
 
   // Index of the first ES in each unique set size group
   std::vector<int> ES_start(n_sizes);
@@ -417,12 +486,22 @@ void calc_ES_perm(SEXP n_same_sign,
       punique_w_float
     );
 
-    // Update n_as_extreme, n_perm_neg, sum_perm_neg, and sum_perm_pos
+    // Sort permutation ES by sign within each block; update n_perm_neg and
+    // ES_perm_pos_idx
+    update_n_perm_neg(
+      pn_perm_neg,
+      pES_perm_pos_idx,
+      pES_perm_mat,
+      n_sizes,
+      partial_block_size
+    );
+
+    // Update n_as_extreme, sum_perm_neg, and sum_perm_pos
     update_n_as_extreme(
       pn_as_extreme,
-      pn_perm_neg,
       psum_perm_neg,
       psum_perm_pos,
+      pES_perm_pos_idx,
       pES_perm_mat,
       pES,
       pES_start,
@@ -452,11 +531,19 @@ void calc_ES_perm(SEXP n_same_sign,
       punique_w_float
     );
 
+    update_n_perm_neg(
+      pn_perm_neg,
+      pES_perm_pos_idx,
+      pES_perm_mat,
+      n_sizes,
+      BLOCK_SIZE
+    );
+
     update_n_as_extreme(
       pn_as_extreme,
-      pn_perm_neg,
       psum_perm_neg,
       psum_perm_pos,
+      pES_perm_pos_idx,
       pES_perm_mat,
       pES,
       pES_start,
@@ -503,8 +590,6 @@ inline void calc_ES_perm_dir_internal(float *pES_perm_mat,
                                       const float *pinv_unique_w_down,
                                       const int *pmap_unique_to_pairs_up,
                                       const int *pmap_unique_to_pairs_down) {
-  int idx = 0;
-
   for (int b = 0; b < block_size; ++b) {
     // Random sample of max_size integers from 0 to n_genes - 1. Used to select
     // pairs of elements from the vectors y and r.
@@ -575,9 +660,11 @@ inline void calc_ES_perm_dir_internal(float *pES_perm_mat,
       start = end;
     }
 
+    int idx = b;
+
     // Combine ES_up and ES_down for a single unique pair of the number of up
     // and down-regulated genes. ES = ES_up - ES_down
-    for (int s = 0; s < n_pairs; ++s, ++idx) {
+    for (int s = 0; s < n_pairs; ++s, idx += block_size) {
       pES_perm_mat[idx] =
         pES_perm_up[pmap_unique_to_pairs_up[s]] -
         pES_perm_down[pmap_unique_to_pairs_down[s]];
@@ -700,15 +787,15 @@ void calc_ES_perm_dir(SEXP n_same_sign,
 
   std::vector<int> n_perm_neg(n_pairs);
   int *pn_perm_neg = &n_perm_neg[0];
-  memset(pn_perm_neg, 0, n_pairs * sizeof(int));
+
+  std::vector<int> ES_perm_pos_idx(n_pairs);
+  int *pES_perm_pos_idx = &ES_perm_pos_idx[0];
 
   std::vector<float> sum_perm_pos(n_pairs);
   float *psum_perm_pos = &sum_perm_pos[0];
-  memset(psum_perm_pos, 0, n_pairs * sizeof(float));
 
   std::vector<float> sum_perm_neg(n_pairs);
   float *psum_perm_neg = &sum_perm_neg[0];
-  memset(psum_perm_neg, 0, n_pairs * sizeof(float));
 
   // Index of the first ES in each unique group of up and down genes
   std::vector<int> ES_start(n_pairs);
@@ -780,11 +867,19 @@ void calc_ES_perm_dir(SEXP n_same_sign,
       pmap_unique_to_pairs_down
     );
 
+    update_n_perm_neg(
+      pn_perm_neg,
+      pES_perm_pos_idx,
+      pES_perm_mat,
+      n_pairs,
+      partial_block_size
+    );
+
     update_n_as_extreme(
       pn_as_extreme,
-      pn_perm_neg,
       psum_perm_neg,
       psum_perm_pos,
+      pES_perm_pos_idx,
       pES_perm_mat,
       pES,
       pES_start,
@@ -821,11 +916,19 @@ void calc_ES_perm_dir(SEXP n_same_sign,
       pmap_unique_to_pairs_down
     );
 
+    update_n_perm_neg(
+      pn_perm_neg,
+      pES_perm_pos_idx,
+      pES_perm_mat,
+      n_pairs,
+      BLOCK_SIZE
+    );
+
     update_n_as_extreme(
       pn_as_extreme,
-      pn_perm_neg,
       psum_perm_neg,
       psum_perm_pos,
+      pES_perm_pos_idx,
       pES_perm_mat,
       pES,
       pES_start,

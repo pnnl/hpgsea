@@ -66,6 +66,33 @@ NULL
 #' @noRd
 NULL
 
+#' @title Sort permutation ES by sign
+#'
+#' @param pn_perm_neg a pointer to an integer vector that stores the number of
+#'   negative permutation ES for each unique gene set size.
+#' @param pES_perm_pos_idx a pointer to an integer vector that stores the index
+#'   of the first positive permutation ES for each unique gene set size for a
+#'   given block of permutation ES.
+#' @param pES_perm_mat a pointer to a float vector containing permutation ES.
+#'   Permutation ES for gene sets of the same size are arranged in blocks of
+#'   (at most) 32 consecutive elements.
+#' @param n_sizes integer; the number of unique gene set sizes.
+#' @param block_size integer; the size of a block of permutation ES. Between 1
+#'   and 32.
+#'
+#' @details For each unique gene set size, sort permutation ES by sign. This is
+#'   done in one pass by swapping elements. By sorting the permutation ES and
+#'   keeping track of the index of the first positive element for each unique
+#'   set size, we can update n_perm_neg in one pass per block of (at most 32)
+#'   permutation ES. Additionally, we can skip needing to check the sign of the
+#'   permutation ES in update_n_same_sign(); instead, the permutation ES loop
+#'   is split to separately iterate over the negative and positive elements.
+#'
+#' @author Tyler Sagendorf
+#'
+#' @noRd
+NULL
+
 #' @title Permutation Tests
 #'
 #' @description Calculate permutation enrichment scores and update vectors
