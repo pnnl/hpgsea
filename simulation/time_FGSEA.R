@@ -5,7 +5,7 @@ source("simulation/scripts/function-generate_data.R")
 # Parameter combinations ----
 param_list <- list(
   "maxSetSize" = c(500L, 1000L),
-  "nSets" = c(1e3L, 1e4L, 5e4L),
+  "nSets" = c(2e4L, 4e4L, 6e4L),
   "nperm" = c(1e4L, 1e5L, 1e6L)
 )
 

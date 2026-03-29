@@ -82,7 +82,7 @@ plot_time <- function(x, y_breaks, y_max = NULL, expand_upper = 0.05) {
     scale_color_manual(
       name = "Number of gene sets: ",
       values = structure(palette.colors(n = 3L), names = NULL),
-      breaks = c("1,000", "10,000", "50,000")
+      breaks = c("20,000", "40,000", "60,000")
     ) +
     labs(
       x = "Maximum gene set size",
@@ -141,17 +141,17 @@ time_res <- prepare_data("../data/fast-ssGSEA_timing_results.rds")
 
 # 10,000 permutations
 pa <- filter(time_res, nperm == levels(nperm)[1L]) %>%
-  plot_time(y_breaks = seq(0, 1, 0.2), y_max = 1, expand_upper = 0.05) +
+  plot_time(y_breaks = seq(0, 1, 0.2), y_max = 1 * 1.08, expand_upper = 0) +
   labs(x = "")
 
 # 100,000 permutations
 pb <- filter(time_res, nperm == levels(nperm)[2L]) %>%
-  plot_time(y_breaks = seq(0, 2, 0.4), y_max = 2, expand_upper = 0.05) +
+  plot_time(y_breaks = seq(0, 2, 0.4), y_max = 2 * 1.08, expand_upper = 0) +
   labs(y = "")
 
 # 1,000,000 permutations
 pc <- filter(time_res, nperm == levels(nperm)[3L]) %>%
-  plot_time(y_breaks = seq(0, 12, 2), y_max = 12, expand_upper = 0.05) +
+  plot_time(y_breaks = seq(0, 12, 2), y_max = 12 * 1.08, expand_upper = 0) +
   labs(x = "", y = "")
 
 # Combine plots
@@ -186,17 +186,17 @@ time_res <- prepare_data("../data/FGSEA_timing_results_nproc_1.rds")
 
 # 10,000 permutations
 pa <- filter(time_res, nperm == levels(nperm)[1L]) %>%
-  plot_time(y_breaks = seq(0, 24, 4), y_max = 26, expand_upper = 5e-3) +
+  plot_time(y_breaks = seq(0, 30, 4), y_max = 30, expand_upper = 5e-3) +
   labs(x = "")
 
 # 100,000 permutations
 pb <- filter(time_res, nperm == levels(nperm)[2L]) %>%
-  plot_time(y_breaks = seq(0, 240, 40), y_max = 260, expand_upper = 5e-3) +
+  plot_time(y_breaks = seq(0, 300, 40), y_max = 300, expand_upper = 5e-3) +
   labs(y = "")
 
 # 1,000,000 permutations
 pc <- filter(time_res, nperm == levels(nperm)[3L]) %>%
-  plot_time(y_breaks = seq(0, 2400, 400), y_max = 2600, expand_upper = 5e-3) +
+  plot_time(y_breaks = seq(0, 3000, 400), y_max = 3000, expand_upper = 5e-3) +
   labs(x = "", y = "")
 
 # Combine plots
