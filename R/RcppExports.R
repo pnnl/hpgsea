@@ -66,27 +66,37 @@ NULL
 #' @noRd
 NULL
 
-#' @title Sort permutation ES by sign
+#' @title Update components for P-values and NES
 #'
-#' @param pn_perm_neg a pointer to an integer vector that stores the number of
+#' @param pn_as_extreme pointer to an integer vector that stores the number of
+#'   permutation ES that are at least as extreme as the ES for each gene set.
+#' @param pn_perm_neg pointer to an integer vector that stores the number of
 #'   negative permutation ES for each unique gene set size.
-#' @param pES_perm_pos_idx a pointer to an integer vector that stores the index
-#'   of the first positive permutation ES for each unique gene set size for a
-#'   given block of permutation ES.
+#' @param psum_perm_neg pointer to a float vector that stores the absolute sums
+#'   of the negative permutation ES.
+#' @param psum_perm_pos pointer to a float vector that stores the sums of the
+#'   positive permutation ES.
 #' @param pES_perm_mat a pointer to a float vector containing permutation ES.
 #'   Permutation ES for gene sets of the same size are arranged in blocks of
 #'   (at most) 32 consecutive elements.
+#' @param pES pointer to a float vector of ES for all gene sets.
+#' @param pES_start pointer to an integer vector containing the index of the
+#'   first ES for each unique set size.
+#' @param pES_pos_idx pointer to an integer vector containing the index of the
+#'   first positive ES for each unique set size.
+#' @param pES_end pointer to an integer vector containing the 1 more than the
+#'   index of the last ES for each unique set size.
 #' @param n_sizes integer; the number of unique gene set sizes.
 #' @param block_size integer; the size of a block of permutation ES. Between 1
 #'   and 32.
 #'
-#' @details For each unique gene set size, sort permutation ES by sign. This is
-#'   done in one pass by swapping elements. By sorting the permutation ES and
-#'   keeping track of the index of the first positive element for each unique
-#'   set size, we can update n_perm_neg in one pass per block of (at most 32)
-#'   permutation ES. Additionally, we can skip needing to check the sign of the
-#'   permutation ES in update_n_same_sign(); instead, the permutation ES loop
-#'   is split to separately iterate over the negative and positive elements.
+#' @details For each unique gene set size, the permutation ES are partitioned
+#'   by sign. At the same time, the number of negative permutation ES, as well
+#'   as the absolute sums of the negative and positive permutation ES, are
+#'   updated. Then, 8 negative ES are compared to a single permutation ES,
+#'   iterating over all negative permutation ES before moving to the next 8
+#'   negative ES to update n_as_extreme. The process is repeated for the
+#'   positive ES and positive permutation ES.
 #'
 #' @author Tyler Sagendorf
 #'
