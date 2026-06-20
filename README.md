@@ -29,11 +29,11 @@ originally described by Barbie, *et al.* ([Barbie et al.
 2009](#ref-barbie-systematic-2009)). They are instead modifications of
 pre-ranked GSEA that calculate the enrichment score (ES) differently and
 support testing directional gene sets (details below). The package and
-fast-ssGSEA name will be corrected in the near future.
+fast-ssGSEA name will be changed in the future.
 
 ## Overview
 
-`fast.ssgsea` is an R package ([R Core Team 2024](#ref-R-core-team)) for
+`fast.ssgsea` is an R package ([R Core Team 2026](#ref-R-core-team)) for
 a highly optimized variant of pre-ranked Gene Set Enrichment Analysis
 (GSEA) ([Subramanian et al. 2005](#ref-subramanian-gene-2005)). Unlike
 standard GSEA, fast-ssGSEA is capable of testing gene sets where each
@@ -46,14 +46,6 @@ Enrichment Analysis (PTM-SEA) ([Krug et al.
 2019](#ref-krug-curated-2019)), and it borrows optimization techniques
 from the simple implementation of Fast Gene Set Enrichment Analysis
 (FGSEA-simple) ([Korotkevich et al. 2021](#ref-korotkevich-fast-2021)).
-Also, while the enrichment score (ES) for standard GSEA is the most
-extreme value of the running sum (see any GSEA paper for details), the
-ES for fast-ssGSEA is the sum of all values of the running sum. This
-change allows the ES to be computed much more quickly, making
-fast-ssGSEA 1-2 orders of magnitude faster than FGSEA-simple (see the
-Benchmarking section). However, fast-ssGSEA it not able to calculate
-arbitrarily small p-values like FGSEA-multilevel ([Korotkevich et al.
-2021](#ref-korotkevich-fast-2021)).
 
 The primary function, `fast_ssgsea`, accepts a vector of signed
 statistics with genes or other molecules as names. The values must be
@@ -70,18 +62,13 @@ use with `fast_ssgsea`.
 
 R version 4.0.0 or greater is required to install `fast.ssgsea`.
 
-It may be possible to get `fast.ssgsea` to work with older versions of R
-by cloning the repository, changing the minimum R version in the
-DESCRIPTION (e.g., to `>= 3.6.0`), and rebuilding the package, but users
-should do so at their own risk.
-
 ### macOS
 
 A macOS binary is provided in the [latest
 release](https://github.com/pnnl/fast.ssgsea/releases). Users looking to
 build and install the development version of `fast.ssgsea` must have the
-Xcode developer tools from Apple and a FORTRAN compiler installed. See
-<https://mac.r-project.org/tools/> for instructions.
+Xcode developer tools from Apple. See <https://mac.r-project.org/tools/>
+for instructions.
 
 ### Windows
 
@@ -98,17 +85,12 @@ version of `fast.ssgsea` on Linux by running the code below.
 
 ### Install
 
-The development version of `fast.ssgsea` can be installed with any of
+The development version of `fast.ssgsea` can be installed with either of
 the following
 
 ``` r
 # install.packages("pak")
 pak::pak("pnnl/fast.ssgsea")
-```
-
-``` r
-# install.packages("devtools")
-devtools::install_github("pnnl/fast.ssgsea")
 ```
 
 ``` r
@@ -134,14 +116,10 @@ stats <- rnorm(n = n_genes)
 names(stats) <- genes
 
 # Simulate list of gene sets
-n_sets <- 20000L # number of gene sets
-min_size <- 5L # size of smallest gene set
-max_size <- 1000L # size of largest gene set
-
-# Set sizes are uniformly distributed between min_size and max_size
-size_range <- max_size - min_size + 1L
-n_reps <- ceiling(n_sets / size_range)
-set_sizes <- rep(max_size:min_size, times = n_reps)[seq_len(n_sets)]
+n_sets <- 20000L
+min_size <- 5L
+max_size <- 1000L
+set_sizes <- rep(max_size:min_size, length.out = n_sets)
 
 gene_sets <- lapply(seq_len(n_sets), function(i) {
   set.seed(i)
@@ -173,7 +151,7 @@ system.time({
 ```
 
     ##    user  system elapsed 
-    ##   1.065   0.095   1.081
+    ##   0.972   0.083   0.978
 
 ``` r
 str(res)
@@ -195,9 +173,9 @@ str(res)
 print(sessionInfo(), locale = FALSE, tzone = FALSE)
 ```
 
-    ## R version 4.5.3 (2026-03-11)
+    ## R version 4.6.0 (2026-04-24)
     ## Platform: x86_64-pc-linux-gnu
-    ## Running under: Linux Mint 22.1
+    ## Running under: Linux Mint 22.3
     ## 
     ## Matrix products: default
     ## BLAS:   /usr/lib/x86_64-linux-gnu/blas/libblas.so.3.12.0 
@@ -207,15 +185,14 @@ print(sessionInfo(), locale = FALSE, tzone = FALSE)
     ## [1] stats     graphics  grDevices utils     datasets  methods   base     
     ## 
     ## other attached packages:
-    ## [1] dqrng_0.4.1            fast.ssgsea_0.1.0.9034
+    ## [1] dqrng_0.4.1            fast.ssgsea_0.1.0.9035
     ## 
     ## loaded via a namespace (and not attached):
-    ##  [1] digest_0.6.39       collapse_2.1.6      fastmap_1.2.0      
-    ##  [4] xfun_0.56           parallel_4.5.3      knitr_1.51         
-    ##  [7] htmltools_0.5.8.1   rmarkdown_2.29      cli_3.6.5          
-    ## [10] data.table_1.18.2.1 compiler_4.5.3      rstudioapi_0.18.0  
-    ## [13] tools_4.5.3         evaluate_1.0.5      Rcpp_1.1.1         
-    ## [16] yaml_2.3.12         otel_0.2.0          rlang_1.1.7
+    ##  [1] digest_0.6.39     collapse_2.1.7    fastmap_1.2.0     xfun_0.57        
+    ##  [5] parallel_4.6.0    knitr_1.51        htmltools_0.5.9   rmarkdown_2.31   
+    ##  [9] cli_3.6.6         data.table_1.18.4 compiler_4.6.0    rstudioapi_0.18.0
+    ## [13] tools_4.6.0       evaluate_1.0.5    Rcpp_1.1.1-1.1    yaml_2.3.12      
+    ## [17] otel_0.2.0        rlang_1.2.0
 
 ## Benchmarking
 
@@ -226,7 +203,7 @@ fast-ssGSEA (`fast.ssgsea::fast_ssgsea`) and FGSEA-simple
 sets, maximum gene set size, and the number of permutations ($\pi$) were
 tested in a random order (3 replicates each) to minimize the influence
 of previous runs. The R scripts and data are available in the
-simulation/ folder.
+simulation/ directory.
 
 ### fast-ssGSEA
 
@@ -264,50 +241,48 @@ permutations.
 
 ## References
 
-<div id="refs" class="references csl-bib-body hanging-indent"
-entry-spacing="0">
+<div id="refs" class="references csl-bib-body hanging-indent">
 
 <div id="ref-barbie-systematic-2009" class="csl-entry">
 
-Barbie, David A., Pablo Tamayo, Jesse S. Boehm, So Young Kim, Susan E.
-Moody, Ian F. Dunn, Anna C. Schinzel, et al. 2009. “Systematic RNA
-Interference Reveals That Oncogenic KRAS-Driven Cancers Require TBK1.”
-*Nature* 462 (7269): 108–12. <https://doi.org/10.1038/nature08460>.
+Barbie, David A., Pablo Tamayo, Jesse S. Boehm, et al. 2009. “Systematic
+RNA Interference Reveals That Oncogenic KRAS-Driven Cancers Require
+TBK1.” *Nature* 462 (7269): 108–12.
+<https://doi.org/10.1038/nature08460>.
 
 </div>
 
 <div id="ref-korotkevich-fast-2021" class="csl-entry">
 
 Korotkevich, Gennady, Vladimir Sukhov, Nikolay Budin, Boris Shpak, Maxim
-N. Artyomov, and Alexey Sergushichev. 2021. “Fast Gene Set Enrichment
-Analysis.” bioRxiv. <https://doi.org/10.1101/060012>.
+N. Artyomov, and Alexey Sergushichev. 2021. *Fast Gene Set Enrichment
+Analysis*. bioRxiv. <https://doi.org/10.1101/060012>.
 
 </div>
 
 <div id="ref-krug-curated-2019" class="csl-entry">
 
-Krug, Karsten, Philipp Mertins, Bin Zhang, Peter Hornbeck, Rajesh Raju,
-Rushdy Ahmad, Matthew Szucs, et al. 2019. “A Curated Resource for
-Phosphosite-Specific Signature Analysis.” *Molecular & Cellular
-Proteomics* 18 (3): 576–93. <https://doi.org/10.1074/mcp.TIR118.000943>.
+Krug, Karsten, Philipp Mertins, Bin Zhang, et al. 2019. “A Curated
+Resource for Phosphosite-Specific Signature Analysis.” *Molecular &
+Cellular Proteomics* 18 (3): 576–93.
+<https://doi.org/10.1074/mcp.TIR118.000943>.
 
 </div>
 
 <div id="ref-R-core-team" class="csl-entry">
 
-R Core Team. 2024. *R: A Language and Environment for Statistical
-Computing*. Vienna, Austria: R Foundation for Statistical Computing.
-<https://www.R-project.org/>.
+R Core Team. 2026. *R: A Language and Environment for Statistical
+Computing*. R Foundation for Statistical Computing.
+<https://doi.org/10.32614/R.manuals>.
 
 </div>
 
 <div id="ref-subramanian-gene-2005" class="csl-entry">
 
-Subramanian, Aravind, Pablo Tamayo, Vamsi K. Mootha, Sayan Mukherjee,
-Benjamin L. Ebert, Michael A. Gillette, Amanda Paulovich, et al. 2005.
-“Gene Set Enrichment Analysis: A Knowledge-Based Approach for
-Interpreting Genome-Wide Expression Profiles.” *Proceedings of the
-National Academy of Sciences* 102 (43): 15545–50.
+Subramanian, Aravind, Pablo Tamayo, Vamsi K. Mootha, et al. 2005. “Gene
+Set Enrichment Analysis: A Knowledge-Based Approach for Interpreting
+Genome-Wide Expression Profiles.” *Proceedings of the National Academy
+of Sciences* 102 (43): 15545–50.
 <https://doi.org/10.1073/pnas.0506580102>.
 
 </div>

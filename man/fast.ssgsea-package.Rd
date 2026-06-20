@@ -11,5 +11,10 @@ High-performance variant of Gene Set Enrichment Analysis that is capable of test
 \author{
 \strong{Maintainer}: Tyler Sagendorf \email{tyler.sagendorf@pnnl.gov} (\href{https://orcid.org/0000-0003-1552-4870}{ORCID})
 
+Authors:
+\itemize{
+  \item Tyler Sagendorf \email{tyler.sagendorf@pnnl.gov} (\href{https://orcid.org/0000-0003-1552-4870}{ORCID})
+}
+
 }
 \keyword{internal}

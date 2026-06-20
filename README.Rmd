@@ -21,13 +21,13 @@ knitr::opts_chunk$set(
 [![R-CMD-check](https://github.com/pnnl/fast.ssgsea/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/pnnl/fast.ssgsea/actions/workflows/R-CMD-check.yaml)
 <!-- badges: end -->
 
-**NOTICE:** While this R package was based on the [ssGSEA2.0](https://github.com/broadinstitute/ssGSEA2.0) repository, neither perform single-sample Gene Set Enrichment Analysis (ssGSEA) as originally described by Barbie, *et al.* [@barbie-systematic-2009]. They are instead modifications of pre-ranked GSEA that calculate the enrichment score (ES) differently and support testing directional gene sets (details below). The package and fast-ssGSEA name will be corrected in the near future.
+**NOTICE:** While this R package was based on the [ssGSEA2.0](https://github.com/broadinstitute/ssGSEA2.0) repository, neither perform single-sample Gene Set Enrichment Analysis (ssGSEA) as originally described by Barbie, *et al.* [@barbie-systematic-2009]. They are instead modifications of pre-ranked GSEA that calculate the enrichment score (ES) differently and support testing directional gene sets (details below). The package and fast-ssGSEA name will be changed in the future.
 
 ## Overview
 
 `fast.ssgsea` is an R package [@R-core-team] for a highly optimized variant of pre-ranked Gene Set Enrichment Analysis (GSEA) [@subramanian-gene-2005]. Unlike standard GSEA, fast-ssGSEA is capable of testing gene sets where each gene has an expected direction of change (up- or down-regulation; indicated by appending a ";u" or ";d" to the end of every gene in a set) from a prior experiment.
 
-fast-ssGSEA is based on Post-Translational Modification Signature Enrichment Analysis (PTM-SEA) [@krug-curated-2019], and it borrows optimization techniques from the simple implementation of Fast Gene Set Enrichment Analysis (FGSEA-simple) [@korotkevich-fast-2021]. Also, while the enrichment score (ES) for standard GSEA is the most extreme value of the running sum (see any GSEA paper for details), the ES for fast-ssGSEA is the sum of all values of the running sum. This change allows the ES to be computed much more quickly, making fast-ssGSEA 1-2 orders of magnitude faster than FGSEA-simple (see the Benchmarking section). However, fast-ssGSEA it not able to calculate arbitrarily small p-values like FGSEA-multilevel [@korotkevich-fast-2021].
+fast-ssGSEA is based on Post-Translational Modification Signature Enrichment Analysis (PTM-SEA) [@krug-curated-2019], and it borrows optimization techniques from the simple implementation of Fast Gene Set Enrichment Analysis (FGSEA-simple) [@korotkevich-fast-2021].
 
 The primary function, `fast_ssgsea`, accepts a vector of signed statistics with genes or other molecules as names. The values must be approximately symmetric around zero, with more extreme values indicating greater importance. A named list of gene sets (more generally, molecular signatures) is also required. Other arguments control the behavior of fast-ssGSEA, and they are described in the function documentation.
 
@@ -36,13 +36,11 @@ The package also contains a `read_gmt` function, which reads a Gene Matrix Trans
 
 ## Installation
 
-R version 4.0.0 or greater is required to install `fast.ssgsea`. 
-
-It may be possible to get `fast.ssgsea` to work with older versions of R by cloning the repository, changing the minimum R version in the DESCRIPTION (e.g., to `>= 3.6.0`), and rebuilding the package, but users should do so at their own risk.
+R version 4.0.0 or greater is required to install `fast.ssgsea`.
 
 ### macOS
 
-A macOS binary is provided in the [latest release](https://github.com/pnnl/fast.ssgsea/releases). Users looking to build and install the development version of `fast.ssgsea` must have the Xcode developer tools from Apple and a FORTRAN compiler installed. See https://mac.r-project.org/tools/ for instructions.
+A macOS binary is provided in the [latest release](https://github.com/pnnl/fast.ssgsea/releases). Users looking to build and install the development version of `fast.ssgsea` must have the Xcode developer tools from Apple. See https://mac.r-project.org/tools/ for instructions.
 
 ### Windows
 
@@ -54,16 +52,11 @@ Most Linux distributions come pre-packaged with tools to compile C and C++ code,
 
 ### Install
 
-The development version of `fast.ssgsea` can be installed with any of the following
+The development version of `fast.ssgsea` can be installed with either of the following
 
 ``` r
 # install.packages("pak")
 pak::pak("pnnl/fast.ssgsea")
-```
-
-``` r
-# install.packages("devtools")
-devtools::install_github("pnnl/fast.ssgsea")
 ```
 
 ``` r
@@ -87,14 +80,10 @@ stats <- rnorm(n = n_genes)
 names(stats) <- genes
 
 # Simulate list of gene sets
-n_sets <- 20000L # number of gene sets
-min_size <- 5L # size of smallest gene set
-max_size <- 1000L # size of largest gene set
-
-# Set sizes are uniformly distributed between min_size and max_size
-size_range <- max_size - min_size + 1L
-n_reps <- ceiling(n_sets / size_range)
-set_sizes <- rep(max_size:min_size, times = n_reps)[seq_len(n_sets)]
+n_sets <- 20000L
+min_size <- 5L
+max_size <- 1000L
+set_sizes <- rep(max_size:min_size, length.out = n_sets)
 
 gene_sets <- lapply(seq_len(n_sets), function(i) {
   set.seed(i)
@@ -134,7 +123,7 @@ print(sessionInfo(), locale = FALSE, tzone = FALSE)
 
 ## Benchmarking
 
-Benchmarking was performed on a desktop computer with an AMD Ryzen 5 7600X CPU (4.7 GHz), single threaded, to measure the runtime of fast-ssGSEA (`fast.ssgsea::fast_ssgsea`) and FGSEA-simple (`fgsea::fgseaSimple`). Different combinations of the number of gene sets, maximum gene set size, and the number of permutations ($\pi$) were tested in a random order (3 replicates each) to minimize the influence of previous runs. The R scripts and data are available in the simulation/ folder.
+Benchmarking was performed on a desktop computer with an AMD Ryzen 5 7600X CPU (4.7 GHz), single threaded, to measure the runtime of fast-ssGSEA (`fast.ssgsea::fast_ssgsea`) and FGSEA-simple (`fgsea::fgseaSimple`). Different combinations of the number of gene sets, maximum gene set size, and the number of permutations ($\pi$) were tested in a random order (3 replicates each) to minimize the influence of previous runs. The R scripts and data are available in the simulation/ directory.
 
 ### fast-ssGSEA
 

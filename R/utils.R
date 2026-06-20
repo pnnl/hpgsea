@@ -125,7 +125,7 @@
 #' @author Tyler Sagendorf
 #'
 #' @importFrom collapse allv anyv fmatch fsubset funique groupid vec vlengths
-#'   vtypes whichNA whichv
+#' @importFrom collapse vtypes whichNA whichv
 #'
 #' @noRd
 .gene_sets_to_indices <- function(stats,

@@ -1,8 +1,8 @@
 Package: fast.ssgsea
 Type: Package
 Title: High-Performance Gene Set Enrichment Analysis (HP-GSEA)
-Version: 0.1.0.9034
-Date: 2026-03-30
+Version: 0.1.0.9035
+Date: 2026-06-20
 Authors@R: 
       person(given = "Tyler", family = "Sagendorf", 
              email = "tyler.sagendorf@pnnl.gov", 
@@ -24,7 +24,7 @@ Imports:
    dqrng,
    Rcpp (>= 1.1.0),
    stats
-RoxygenNote: 7.3.3
 Suggests:
     testthat (>= 3.0.0)
 Config/testthat/edition: 3
+Config/roxygen2/version: 8.0.0
