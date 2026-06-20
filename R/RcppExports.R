@@ -49,8 +49,8 @@ NULL
 #' @param pES_end pointer to an integer vector with length equal to
 #'   \code{n_sizes}. Each element is 1 more than the index of the last ES for
 #'   every unique gene set size.
-#' @param pES_pos_idx pointer to an integer vector; the output of
-#'   \code{get_ES_pos_idx()}.
+#' @param pES_pos_idx pointer to an integer vector; contains the index of the
+#'   first positive ES for every unique gene set size.
 #' @param pn_perm_neg pointer to an integer vector; contains the number of
 #'   negative permutation ES for every unique gene set size.
 #' @param psum_perm_pos pointer to a numeric vector; contains the sum of the
@@ -76,7 +76,7 @@ NULL
 #'   of the negative permutation ES.
 #' @param psum_perm_pos pointer to a float vector that stores the sums of the
 #'   positive permutation ES.
-#' @param pES_perm_mat a pointer to a float vector containing permutation ES.
+#' @param pES_perm_vec a pointer to a float vector containing permutation ES.
 #'   Permutation ES for gene sets of the same size are arranged in blocks of
 #'   (at most) 32 consecutive elements.
 #' @param pES pointer to a float vector of ES for all gene sets.
