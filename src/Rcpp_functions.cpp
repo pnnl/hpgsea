@@ -6,6 +6,29 @@
 #define BLOCK_SIZE 200
 
 
+typedef struct {
+  float r;
+  float y;
+} GeneData;
+
+typedef struct {
+  int start;
+  int first_positive;
+  int end;
+} ESBounds;
+
+typedef struct {
+  int n_negative;
+  float sum_negative;
+  float sum_positive;
+} PermStats;
+
+typedef struct {
+  int up;
+  int down;
+} PairMap;
+
+
 //' @title Get the Index of the First Positive ES for Every Unique Gene Set Size
 //'
 //' @description Perform binary searches to determine the index of the first
@@ -32,24 +55,22 @@
 //' @author Tyler Sagendorf
 //'
 //' @noRd
-void update_ES_pos_idx(int *pES_pos_idx,
-                       const int n_sizes,
-                       const float *pES,
-                       const int *pES_start,
-                       const int *pES_end)
+void update_first_positive(ESBounds *pES_bounds,
+                           const int n_sizes,
+                           const float *pES)
 {
   for (int s = 0; s < n_sizes; ++s) {
-    int low = pES_start[s];
+    int low = pES_bounds[s].start;
     const int min_idx = low;
-    int high = pES_end[s] - 1;
-    pES_pos_idx[s] = pES_end[s];
+    int high = pES_bounds[s].end - 1;
+    pES_bounds[s].first_positive = pES_bounds[s].end;
 
     while (low <= high) {
       int mid = (low + high) >> 1;
 
       if (pES[mid] >= 0.0f) {
         if (mid == min_idx || pES[mid - 1] < 0.0f) {
-          pES_pos_idx[s] = mid;
+          pES_bounds[s].first_positive = mid;
           break;
         } else {
           high = mid - 1;
@@ -101,30 +122,27 @@ inline void update_output_vectors(int *pn_same_sign,
                                   double *psum_ES_perm,
                                   const int n_sizes,
                                   const int nperm,
-                                  const int *pES_start,
-                                  const int *pES_end,
-                                  const int *pES_pos_idx,
-                                  const int *pn_perm_neg,
-                                  const float *psum_perm_pos,
-                                  const float *psum_perm_neg)
+                                  const ESBounds *pES_bounds,
+                                  const PermStats *pperm_stats)
 {
   for (int s = 0; s < n_sizes; ++s) {
-    const int ES_start_s = pES_start[s];
-    const int ES_pos_idx_s = pES_pos_idx[s];
-    const int ES_end_s = pES_end[s];
-    const int n_perm_neg_s = pn_perm_neg[s];
-    const int n_perm_pos_s = nperm - n_perm_neg_s;
-    const double sum_perm_neg_s = (double) psum_perm_neg[s];
-    const double sum_perm_pos_s = (double) psum_perm_pos[s];
+    const int start = pES_bounds[s].start;
+    const int first_positive = pES_bounds[s].first_positive;
+    const int end = pES_bounds[s].end;
 
-    for (int i = ES_start_s; i < ES_pos_idx_s; ++i) {
-      pn_same_sign[i] = n_perm_neg_s;
-      psum_ES_perm[i] = sum_perm_neg_s;
+    const int n_negative = pperm_stats[s].n_negative;
+    const int n_positive = nperm - n_negative;
+    const double sum_negative = (double) pperm_stats[s].sum_negative;
+    const double sum_positive = (double) pperm_stats[s].sum_positive;
+
+    for (int i = start; i < first_positive; ++i) {
+      pn_same_sign[i] = n_negative;
+      psum_ES_perm[i] = sum_negative;
     }
 
-    for (int i = ES_pos_idx_s; i < ES_end_s; ++i) {
-      pn_same_sign[i] = n_perm_pos_s;
-      psum_ES_perm[i] = sum_perm_pos_s;
+    for (int i = first_positive; i < end; ++i) {
+      pn_same_sign[i] = n_positive;
+      psum_ES_perm[i] = sum_positive;
     }
   }
 }
@@ -134,37 +152,35 @@ inline void calc_ES_perm_internal(float *pES_perm_vec,
                                   const int n_genes,
                                   const int n_sizes,
                                   const int block_size,
-                                  const float *py,
-                                  const float *pr,
+                                  const GeneData *pgene_data,
                                   const int max_size,
                                   const float sum_ranks,
                                   const int *punique_m,
-                                  const float *punique_w_float) {
+                                  const float *pinv_w) {
   for (int b = 0; b < block_size; ++b) {
-    const Rcpp::IntegerVector rand_idx = dqrng::dqsample_int(
+    const Rcpp::IntegerVector random_indices = dqrng::dqsample_int(
       n_genes,
       max_size
     );
-    const int *prand_idx = rand_idx.begin();
+    const int *prandom_indices = random_indices.begin();
 
+    int perm_idx = b;
     int start = 0;
-    int idx = b;
     float sum_r = 0.0f;
     float sum_y = 0.0f;
     float sum_ry = 0.0f;
 
-    for (int s = 0; s < n_sizes; ++s, idx += block_size) {
+    for (int s = 0; s < n_sizes; ++s, perm_idx += block_size) {
       const int end = punique_m[s];
 
       while (start < end) {
-        const int idx_k = prand_idx[start];
-        ++start;
-        sum_r += pr[idx_k];
-        sum_y += py[idx_k];
-        sum_ry += pr[idx_k] * py[idx_k];
+        const int rand_idx = prandom_indices[start++];
+        sum_r += pgene_data[rand_idx].r;
+        sum_y += pgene_data[rand_idx].y;
+        sum_ry += pgene_data[rand_idx].r * pgene_data[rand_idx].y;
       }
 
-      pES_perm_vec[idx] = sum_ry / sum_y + (sum_r - sum_ranks) * punique_w_float[s];
+      pES_perm_vec[perm_idx] = (sum_ry / sum_y) + (sum_r - sum_ranks) * pinv_w[s];
     }
   }
 }
@@ -181,7 +197,7 @@ inline void calc_ES_perm_internal(float *pES_perm_vec,
 //'   positive permutation ES.
 //' @param pES_perm_vec a pointer to a float vector containing permutation ES.
 //'   Permutation ES for gene sets of the same size are arranged in blocks of
-//'   (at most) 32 consecutive elements.
+//'   (at most) BLOCK_SIZE consecutive elements.
 //' @param pES pointer to a float vector of ES for all gene sets.
 //' @param pES_start pointer to an integer vector containing the index of the
 //'   first ES for each unique set size.
@@ -191,7 +207,7 @@ inline void calc_ES_perm_internal(float *pES_perm_vec,
 //'   index of the last ES for each unique set size.
 //' @param n_sizes integer; the number of unique gene set sizes.
 //' @param block_size integer; the size of a block of permutation ES. Between 1
-//'   and 32.
+//'   and BLOCK_SIZE.
 //'
 //' @details For each unique gene set size, the permutation ES are partitioned
 //'   by sign. At the same time, the number of negative permutation ES, as well
@@ -205,53 +221,50 @@ inline void calc_ES_perm_internal(float *pES_perm_vec,
 //'
 //' @noRd
 inline void update_n_as_extreme(int *pn_as_extreme,
-                                int *pn_perm_neg,
-                                float *psum_perm_neg,
-                                float *psum_perm_pos,
+                                PermStats *pperm_stats,
                                 float *pES_perm_vec,
                                 const float *pES,
-                                const int *pES_start,
-                                const int *pES_pos_idx,
-                                const int *pES_end,
+                                const ESBounds *pES_bounds,
                                 const int n_sizes,
                                 const int block_size) {
-  int block_start_perm = 0;
-
   for (int s = 0; s < n_sizes; ++s) {
+    const int block_start_perm = s * block_size;
+
     // Partition permutation ES by sign and update the sums ====
-    float sum_neg = 0.0f;
-    float sum_pos = 0.0f;
-    int perm_first_pos = block_start_perm;
+    int first_positive_perm = block_start_perm;
+    float sum_negative_perm = 0.0f;
+    float sum_positive_perm = 0.0f;
 
     for (int k = 0; k < block_size; ++k) {
       const float swap = pES_perm_vec[block_start_perm + k];
 
       if (swap < 0.0f) {
-        pES_perm_vec[block_start_perm + k] = pES_perm_vec[perm_first_pos];
-        pES_perm_vec[perm_first_pos] = swap;
-        sum_neg -= swap;
-        ++perm_first_pos;
+        pES_perm_vec[block_start_perm + k] = pES_perm_vec[first_positive_perm];
+        pES_perm_vec[first_positive_perm] = swap;
+
+        sum_negative_perm -= swap;
+        ++first_positive_perm;
       } else {
-        sum_pos += swap;
+        sum_positive_perm += swap;
       }
     }
 
-    perm_first_pos -= block_start_perm; // 0 to block_size
-    pn_perm_neg[s] += perm_first_pos;
-    psum_perm_neg[s] += sum_neg;
-    psum_perm_pos[s] += sum_pos;
+    pperm_stats[s].n_negative += (first_positive_perm - block_start_perm);
+    pperm_stats[s].sum_negative += sum_negative_perm;
+    pperm_stats[s].sum_positive += sum_positive_perm;
 
     // Comparisons ====
-    int i_neg = pES_start[s];
-    int i_pos = pES_pos_idx[s];
+    int i_neg = pES_bounds[s].start;
+    int i_pos = pES_bounds[s].first_positive;
     int remainder_neg = i_pos - i_neg;
-    int remainder_pos = pES_end[s] - i_pos;
+    int remainder_pos = pES_bounds[s].end - i_pos;
+    const int perm_end = block_start_perm + block_size;
 
     // Negative ----
     while (remainder_neg >= 8) {
-      for (int b = 0; b < perm_first_pos; ++b) {
+      for (int b = block_start_perm; b < first_positive_perm; ++b) {
         for (int k = 0; k < 8; ++k) {
-          pn_as_extreme[i_neg + k] += pES_perm_vec[block_start_perm + b] <= pES[i_neg + k];
+          pn_as_extreme[i_neg + k] += pES_perm_vec[b] <= pES[i_neg + k];
         }
       }
       i_neg += 8;
@@ -259,9 +272,9 @@ inline void update_n_as_extreme(int *pn_as_extreme,
     }
 
     if (remainder_neg >= 4) {
-      for (int b = 0; b < perm_first_pos; ++b) {
+      for (int b = block_start_perm; b < first_positive_perm; ++b) {
         for (int k = 0; k < 4; ++k) {
-          pn_as_extreme[i_neg + k] += pES_perm_vec[block_start_perm + b] <= pES[i_neg + k];
+          pn_as_extreme[i_neg + k] += pES_perm_vec[b] <= pES[i_neg + k];
         }
       }
       i_neg += 4;
@@ -269,9 +282,9 @@ inline void update_n_as_extreme(int *pn_as_extreme,
     }
 
     if (remainder_neg >= 2) {
-      for (int b = 0; b < perm_first_pos; ++b) {
+      for (int b = block_start_perm; b < first_positive_perm; ++b) {
         for (int k = 0; k < 2; ++k) {
-          pn_as_extreme[i_neg + k] += pES_perm_vec[block_start_perm + b] <= pES[i_neg + k];
+          pn_as_extreme[i_neg + k] += pES_perm_vec[b] <= pES[i_neg + k];
         }
       }
       i_neg += 2;
@@ -279,16 +292,16 @@ inline void update_n_as_extreme(int *pn_as_extreme,
     }
 
     if (remainder_neg == 1) {
-      for (int b = 0; b < perm_first_pos; ++b) {
-        pn_as_extreme[i_neg] += pES_perm_vec[block_start_perm + b] <= pES[i_neg];
+      for (int b = block_start_perm; b < first_positive_perm; ++b) {
+        pn_as_extreme[i_neg] += pES_perm_vec[b] <= pES[i_neg];
       }
     }
 
     // Positive ----
     while (remainder_pos >= 8) {
-      for (int b = perm_first_pos; b < block_size; ++b) {
+      for (int b = first_positive_perm; b < perm_end; ++b) {
         for (int k = 0; k < 8; ++k) {
-          pn_as_extreme[i_pos + k] += pES_perm_vec[block_start_perm + b] >= pES[i_pos + k];
+          pn_as_extreme[i_pos + k] += pES_perm_vec[b] >= pES[i_pos + k];
         }
       }
       i_pos += 8;
@@ -296,9 +309,9 @@ inline void update_n_as_extreme(int *pn_as_extreme,
     }
 
     if (remainder_pos >= 4) {
-      for (int b = perm_first_pos; b < block_size; ++b) {
+      for (int b = first_positive_perm; b < perm_end; ++b) {
         for (int k = 0; k < 4; ++k) {
-          pn_as_extreme[i_pos + k] += pES_perm_vec[block_start_perm + b] >= pES[i_pos + k];
+          pn_as_extreme[i_pos + k] += pES_perm_vec[b] >= pES[i_pos + k];
         }
       }
       i_pos += 4;
@@ -306,9 +319,9 @@ inline void update_n_as_extreme(int *pn_as_extreme,
     }
 
     if (remainder_pos >= 2) {
-      for (int b = perm_first_pos; b < block_size; ++b) {
+      for (int b = first_positive_perm; b < perm_end; ++b) {
         for (int k = 0; k < 2; ++k) {
-          pn_as_extreme[i_pos + k] += pES_perm_vec[block_start_perm + b] >= pES[i_pos + k];
+          pn_as_extreme[i_pos + k] += pES_perm_vec[b] >= pES[i_pos + k];
         }
       }
       i_pos += 2;
@@ -316,12 +329,11 @@ inline void update_n_as_extreme(int *pn_as_extreme,
     }
 
     if (remainder_pos == 1) {
-      for (int b = perm_first_pos; b < block_size; ++b) {
-        pn_as_extreme[i_pos] += pES_perm_vec[block_start_perm + b] >= pES[i_pos];
+      for (int b = first_positive_perm; b < perm_end; ++b) {
+        pn_as_extreme[i_pos] += pES_perm_vec[b] >= pES[i_pos];
       }
     }
 
-    block_start_perm += block_size;
   }
 }
 
@@ -397,77 +409,58 @@ void calc_ES_perm(SEXP n_same_sign,
   const int n_sets = Rf_length(ES_dbl);
   const int n_sizes = Rf_length(unique_m);
 
-  std::vector<float> ES(n_sets);
-  float *pES = &ES[0];
+  float *pES = new float[n_sets];
   for (int i = 0; i < n_sets; ++i) {
     pES[i] = (float) pES_dbl[i];
   }
 
-  std::vector<float> y(n_genes);
-  std::vector<float> r(n_genes);
-  float *py = &y[0];
-  float *pr = &r[0];
+  GeneData *pgene_data = new GeneData[n_genes];
   for (int i = 0; i < n_genes; ++i) {
-    py[i] = (float) py_dbl[i];
-    pr[i] = (float) pr_dbl[i];
+    pgene_data[i].r = (float) pr_dbl[i];
+    pgene_data[i].y = (float) py_dbl[i];
   }
 
-  std::vector<int> n_perm_neg(n_sizes);
-  std::vector<float> sum_perm_neg(n_sizes);
-  std::vector<float> sum_perm_pos(n_sizes);
-  int *pn_perm_neg = &n_perm_neg[0];
-  float *psum_perm_neg = &sum_perm_neg[0];
-  float *psum_perm_pos = &sum_perm_pos[0];
+  PermStats *pperm_stats = new PermStats[n_sizes];
+  memset(pperm_stats, 0, sizeof(PermStats) * n_sizes);
 
-  std::vector<int> ES_start(n_sizes);
-  int *pES_start = &ES_start[0];
-  pES_start[0] = 0;
+  ESBounds *pES_bounds = new ESBounds[n_sizes];
+  pES_bounds[0].start = 0;
+  pES_bounds[0].end = pES_end[0];
   for (int i = 1; i < n_sizes; ++i) {
-    pES_start[i] = pES_end[i - 1];
+    pES_bounds[i].start = pES_end[i - 1];
+    pES_bounds[i].end = pES_end[i];
   }
+  update_first_positive(pES_bounds, n_sizes, pES);
 
-  std::vector<int> ES_pos_idx(n_sizes);
-  int *pES_pos_idx = &ES_pos_idx[0];
-  update_ES_pos_idx(pES_pos_idx, n_sizes, pES, pES_start, pES_end);
-
-  std::vector<float> unique_w_float(n_sizes);
-  float *punique_w_float = &unique_w_float[0];
+  float *pinv_w = new float[n_sizes];
   for (int i = 0; i < n_sizes; ++i) {
-    punique_w_float[i] = (float) (1.0 / punique_w[i]);
+    pinv_w[i] = (float) (1.0 / punique_w[i]);
   }
 
-  std::vector<float> ES_perm_vec(BLOCK_SIZE * n_sizes);
-  float *pES_perm_vec = &ES_perm_vec[0];
+  float *pES_perm_vec = new float[BLOCK_SIZE * n_sizes];
 
   dqrng::dqset_seed(seed);
   const int partial_block_size = nperm % BLOCK_SIZE;
 
   if (partial_block_size != 0) {
-    Rcpp::checkUserInterrupt();
-
     calc_ES_perm_internal(
       pES_perm_vec,
       n_genes,
       n_sizes,
       partial_block_size,
-      py,
-      pr,
+      pgene_data,
       max_size,
       sum_ranks,
       punique_m,
-      punique_w_float
+      pinv_w
     );
 
     update_n_as_extreme(
       pn_as_extreme,
-      pn_perm_neg,
-      psum_perm_neg,
-      psum_perm_pos,
+      pperm_stats,
       pES_perm_vec,
       pES,
-      pES_start,
-      pES_pos_idx,
-      pES_end,
+      pES_bounds,
       n_sizes,
       partial_block_size
     );
@@ -483,24 +476,19 @@ void calc_ES_perm(SEXP n_same_sign,
       n_genes,
       n_sizes,
       BLOCK_SIZE,
-      py,
-      pr,
+      pgene_data,
       max_size,
       sum_ranks,
       punique_m,
-      punique_w_float
+      pinv_w
     );
 
     update_n_as_extreme(
       pn_as_extreme,
-      pn_perm_neg,
-      psum_perm_neg,
-      psum_perm_pos,
+      pperm_stats,
       pES_perm_vec,
       pES,
-      pES_start,
-      pES_pos_idx,
-      pES_end,
+      pES_bounds,
       n_sizes,
       BLOCK_SIZE
     );
@@ -511,13 +499,16 @@ void calc_ES_perm(SEXP n_same_sign,
     psum_ES_perm,
     n_sizes,
     nperm,
-    pES_start,
-    pES_end,
-    pES_pos_idx,
-    pn_perm_neg,
-    psum_perm_pos,
-    psum_perm_neg
+    pES_bounds,
+    pperm_stats
   );
+
+  delete[] pES;
+  delete[] pgene_data;
+  delete[] pinv_w;
+  delete[] pES_perm_vec;
+  delete[] pES_bounds;
+  delete[] pperm_stats;
 }
 
 
@@ -529,22 +520,20 @@ inline void calc_ES_perm_dir_internal(float *pES_perm_vec,
                                       const int n_sizes_up,
                                       const int n_pairs,
                                       const int block_size,
-                                      const float *py,
-                                      const float *pr,
+                                      const GeneData *pgene_data,
                                       const int max_size,
                                       const float sum_ranks,
                                       const int *punique_m_down,
                                       const int *punique_m_up,
-                                      const float *pinv_unique_w_up,
-                                      const float *pinv_unique_w_down,
-                                      const int *pmap_unique_to_pairs_up,
-                                      const int *pmap_unique_to_pairs_down) {
+                                      const float *pinv_w_up,
+                                      const float *pinv_w_down,
+                                      const PairMap *ppair_map) {
   for (int b = 0; b < block_size; ++b) {
-    const Rcpp::IntegerVector rand_idx = dqrng::dqsample_int(
+    const Rcpp::IntegerVector random_indices = dqrng::dqsample_int(
       n_genes,
       max_size
     );
-    const int *prand_idx = rand_idx.begin();
+    const int *prandom_indices = random_indices.begin();
 
     // Up-regulated genes ====
     int start = 0;
@@ -557,15 +546,14 @@ inline void calc_ES_perm_dir_internal(float *pES_perm_vec,
       const bool empty_set = (start == end);
 
       while (start < end) {
-        const int idx_k = prand_idx[start];
-        ++start;
-        sum_r += pr[idx_k];
-        sum_y += py[idx_k];
-        sum_ry += pr[idx_k] * py[idx_k];
+        const int rand_idx = prandom_indices[start++];
+        sum_r += pgene_data[rand_idx].r;
+        sum_y += pgene_data[rand_idx].y;
+        sum_ry += pgene_data[rand_idx].r * pgene_data[rand_idx].y;
       }
 
       pES_perm_up[i_up] = empty_set ? 0.0f :
-        (sum_ry / sum_y) + (sum_r - sum_ranks) * pinv_unique_w_up[i_up];
+        (sum_ry / sum_y) + (sum_r - sum_ranks) * pinv_w_up[i_up];
     }
 
     // Down-regulated genes ====
@@ -579,26 +567,23 @@ inline void calc_ES_perm_dir_internal(float *pES_perm_vec,
       const bool empty_set = (start == end);
 
       // Indices for the down-regulated portions of the gene sets start at the
-      // end of rand_idx to avoid selecting the same values that were used for
-      // the up-regulated permutation ES.
+      // end of random_indices to avoid selecting the same values that were used
+      // for the up-regulated permutation ES.
       while (start > end) {
-        const int idx_k = prand_idx[start];
-        --start;
-        sum_r += pr[idx_k];
-        sum_y += py[idx_k];
-        sum_ry += pr[idx_k] * py[idx_k];
+        const int rand_idx = prandom_indices[start--];
+        sum_r += pgene_data[rand_idx].r;
+        sum_y += pgene_data[rand_idx].y;
+        sum_ry += pgene_data[rand_idx].r * pgene_data[rand_idx].y;
       }
 
       pES_perm_down[i_down] = empty_set ? 0.0f :
-        (sum_ry / sum_y) + (sum_r - sum_ranks) * pinv_unique_w_down[i_down];
+        (sum_ry / sum_y) + (sum_r - sum_ranks) * pinv_w_down[i_down];
     }
 
     // ES = ES_up - ES_down for each unique pair
-    int idx = b;
-    for (int s = 0; s < n_pairs; ++s, idx += block_size) {
-      pES_perm_vec[idx] =
-        pES_perm_up[pmap_unique_to_pairs_up[s]] -
-        pES_perm_down[pmap_unique_to_pairs_down[s]];
+    int perm_idx = b;
+    for (int s = 0; s < n_pairs; ++s, perm_idx += block_size) {
+      pES_perm_vec[perm_idx] = pES_perm_up[ppair_map[s].up] - pES_perm_down[ppair_map[s].down];
     }
   }
 }
@@ -674,48 +659,35 @@ void calc_ES_perm_dir(SEXP n_same_sign,
   const int n_sizes_up = Rf_length(unique_m_up);
   const int n_sizes_down = Rf_length(unique_m_down);
 
-  std::vector<float> ES(n_sets);
-  float *pES = &ES[0];
+  float *pES = new float[n_sets];
   for (int i = 0; i < n_sets; ++i) {
     pES[i] = (float) pES_dbl[i];
   }
 
-  std::vector<float> y(n_genes);
-  std::vector<float> r(n_genes);
-  float *py = &y[0];
-  float *pr = &r[0];
+  GeneData *pgene_data = new GeneData[n_genes];
   for (int i = 0; i < n_genes; ++i) {
-    py[i] = (float) py_dbl[i];
-    pr[i] = (float) pr_dbl[i];
+    pgene_data[i].r = (float) pr_dbl[i];
+    pgene_data[i].y = (float) py_dbl[i];
   }
 
+  PairMap *ppair_map = new PairMap[n_pairs];
   // Convert from 1-based to 0-based indices
   for (int i = 0; i < n_pairs; ++i) {
-    --pmap_unique_to_pairs_up[i];
-    --pmap_unique_to_pairs_down[i];
+    ppair_map[i].up = pmap_unique_to_pairs_up[i] - 1;
+    ppair_map[i].down = pmap_unique_to_pairs_down[i] - 1;
   }
 
-  std::vector<float> ES_perm_up(n_sizes_up);
-  std::vector<float> ES_perm_down(n_sizes_down);
-  std::vector<int> n_perm_neg(n_pairs);
-  std::vector<float> sum_perm_pos(n_pairs);
-  std::vector<float> sum_perm_neg(n_pairs);
-  float *pES_perm_up = &ES_perm_up[0];
-  float *pES_perm_down = &ES_perm_down[0];
-  int *pn_perm_neg = &n_perm_neg[0];
-  float *psum_perm_pos = &sum_perm_pos[0];
-  float *psum_perm_neg = &sum_perm_neg[0];
+  PermStats *pperm_stats = new PermStats[n_pairs];
+  memset(pperm_stats, 0, sizeof(PermStats) * n_pairs);
 
-  std::vector<int> ES_start(n_pairs);
-  int *pES_start = &ES_start[0];
-  pES_start[0] = 0;
+  ESBounds *pES_bounds = new ESBounds[n_pairs];
+  pES_bounds[0].start = 0;
+  pES_bounds[0].end = pES_end[0];
   for (int i = 1; i < n_pairs; ++i) {
-    pES_start[i] = pES_end[i - 1];
+    pES_bounds[i].start = pES_end[i - 1];
+    pES_bounds[i].end = pES_end[i];
   }
-
-  std::vector<int> ES_pos_idx(n_pairs);
-  int *pES_pos_idx = &ES_pos_idx[0];
-  update_ES_pos_idx(pES_pos_idx, n_pairs, pES, pES_start, pES_end);
+  update_first_positive(pES_bounds, n_pairs, pES);
 
   // Update end positions of down-regulated genes to avoid overlap with
   // up-regulated genes
@@ -723,27 +695,24 @@ void calc_ES_perm_dir(SEXP n_same_sign,
     punique_m_down[i] = (max_size - 1) - punique_m_down[i];
   }
 
-  std::vector<float> inv_unique_w_up(n_sizes_up);
-  float *pinv_unique_w_up = &inv_unique_w_up[0];
+  float *pinv_w_up = new float[n_sizes_up];
   for (int i = 0; i < n_sizes_up; ++i) {
-    pinv_unique_w_up[i] = (float) (1.0 / punique_w_up[i]);
+    pinv_w_up[i] = (float) (1.0 / punique_w_up[i]);
   }
 
-  std::vector<float> inv_unique_w_down(n_sizes_down);
-  float *pinv_unique_w_down = &inv_unique_w_down[0];
+  float *pinv_w_down = new float[n_sizes_down];
   for (int i = 0; i < n_sizes_down; ++i) {
-    pinv_unique_w_down[i] = (float) (1.0 / punique_w_down[i]);
+    pinv_w_down[i] = (float) (1.0 / punique_w_down[i]);
   }
 
-  std::vector<float> ES_perm_vec(BLOCK_SIZE * n_pairs);
-  float *pES_perm_vec = &ES_perm_vec[0];
+  float *pES_perm_up = new float[n_sizes_up];
+  float *pES_perm_down = new float[n_sizes_down];
+  float *pES_perm_vec = new float[BLOCK_SIZE * n_pairs];
 
   dqrng::dqset_seed(seed);
   const int partial_block_size = nperm % BLOCK_SIZE;
 
   if (partial_block_size != 0) {
-    Rcpp::checkUserInterrupt();
-
     calc_ES_perm_dir_internal(
       pES_perm_vec,
       pES_perm_down,
@@ -753,28 +722,22 @@ void calc_ES_perm_dir(SEXP n_same_sign,
       n_sizes_up,
       n_pairs,
       partial_block_size,
-      py,
-      pr,
+      pgene_data,
       max_size,
       sum_ranks,
       punique_m_down,
       punique_m_up,
-      pinv_unique_w_up,
-      pinv_unique_w_down,
-      pmap_unique_to_pairs_up,
-      pmap_unique_to_pairs_down
+      pinv_w_up,
+      pinv_w_down,
+      ppair_map
     );
 
     update_n_as_extreme(
       pn_as_extreme,
-      pn_perm_neg,
-      psum_perm_neg,
-      psum_perm_pos,
+      pperm_stats,
       pES_perm_vec,
       pES,
-      pES_start,
-      pES_pos_idx,
-      pES_end,
+      pES_bounds,
       n_pairs,
       partial_block_size
     );
@@ -794,28 +757,22 @@ void calc_ES_perm_dir(SEXP n_same_sign,
       n_sizes_up,
       n_pairs,
       BLOCK_SIZE,
-      py,
-      pr,
+      pgene_data,
       max_size,
       sum_ranks,
       punique_m_down,
       punique_m_up,
-      pinv_unique_w_up,
-      pinv_unique_w_down,
-      pmap_unique_to_pairs_up,
-      pmap_unique_to_pairs_down
+      pinv_w_up,
+      pinv_w_down,
+      ppair_map
     );
 
     update_n_as_extreme(
       pn_as_extreme,
-      pn_perm_neg,
-      psum_perm_neg,
-      psum_perm_pos,
+      pperm_stats,
       pES_perm_vec,
       pES,
-      pES_start,
-      pES_pos_idx,
-      pES_end,
+      pES_bounds,
       n_pairs,
       BLOCK_SIZE
     );
@@ -826,11 +783,18 @@ void calc_ES_perm_dir(SEXP n_same_sign,
     psum_ES_perm,
     n_pairs,
     nperm,
-    pES_start,
-    pES_end,
-    pES_pos_idx,
-    pn_perm_neg,
-    psum_perm_pos,
-    psum_perm_neg
+    pES_bounds,
+    pperm_stats
   );
+
+  delete[] pES;
+  delete[] pgene_data;
+  delete[] ppair_map;
+  delete[] pinv_w_up;
+  delete[] pinv_w_down;
+  delete[] pES_perm_up;
+  delete[] pES_perm_down;
+  delete[] pES_perm_vec;
+  delete[] pES_bounds;
+  delete[] pperm_stats;
 }

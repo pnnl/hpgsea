@@ -78,7 +78,7 @@ NULL
 #'   positive permutation ES.
 #' @param pES_perm_vec a pointer to a float vector containing permutation ES.
 #'   Permutation ES for gene sets of the same size are arranged in blocks of
-#'   (at most) 32 consecutive elements.
+#'   (at most) BLOCK_SIZE consecutive elements.
 #' @param pES pointer to a float vector of ES for all gene sets.
 #' @param pES_start pointer to an integer vector containing the index of the
 #'   first ES for each unique set size.
@@ -88,7 +88,7 @@ NULL
 #'   index of the last ES for each unique set size.
 #' @param n_sizes integer; the number of unique gene set sizes.
 #' @param block_size integer; the size of a block of permutation ES. Between 1
-#'   and 32.
+#'   and BLOCK_SIZE.
 #'
 #' @details For each unique gene set size, the permutation ES are partitioned
 #'   by sign. At the same time, the number of negative permutation ES, as well
