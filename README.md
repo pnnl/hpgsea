@@ -107,7 +107,7 @@ will also simulate 20,000 gene sets by randomly sampling between 5 and
 1,000 genes.
 
 ``` r
-n_genes <- 10000L # number of genes
+n_genes <- 1e4L # number of genes
 genes <- paste0("gene", seq_len(n_genes))
 
 # Simulate named vector of gene-level values
@@ -116,9 +116,9 @@ stats <- rnorm(n = n_genes)
 names(stats) <- genes
 
 # Simulate list of gene sets
-n_sets <- 20000L
+n_sets <- 2e4L
 min_size <- 5L
-max_size <- 1000L
+max_size <- 500L
 set_sizes <- rep(max_size:min_size, length.out = n_sets)
 
 gene_sets <- lapply(seq_len(n_sets), function(i) {
@@ -131,7 +131,7 @@ names(gene_sets) <- paste0("set", seq_along(gene_sets))
 ### Runtime and Results
 
 This shows the runtime of `fast_ssgsea` on an AMD Ryzen 5 7600X CPU with
-a clock speed of 4.7 GHz. A total of 100,000 permutations were used to
+a clock speed of 4.7 GHz. A total of 1 million permutations were used to
 calculate P-values and normalized enrichment scores (NES).
 
 ``` r
@@ -143,29 +143,30 @@ system.time({
     stats = stats,
     gene_sets = gene_sets,
     alpha = 1,
-    nperm = 1e5L,
+    nperm = 1e6L,
     min_size = min_size,
+    max_size = max_size,
     seed = 0L
   )
 })
 ```
 
     ##    user  system elapsed 
-    ##   0.972   0.083   0.978
+    ##   4.181   0.040   4.146
 
 ``` r
 str(res)
 ```
 
     ## 'data.frame':    20000 obs. of  8 variables:
-    ##  $ set         : chr  "set18791" "set2830" "set19084" "set18223" ...
-    ##  $ set_size    : int  138 163 841 706 801 87 503 409 320 450 ...
-    ##  $ ES          : num  -1866 1584 698 759 709 ...
-    ##  $ NES         : num  -5.34 4.78 4.66 4.67 4.62 ...
-    ##  $ n_same_sign : int  49235 51108 52907 52785 52814 50462 52351 51847 51728 47860 ...
-    ##  $ n_as_extreme: int  1 3 8 9 12 12 16 19 19 19 ...
-    ##  $ p_value     : num  4.06e-05 7.83e-05 1.70e-04 1.89e-04 2.46e-04 ...
-    ##  $ adj_p_value : num  0.783 0.783 0.836 0.836 0.836 ...
+    ##  $ set         : chr  "set15224" "set9014" "set14650" "set7155" ...
+    ##  $ set_size    : int  157 415 235 290 62 439 455 389 280 27 ...
+    ##  $ ES          : num  -1681 -952 -1288 -1116 -2272 ...
+    ##  $ NES         : num  -5.11 -4.74 -4.8 -4.63 -4.31 ...
+    ##  $ n_same_sign : int  486561 478962 483258 482342 491895 522137 477630 520005 517360 494438 ...
+    ##  $ n_as_extreme: int  24 62 66 124 149 159 147 194 199 205 ...
+    ##  $ p_value     : num  5.14e-05 1.32e-04 1.39e-04 2.59e-04 3.05e-04 ...
+    ##  $ adj_p_value : num  0.74 0.74 0.74 0.74 0.74 ...
 
 ### Session Information
 
@@ -173,7 +174,7 @@ str(res)
 print(sessionInfo(), locale = FALSE, tzone = FALSE)
 ```
 
-    ## R version 4.6.0 (2026-04-24)
+    ## R version 4.6.1 (2026-06-24)
     ## Platform: x86_64-pc-linux-gnu
     ## Running under: Linux Mint 22.3
     ## 
@@ -189,9 +190,9 @@ print(sessionInfo(), locale = FALSE, tzone = FALSE)
     ## 
     ## loaded via a namespace (and not attached):
     ##  [1] digest_0.6.39     collapse_2.1.7    fastmap_1.2.0     xfun_0.57        
-    ##  [5] parallel_4.6.0    knitr_1.51        htmltools_0.5.9   rmarkdown_2.31   
-    ##  [9] cli_3.6.6         data.table_1.18.4 compiler_4.6.0    rstudioapi_0.18.0
-    ## [13] tools_4.6.0       evaluate_1.0.5    Rcpp_1.1.1-1.1    yaml_2.3.12      
+    ##  [5] parallel_4.6.1    knitr_1.51        htmltools_0.5.9   rmarkdown_2.31   
+    ##  [9] cli_3.6.6         data.table_1.18.4 compiler_4.6.1    rstudioapi_0.18.0
+    ## [13] tools_4.6.1       evaluate_1.0.5    Rcpp_1.1.1-1.1    yaml_2.3.12      
     ## [17] otel_0.2.0        rlang_1.2.0
 
 ## Benchmarking
