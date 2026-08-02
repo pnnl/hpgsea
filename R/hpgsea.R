@@ -80,7 +80,7 @@
 #'   doi:\href{https://doi.org/10.1074/mcp.TIR118.000943}{
 #'   10.1074/mcp.TIR118.000943}
 #'
-#' @export fast_ssgsea
+#' @export hpgsea
 #'
 #' @examples
 #' # Simulate named vector of gene-level values
@@ -98,7 +98,7 @@
 #' })
 #' names(gene_sets) <- paste0("set", seq_along(gene_sets))
 #'
-#' df <- fast_ssgsea(
+#' df <- hpgsea(
 #'   stats = stats,
 #'   gene_sets = gene_sets,
 #'   seed = 0L # reproducible results
@@ -106,7 +106,7 @@
 #'
 #' head(df)
 #'
-fast_ssgsea <- function(stats,
+hpgsea <- function(stats,
                         gene_sets,
                         alpha = 1,
                         nperm = 1e5L,

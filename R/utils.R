@@ -3,7 +3,7 @@
 #' @description Validate `stats`, remove missing values, and sort genes
 #'   lexicographically.
 #'
-#' @inheritParams fast_ssgsea
+#' @inheritParams hpgsea
 #'
 #' @author Tyler Sagendorf
 #'
@@ -41,9 +41,9 @@
 }
 
 
-#' @title Validate fast_ssgsea function parameters
+#' @title Validate hpgsea function parameters
 #'
-#' @inheritParams fast_ssgsea
+#' @inheritParams hpgsea
 #'
 #' @returns Nothing.
 #'
@@ -118,7 +118,7 @@
 
 #' @title Convert gene sets to a list of indices for `.calc_ES`
 #'
-#' @inheritParams fast_ssgsea
+#' @inheritParams hpgsea
 #'
 #' @returns A named list.
 #'
@@ -332,7 +332,7 @@
 #' @param m integer vector; the number of genes in each set. Used to select
 #'   elements of `gene_indices`.
 #' @param w integer vector; the number of genes that are not in each set.
-#' @inheritParams fast_ssgsea
+#' @inheritParams hpgsea
 #'
 #' @returns Numeric vector of enrichment scores with the same length as `m`. If
 #'   all elements of `y_prime` are 0 for a particular set, the ES for that set
@@ -367,7 +367,7 @@
 #' @description Calculate enrichment scores and information needed for
 #'   permutation tests later on.
 #'
-#' @inheritParams fast_ssgsea
+#' @inheritParams hpgsea
 #' @param n_genes integer; total number of genes. The length of `stats`.
 #'
 #' @author Tyler Sagendorf
@@ -628,7 +628,7 @@
 
 #' @title Calculate Permutation Enrichment Scores
 #'
-#' @inheritParams fast_ssgsea
+#' @inheritParams hpgsea
 #' @inheritParams .calc_ES
 #' @param ES_list list; output of `.calc_ES()`.
 #'
@@ -759,7 +759,7 @@
 #' @title Calculate P-values and Normalized Enrichment Scores
 #'
 #' @param tab a `data.table`. The output of `.calc_ES_perm()`.
-#' @inheritParams fast_ssgsea
+#' @inheritParams hpgsea
 #'
 #' @returns A `data.frame`.
 #'

@@ -15,60 +15,58 @@ knitr::opts_chunk$set(
 )
 ```
 
-# fast.ssgsea
+# hpgsea
 
 <!-- badges: start -->
-[![R-CMD-check](https://github.com/pnnl/fast.ssgsea/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/pnnl/fast.ssgsea/actions/workflows/R-CMD-check.yaml)
+[![R-CMD-check](https://github.com/pnnl/hpgsea/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/pnnl/hpgsea/actions/workflows/R-CMD-check.yaml)
 <!-- badges: end -->
-
-**NOTICE:** While this R package was based on the [ssGSEA2.0](https://github.com/broadinstitute/ssGSEA2.0) repository, neither perform single-sample Gene Set Enrichment Analysis (ssGSEA) as originally described by Barbie, *et al.* [@barbie-systematic-2009]. They are instead modifications of pre-ranked GSEA that calculate the enrichment score (ES) differently and support testing directional gene sets (details below). The package and fast-ssGSEA name will be changed in the future.
 
 ## Overview
 
-`fast.ssgsea` is an R package [@R-core-team] for a highly optimized variant of pre-ranked Gene Set Enrichment Analysis (GSEA) [@subramanian-gene-2005]. Unlike standard GSEA, fast-ssGSEA is capable of testing gene sets where each gene has an expected direction of change (up- or down-regulation; indicated by appending a ";u" or ";d" to the end of every gene in a set) from a prior experiment.
+`hpgsea` is an R package [@R-core-team] for a highly optimized variant of pre-ranked Gene Set Enrichment Analysis (GSEA) [@subramanian-gene-2005]. Unlike standard GSEA, HPGSEA is capable of testing gene sets where each gene has an expected direction of change (up- or down-regulation; indicated by appending a ";u" or ";d" to the end of every gene in a set) from a prior experiment.
 
-fast-ssGSEA is based on Post-Translational Modification Signature Enrichment Analysis (PTM-SEA) [@krug-curated-2019], and it borrows optimization techniques from the simple implementation of Fast Gene Set Enrichment Analysis (FGSEA-simple) [@korotkevich-fast-2021].
+HPGSEA is based on Post-Translational Modification Signature Enrichment Analysis (PTM-SEA) [@krug-curated-2019], and it borrows optimization techniques from the simple implementation of Fast Gene Set Enrichment Analysis (FGSEA-simple) [@korotkevich-fast-2021].
 
-The primary function, `fast_ssgsea`, accepts a vector of signed statistics with genes or other molecules as names. The values must be approximately symmetric around zero, with more extreme values indicating greater importance. A named list of gene sets (more generally, molecular signatures) is also required. Other arguments control the behavior of fast-ssGSEA, and they are described in the function documentation.
+The primary function, `hpgsea`, accepts a vector of signed statistics with genes or other molecules as names. The values must be approximately symmetric around zero, with more extreme values indicating greater importance. A named list of gene sets (more generally, molecular signatures) is also required. Other arguments control the behavior of HPGSEA, and they are described in the documentation.
 
-The package also contains a `read_gmt` function, which reads a Gene Matrix Transposed (GMT) file to construct a named list of gene sets for use with `fast_ssgsea`.
+The package also contains a `read_gmt` function, which reads a Gene Matrix Transposed (GMT) file to construct a named list of gene sets for use with `hpgsea`.
 
 
 ## Installation
 
-R version 4.0.0 or greater is required to install `fast.ssgsea`.
+R version 4.0.0 or greater is required to install `hpgsea`.
 
 ### macOS
 
-A macOS binary is provided in the [latest release](https://github.com/pnnl/fast.ssgsea/releases). Users looking to build and install the development version of `fast.ssgsea` must have the Xcode developer tools from Apple. See https://mac.r-project.org/tools/ for instructions.
+A macOS binary is provided in the [latest release](https://github.com/pnnl/hpgsea/releases). Users looking to build and install the development version of `hpgsea` must have the Xcode developer tools from Apple. See https://mac.r-project.org/tools/ for instructions.
 
 ### Windows
 
-No Windows binary is available, so [Rtools](https://cran.r-project.org/bin/windows/Rtools/) must be installed to compile C and C++ code. Then, the development version of `fast.ssgsea` can be installed with the code below.
+No Windows binary is available, so [Rtools](https://cran.r-project.org/bin/windows/Rtools/) must be installed to compile C and C++ code. Then, the development version of `hpgsea` can be installed with the code below.
 
 ### Linux
 
-Most Linux distributions come pre-packaged with tools to compile C and C++ code, so no extra work is needed. Users can install the development version of `fast.ssgsea` on Linux by running the code below.
+Most Linux distributions come pre-packaged with tools to compile C and C++ code, so no extra work is needed. Users can install the development version of `hpgsea` on Linux by running the code below.
 
 ### Install
 
-The development version of `fast.ssgsea` can be installed with either of the following
+The development version of `hpgsea` can be installed with either of the following
 
 ``` r
 # install.packages("pak")
-pak::pak("pnnl/fast.ssgsea")
+pak::pak("pnnl/hpgsea")
 ```
 
 ``` r
 # install.packages("renv")
-renv::install("pnnl/fast.ssgsea")
+renv::install("pnnl/hpgsea")
 ```
 
 ## Usage
 
 ### Simulate Data
 
-We will simulate a vector of 10,000 signed gene-level statistics. We will also simulate 20,000 gene sets by randomly sampling between 5 and 1,000 genes.
+We will simulate a vector of 10,000 signed gene-level statistics and a list of 20,000 gene sets by randomly sampling between 5 and 500 genes.
 
 ```{r simulate-data}
 n_genes <- 1e4L # number of genes
@@ -94,14 +92,14 @@ names(gene_sets) <- paste0("set", seq_along(gene_sets))
 
 ### Runtime and Results
 
-This shows the runtime of `fast_ssgsea` on an AMD Ryzen 5 7600X CPU with a clock speed of 4.7 GHz. A total of 1 million permutations were used to calculate P-values and normalized enrichment scores (NES).
+This shows the runtime of `hpgsea` on an AMD Ryzen 5 7600X CPU with a clock speed of 4.7 GHz. A total of 1 million permutations were used to calculate P-values and normalized enrichment scores (NES).
 
 ```{r time-results}
-library(fast.ssgsea)
+library(hpgsea)
 
 # Runtime (in seconds)
 system.time({
-  res <- fast_ssgsea(
+  res <- hpgsea(
     stats = stats,
     gene_sets = gene_sets,
     alpha = 1,
@@ -124,12 +122,12 @@ print(sessionInfo(), locale = FALSE, tzone = FALSE)
 
 ## Benchmarking
 
-Benchmarking was performed on a desktop computer with an AMD Ryzen 5 7600X CPU (4.7 GHz), single threaded, to measure the runtime of fast-ssGSEA (`fast.ssgsea::fast_ssgsea`) and FGSEA-simple (`fgsea::fgseaSimple`). Different combinations of the number of gene sets, maximum gene set size, and the number of permutations ($\pi$) were tested in a random order (3 replicates each) to minimize the influence of previous runs. The R scripts and data are available in the simulation/ directory.
+Benchmarking was performed on the same AMD Ryzen 5 7600X CPU, single threaded, to measure the runtime of HPGSEA (`hpgsea::hpgsea`) and FGSEA-simple (`fgsea::fgseaSimple`). Different combinations of the number of gene sets, maximum gene set size, and the number of permutations ($\pi$) were tested in a random order (3 replicates each) to minimize the influence of previous runs. The R scripts and data are available in the simulation/ directory.
 
-### fast-ssGSEA
+### HPGSEA
 
 ```{r, echo=FALSE}
-fig1_cap <- "Runtime of fast_ssgsea with 10,000, 100,000, or 1,000,000 permutations."
+fig1_cap <- "Runtime of hpgsea with 10,000, 100,000, or 1,000,000 permutations."
 ```
 
 ```{r, echo=FALSE, fig.cap=fig1_cap}
@@ -138,7 +136,7 @@ knitr::include_graphics("./man/figures/README-figure-1.png")
 
 ### FGSEA-simple
 
-Like fast-ssGSEA, FGSEA-simple relies purely on the number of permutations to calculate p-values, which limits how small they can become. While FGSEA-simple is meant to be run with a smaller number of permutations and followed up by FGSEA-multilevel (the method capable of calculating arbitrarily small p-values) [@korotkevich-fast-2021], these results serve to illustrate the extreme difference in runtime between the two approaches. This difference is largely the result of changes to how the ES is defined.
+Like HPGSEA, FGSEA-simple relies purely on the number of permutations to calculate p-values, which limits how small they can become. While FGSEA-simple is meant to be run with a smaller number of permutations and followed up by FGSEA-multilevel (the method capable of calculating arbitrarily small p-values) [@korotkevich-fast-2021], these results serve to illustrate the difference in runtime between the two approaches. This difference is largely the result of changes to how the ES is defined.
 
 ```{r, echo=FALSE}
 fig2_cap <- "Runtime of fgsea::fgseaSimple with 10,000, 100,000, or 1,000,000 permutations."

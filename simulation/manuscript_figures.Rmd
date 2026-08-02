@@ -136,8 +136,8 @@ width <- 5
 
 
 ```{r timing-ssgsea}
-# fast-ssGSEA
-time_res <- prepare_data("../data/fast-ssGSEA_timing_results.rds")
+# HPGSEA
+time_res <- prepare_data("../data/hpgsea_times.rds")
 
 # 10,000 permutations
 pa <- filter(time_res, nperm == levels(nperm)[1L]) %>%
@@ -182,7 +182,7 @@ ggsave(
 
 ```{r timing-fgsea}
 # FGSEA (single-threaded)
-time_res <- prepare_data("../data/FGSEA_timing_results_nproc_1.rds")
+time_res <- prepare_data("../data/fgsea_times_nproc_1.rds")
 
 # 10,000 permutations
 pa <- filter(time_res, nperm == levels(nperm)[1L]) %>%

@@ -3,7 +3,7 @@
 
 test_that("nperm <= 2 billion", {
   err <- capture_error(
-    fast_ssgsea_multicol(
+    hpgsea_multicol(
       stats_mat = stats_mat,
       gene_sets = gene_sets,
       nperm = 2e9L + 1L
@@ -19,7 +19,7 @@ test_that("nperm <= 2 billion", {
 
 test_that("alpha is finite and non-negative", {
   err <- capture_error(
-    fast_ssgsea_multicol(
+    hpgsea_multicol(
       stats_mat = stats_mat,
       gene_sets = gene_sets,
       alpha = Inf
@@ -37,7 +37,7 @@ test_that("`sort` must be logical", {
   expected_error <- "`sort` must be TRUE or FALSE."
 
   err1 <- capture_error(
-    fast_ssgsea_multicol(
+    hpgsea_multicol(
       stats_mat = stats_mat,
       gene_sets = gene_sets,
       sort = list(logical(1L))
@@ -45,7 +45,7 @@ test_that("`sort` must be logical", {
   )$message
 
   err2 <- capture_error(
-    fast_ssgsea_multicol(
+    hpgsea_multicol(
       stats_mat = stats_mat,
       gene_sets = gene_sets,
       sort = 1
@@ -59,14 +59,14 @@ test_that("`sort` must be logical", {
 
 test_that("`stats` is a numeric vector with unique names", {
   err1 <- capture_error(
-    fast_ssgsea(
+    hpgsea(
       stats = numeric(1L),
       gene_sets = list("Set1" = letters)
     )
   )$message
 
   err2 <- capture_error(
-    fast_ssgsea(
+    hpgsea(
       stats = structure(c(1, 2), names = c("a", "a")),
       gene_sets = list("Set1" = letters)
     )
@@ -83,7 +83,7 @@ test_that("`stats` is a numeric vector with unique names", {
 
 test_that("`stats` has at least 3 nonmissing values", {
   err1 <- capture_error(
-    fast_ssgsea(
+    hpgsea(
       stats = stats_mat[1:2, 1L],
       gene_sets = gene_sets
     )
@@ -98,7 +98,7 @@ test_that("`stats` has at least 3 nonmissing values", {
 
 test_that("`min_size` is smaller than the number of nonmissing values", {
   err1 <- capture_error(
-    fast_ssgsea_multicol(
+    hpgsea_multicol(
       stats_mat = stats_mat,
       gene_sets = gene_sets,
       nperm = 0L,
@@ -118,7 +118,7 @@ test_that("`min_size` is smaller than the number of nonmissing values", {
 
 test_that("extreme sets are removed", {
   # Remove extreme sets, unless all sets will be removed
-  res <- fast_ssgsea_multicol(
+  res <- hpgsea_multicol(
     stats_mat = stats_mat,
     gene_sets = c(gene_sets, list("Set999" = rownames(stats_mat))),
     nperm = 0L
@@ -128,7 +128,7 @@ test_that("extreme sets are removed", {
 
   # If all sets are extreme, throw an error
   err <- capture_error(
-    fast_ssgsea_multicol(
+    hpgsea_multicol(
       stats_mat = stats_mat,
       gene_sets = list(
         "Set1" = rownames(stats_mat),
@@ -151,7 +151,7 @@ test_that("extreme sets are removed", {
 
 test_that("extreme directional sets are removed", {
   # Remove extreme sets, unless all sets will be removed
-  res <- fast_ssgsea_multicol(
+  res <- hpgsea_multicol(
     stats_mat = stats_mat,
     gene_sets = c(
       gene_sets,
@@ -169,7 +169,7 @@ test_that("extreme directional sets are removed", {
 
   # If all sets are extreme, throw an error
   err <- capture_error(
-    fast_ssgsea_multicol(
+    hpgsea_multicol(
       stats_mat = stats_mat,
       gene_sets = list(
         "Set1" = paste0(rownames(stats_mat), ";u"),
@@ -191,7 +191,7 @@ test_that("extreme directional sets are removed", {
 
 
 test_that("The columns of the results have the correct type and position", {
-  res <- fast_ssgsea_multicol(
+  res <- hpgsea_multicol(
     stats_mat = stats_mat,
     gene_sets = gene_sets,
     alpha = 0,
@@ -235,7 +235,7 @@ test_that("The columns of the results have the correct type and position", {
 
   gene_sets_dir <- list("Set1" = c(gene_set1_up, gene_set1_down))
 
-  res <- fast_ssgsea_multicol(
+  res <- hpgsea_multicol(
     stats_mat = stats_mat,
     gene_sets = gene_sets_dir,
     nperm = 10L
@@ -263,7 +263,7 @@ test_that("The ES is NA when all gene-level values are 0", {
     "set2" = genes[2:6]
   )
 
-  res <- fast_ssgsea(
+  res <- hpgsea(
     stats = stats,
     gene_sets = gene_sets,
     nperm = 100L
@@ -289,7 +289,7 @@ test_that("The ES are correct when there are ties", {
   expected_ES_0 <- data.table::rbindlist(expected_ES_0, idcol = "set")
   setorderv(expected_ES_0, cols = c("sample", "set"))
 
-  true_ES_0 <- fast_ssgsea_multicol(
+  true_ES_0 <- hpgsea_multicol(
     stats_mat = stats_mat,
     gene_sets = gene_sets,
     alpha = 0,
@@ -310,7 +310,7 @@ test_that("The ES are correct when there are ties", {
   expected_ES_1 <- data.table::rbindlist(expected_ES_1, idcol = "set")
   setorderv(expected_ES_1, cols = c("sample", "set"))
 
-  true_ES_1 <- fast_ssgsea_multicol(
+  true_ES_1 <- hpgsea_multicol(
     stats_mat = stats_mat,
     gene_sets = gene_sets,
     alpha = 1,
@@ -354,7 +354,7 @@ test_that("the ES are correct for directional sets", {
   )
 
   ## alpha = 1 ----
-  res1 <- fast_ssgsea_multicol(
+  res1 <- hpgsea_multicol(
     stats_mat = stats_mat,
     gene_sets = gene_sets_dir,
     alpha = 1,
@@ -431,7 +431,7 @@ test_that("the ES are correct for directional sets", {
   # The gene set is the same as gene_set2_down (without the expected direction
   # of change), but the sign of the ES and NES will have opposite signs to the
   # res1 results.
-  res2 <- fast_ssgsea_multicol(
+  res2 <- hpgsea_multicol(
     stats_mat = stats_mat,
     gene_sets = list("Set1" = sub(";d", "", gene_set2_down)),
     alpha = 1,
@@ -454,7 +454,7 @@ test_that("the ES are correct for directional sets", {
 
 
   ## alpha = 0 ----
-  res1 <- fast_ssgsea_multicol(
+  res1 <- hpgsea_multicol(
     stats_mat = stats_mat,
     gene_sets = gene_sets_dir,
     alpha = 0,
@@ -477,7 +477,7 @@ test_that("the ES are correct for directional sets", {
   # The gene set is the same as gene_set2_down (without the expected direction
   # of change), but the sign of the ES and NES will have opposite signs to the
   # res1 results.
-  res2 <- fast_ssgsea_multicol(
+  res2 <- hpgsea_multicol(
     stats_mat = stats_mat,
     gene_sets = list("Set1" = sub(";d", "", gene_set2_down)),
     alpha = 0,
@@ -503,7 +503,7 @@ test_that("genes in directional gene sets can be the same direction", {
   set_down <- paste0(rownames(stats_mat)[seq_len(30L)], ";d")
 
   expect_no_error(
-    res1 <- fast_ssgsea_multicol(
+    res1 <- hpgsea_multicol(
       stats_mat = stats_mat,
       gene_sets = list("set_down" = set_down),
       nperm = 500L
@@ -518,7 +518,7 @@ test_that("genes in directional gene sets can be the same direction", {
   set_up <- paste0(rownames(stats_mat)[seq_len(30L)], ";u")
 
   expect_no_error(
-    res2 <- fast_ssgsea_multicol(
+    res2 <- hpgsea_multicol(
       stats_mat = stats_mat,
       gene_sets = list("set_up" = set_up),
       nperm = 500L
@@ -543,7 +543,7 @@ test_that("ES_u or ES_d is 0 when there are fewer than min_size up- or down-regu
     )
   )
 
-  res <- fast_ssgsea(
+  res <- hpgsea(
     stats = stats_mat[, 1L],
     gene_sets = gene_sets,
     nperm = 500L,
@@ -579,7 +579,7 @@ test_that("NES are mostly within [-4, +4]", {
   })
   names(gene_sets) <- paste0("set.", seq_along(gene_sets))
 
-  res1 <- fast_ssgsea_multicol(
+  res1 <- hpgsea_multicol(
     stats_mat = stats_mat,
     gene_sets = gene_sets,
     alpha = 0,
@@ -592,7 +592,7 @@ test_that("NES are mostly within [-4, +4]", {
     mean(res1$NES <= 4 & res1$NES >= -4) >= 0.995
   )
 
-  res2 <- fast_ssgsea_multicol(
+  res2 <- hpgsea_multicol(
     stats_mat = stats_mat,
     gene_sets = gene_sets,
     alpha = 1,
@@ -608,7 +608,7 @@ test_that("NES are mostly within [-4, +4]", {
 
 
 test_that("results are sorted correctly", {
-  res1 <- fast_ssgsea_multicol(
+  res1 <- hpgsea_multicol(
     stats_mat = stats_mat,
     gene_sets = gene_sets,
     alpha = 0,
@@ -625,7 +625,7 @@ test_that("results are sorted correctly", {
 
 
 test_that("n_same_sign >= n_as_extreme", {
-  res <- fast_ssgsea_multicol(
+  res <- hpgsea_multicol(
     stats_mat = stats_mat,
     gene_sets = gene_sets,
     nperm = 500L,
@@ -639,7 +639,7 @@ test_that("n_same_sign >= n_as_extreme", {
 
 
 test_that("p-values are between 0 and 1", {
-  res1 <- fast_ssgsea_multicol(
+  res1 <- hpgsea_multicol(
     stats_mat = stats_mat,
     gene_sets = gene_sets,
     alpha = 0,
@@ -651,7 +651,7 @@ test_that("p-values are between 0 and 1", {
     all(res1$p_value <= 1) && all(res1$p_value > 0)
   )
 
-  res2 <- fast_ssgsea_multicol(
+  res2 <- hpgsea_multicol(
     stats_mat = stats_mat,
     gene_sets = gene_sets,
     alpha = 1,

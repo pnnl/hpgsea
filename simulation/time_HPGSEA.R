@@ -1,4 +1,4 @@
-library(fast.ssgsea)
+library(hpgsea)
 
 source("simulation/scripts/function-generate_data.R")
 
@@ -46,7 +46,7 @@ time_df <- lapply(seq_len(3L), function(j) { # 3 replicates
 
     tic <- Sys.time()
 
-    res <- fast_ssgsea(
+    res <- hpgsea(
       stats = stats_i,
       gene_sets = gene_sets_i,
       alpha = alpha,
@@ -80,6 +80,6 @@ saveRDS(
   file = file.path(
     "simulation",
     "data",
-    "fast-ssGSEA_timing_results.rds"
+    "hpgsea_times.rds"
   )
 )

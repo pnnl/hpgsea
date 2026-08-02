@@ -1,5 +1,5 @@
 ## Given a matrix of samples and vector of genes from a particular set,
-## calculate enrichment scores. Used to verify the results of fast_ssgsea.
+## calculate enrichment scores. Used to verify the results of hpgsea.
 calculate_ES <- function(stats_mat, gene_set, alpha = 1) {
   # Note: only functions imported from data.table for functions in R/ will work
   # without needing `data.table::`
@@ -79,13 +79,13 @@ gene_sets <- list(
 gmt_file <- system.file(
   "extdata",
   "h.all.v2025.1.Hs.symbols.gmt.gz",
-  package = "fast.ssgsea"
+  package = "hpgsea"
 )
 
-# Apply fast_ssgsea() to each column of a numeric matrix. The only reason to do
+# Apply hpgsea() to each column of a numeric matrix. The only reason to do
 # this is to have more data to check in the tests.
 
-fast_ssgsea_multicol <- function(stats_mat,
+hpgsea_multicol <- function(stats_mat,
                                  gene_sets,
                                  alpha = 1,
                                  nperm = 1000L,
@@ -99,7 +99,7 @@ fast_ssgsea_multicol <- function(stats_mat,
                                    "greater"
                                  )) {
   ls <- apply(stats_mat, 2L, function(stats_i) {
-    fast_ssgsea(
+    hpgsea(
       stats = stats_i,
       gene_sets = gene_sets,
       alpha = alpha,

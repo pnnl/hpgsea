@@ -13,14 +13,14 @@ compressed.}
 \description{
 Given a path to a Gene Matrix Transposed (GMT) file or GMT-like
   file, construct a named list of sets that can be used with
-  \code{\link{fast_ssgsea}}.
+  \code{\link{hpgsea}}.
 }
 \examples{
 # HALLMARK gene sets from MSigDB
 file <- system.file(
   "extdata",
   "h.all.v2025.1.Hs.symbols.gmt.gz",
-  package = "fast.ssgsea"
+  package = "hpgsea"
 )
 
 gene_sets <- read_gmt(file)

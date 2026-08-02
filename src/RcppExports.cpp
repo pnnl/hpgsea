@@ -12,7 +12,7 @@ Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 
 // calc_ES_perm
 void calc_ES_perm(SEXP n_same_sign, SEXP n_as_extreme, SEXP sum_ES_perm, const Rcpp::Nullable<Rcpp::IntegerVector> seed, const int nperm, const SEXP ES_dbl, const SEXP ES_end, const SEXP y_dbl, const SEXP r_dbl, const int max_size, const SEXP Rsum_ranks, const SEXP unique_m, const SEXP unique_w);
-RcppExport SEXP _fast_ssgsea_calc_ES_perm(SEXP n_same_signSEXP, SEXP n_as_extremeSEXP, SEXP sum_ES_permSEXP, SEXP seedSEXP, SEXP npermSEXP, SEXP ES_dblSEXP, SEXP ES_endSEXP, SEXP y_dblSEXP, SEXP r_dblSEXP, SEXP max_sizeSEXP, SEXP Rsum_ranksSEXP, SEXP unique_mSEXP, SEXP unique_wSEXP) {
+RcppExport SEXP _hpgsea_calc_ES_perm(SEXP n_same_signSEXP, SEXP n_as_extremeSEXP, SEXP sum_ES_permSEXP, SEXP seedSEXP, SEXP npermSEXP, SEXP ES_dblSEXP, SEXP ES_endSEXP, SEXP y_dblSEXP, SEXP r_dblSEXP, SEXP max_sizeSEXP, SEXP Rsum_ranksSEXP, SEXP unique_mSEXP, SEXP unique_wSEXP) {
 BEGIN_RCPP
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< SEXP >::type n_same_sign(n_same_signSEXP);
@@ -34,7 +34,7 @@ END_RCPP
 }
 // calc_ES_perm_dir
 void calc_ES_perm_dir(SEXP n_same_sign, SEXP n_as_extreme, SEXP sum_ES_perm, const Rcpp::Nullable<Rcpp::IntegerVector> seed, const int nperm, const SEXP ES_dbl, const SEXP ES_end, const SEXP y_dbl, const SEXP r_dbl, const int max_size, const SEXP Rsum_ranks, const SEXP unique_m_up, const SEXP unique_w_up, const SEXP unique_m_down, const SEXP unique_w_down, SEXP map_unique_to_pairs_up, SEXP map_unique_to_pairs_down);
-RcppExport SEXP _fast_ssgsea_calc_ES_perm_dir(SEXP n_same_signSEXP, SEXP n_as_extremeSEXP, SEXP sum_ES_permSEXP, SEXP seedSEXP, SEXP npermSEXP, SEXP ES_dblSEXP, SEXP ES_endSEXP, SEXP y_dblSEXP, SEXP r_dblSEXP, SEXP max_sizeSEXP, SEXP Rsum_ranksSEXP, SEXP unique_m_upSEXP, SEXP unique_w_upSEXP, SEXP unique_m_downSEXP, SEXP unique_w_downSEXP, SEXP map_unique_to_pairs_upSEXP, SEXP map_unique_to_pairs_downSEXP) {
+RcppExport SEXP _hpgsea_calc_ES_perm_dir(SEXP n_same_signSEXP, SEXP n_as_extremeSEXP, SEXP sum_ES_permSEXP, SEXP seedSEXP, SEXP npermSEXP, SEXP ES_dblSEXP, SEXP ES_endSEXP, SEXP y_dblSEXP, SEXP r_dblSEXP, SEXP max_sizeSEXP, SEXP Rsum_ranksSEXP, SEXP unique_m_upSEXP, SEXP unique_w_upSEXP, SEXP unique_m_downSEXP, SEXP unique_w_downSEXP, SEXP map_unique_to_pairs_upSEXP, SEXP map_unique_to_pairs_downSEXP) {
 BEGIN_RCPP
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< SEXP >::type n_same_sign(n_same_signSEXP);
@@ -66,8 +66,8 @@ RcppExport SEXP _C_remove_extreme_gene_sets(SEXP, SEXP, SEXP);
 RcppExport SEXP _C_rep_int(SEXP, SEXP);
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_fast_ssgsea_calc_ES_perm", (DL_FUNC) &_fast_ssgsea_calc_ES_perm, 13},
-    {"_fast_ssgsea_calc_ES_perm_dir", (DL_FUNC) &_fast_ssgsea_calc_ES_perm_dir, 17},
+    {"_hpgsea_calc_ES_perm", (DL_FUNC) &_hpgsea_calc_ES_perm, 13},
+    {"_hpgsea_calc_ES_perm_dir", (DL_FUNC) &_hpgsea_calc_ES_perm_dir, 17},
     {"_C_calc_ES",                  (DL_FUNC) &_C_calc_ES,                  7},
     {"_C_group_sizes",              (DL_FUNC) &_C_group_sizes,              2},
     {"_C_pair_szudzik",             (DL_FUNC) &_C_pair_szudzik,             2},
@@ -76,7 +76,7 @@ static const R_CallMethodDef CallEntries[] = {
     {NULL, NULL, 0}
 };
 
-RcppExport void R_init_fast_ssgsea(DllInfo *dll) {
+RcppExport void R_init_hpgsea(DllInfo *dll) {
     R_registerRoutines(dll, NULL, CallEntries, NULL, NULL);
     R_useDynamicSymbols(dll, FALSE);
 }

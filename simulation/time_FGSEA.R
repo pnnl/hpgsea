@@ -86,7 +86,7 @@ for (nproc in c(1L, 0L)) {
     file = file.path(
       "simulation",
       "data",
-      sprintf("FGSEA_timing_results_nproc_%d.rds", nproc)
+      sprintf("fgsea_times_nproc_%d.rds", nproc)
     )
   )
 

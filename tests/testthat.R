@@ -7,6 +7,6 @@
 # * https://testthat.r-lib.org/articles/special-files.html
 
 library(testthat)
-library(fast.ssgsea)
+library(hpgsea)
 
-test_check("fast.ssgsea")
+test_check("hpgsea")

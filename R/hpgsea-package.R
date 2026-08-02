@@ -1,7 +1,7 @@
 #' @import dqrng
 #' @importFrom Rcpp evalCpp
 #'
-#' @useDynLib fast.ssgsea, .registration=TRUE
+#' @useDynLib hpgsea, .registration=TRUE
 #'
 #' @exportPattern "^[[:alpha:]]+"
 #'
