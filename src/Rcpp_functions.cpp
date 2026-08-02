@@ -2,6 +2,7 @@
 #include <dqrng.h>
 
 #define BLOCK_SIZE 200
+#define USE_SIMD
 
 
 // Gene-level values
@@ -223,6 +224,9 @@ inline void calc_ES_perm_internal(float *pES_perm_vec,
 //' @author Tyler Sagendorf
 //'
 //' @noRd
+
+#ifdef USE_SIMD
+
 inline void update_n_as_extreme(int *pn_as_extreme,
                                 perm_stats_t *pperm_stats,
                                 float *pES_perm_vec,
@@ -339,6 +343,64 @@ inline void update_n_as_extreme(int *pn_as_extreme,
 
   }
 }
+
+#else
+
+inline void update_n_as_extreme(int *pn_as_extreme,
+                                perm_stats_t *pperm_stats,
+                                const float *pES_perm_vec,
+                                const float *pES,
+                                const ES_bounds_t *pES_bounds,
+                                const int n_sizes,
+                                const int block_size) {
+  for (int s = 0; s < n_sizes; ++s) {
+    const int block_start_perm = s * block_size;
+
+    // Partition permutation ES by sign and update the sums ====
+    int n_negative = block_start_perm;
+    float sum_negative_perm = 0.0f;
+    float sum_positive_perm = 0.0f;
+
+    for (int k = 0; k < block_size; ++k) {
+      const float swap = pES_perm_vec[block_start_perm + k];
+
+      if (swap < 0.0f) {
+        sum_negative_perm -= swap;
+        ++n_negative;
+      } else {
+        sum_positive_perm += swap;
+      }
+    }
+
+    pperm_stats[s].n_negative += (n_negative - block_start_perm);
+    pperm_stats[s].sum_negative += sum_negative_perm;
+    pperm_stats[s].sum_positive += sum_positive_perm;
+
+    // Comparisons ====
+    const int start_s = pES_bounds[s].start;
+    const int end_s = pES_bounds[s].end;
+
+    for (int i = start_s; i < end_s; ++i) {
+      int total = 0;
+      const float ES_i = pES[i];
+
+      if (ES_i < 0.0f) {
+        for (int j = 0; j < block_size; ++j) {
+          total += pES_perm_vec[block_start_perm + j] <= ES_i;
+        }
+      } else {
+        for (int j = 0; j < block_size; ++j) {
+          total += pES_perm_vec[block_start_perm + j] >= ES_i;
+        }
+      }
+
+      pn_as_extreme[i] += total;
+    }
+
+  }
+}
+
+#endif
 
 
 //' @title Permutation Tests

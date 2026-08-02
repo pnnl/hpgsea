@@ -1,6 +1,6 @@
 library(hpgsea)
 
-source("simulation/scripts/function-generate_data.R")
+source("simulation/scripts/functions/function-generate_data.R")
 
 # Parameter combinations ----
 param_list <- list(
@@ -34,8 +34,7 @@ time_df <- lapply(seq_len(3L), function(j) { # 3 replicates
         nGenes = n_genes,
         minSetSize = min_size,
         maxSetSize,
-        nSets,
-        nperm
+        nSets
       )
     )
 

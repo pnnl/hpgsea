@@ -23,8 +23,7 @@ get_set_sizes <- function(min_size, max_size, n_sets) {
 generate_data <- function(nGenes,
                           minSetSize,
                           maxSetSize,
-                          nSets,
-                          nperm) {
+                          nSets) {
   on.exit(invisible(gc()))
 
   n_digits <- floor(log10(nGenes)) + 1L

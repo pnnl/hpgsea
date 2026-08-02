@@ -1,6 +1,6 @@
 library(fgsea)
 
-source("simulation/scripts/function-generate_data.R")
+source("simulation/scripts/functions/function-generate_data.R")
 
 # Parameter combinations ----
 param_list <- list(
@@ -36,8 +36,7 @@ for (nproc in c(1L, 0L)) {
           nGenes = n_genes,
           minSetSize = min_size,
           maxSetSize,
-          nSets,
-          nperm
+          nSets
         )
       )
 
