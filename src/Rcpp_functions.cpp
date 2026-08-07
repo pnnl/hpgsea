@@ -9,7 +9,7 @@
 typedef struct {
   float r;
   float y;
-} gene_data_t;
+} GeneData;
 
 // For a given set size, defines the index of the first ES, the index of the
 // first positive ES, and the index of the last ES + 1.
@@ -17,7 +17,7 @@ typedef struct {
   int start;
   int first_positive;
   int end;
-} ES_bounds_t;
+} ESBounds;
 
 // For a given set size, count the number of negative permutation ES and compute
 // the absolute sums of the negative and positive ES, separately.
@@ -25,12 +25,12 @@ typedef struct {
   int n_negative;
   float sum_negative;
   float sum_positive;
-} perm_stats_t;
+} PermStats;
 
 typedef struct {
   int up;
   int down;
-} pair_map_t;
+} PairMap;
 
 
 //' @title Get the Index of the First Positive ES for Every Unique Gene Set Size
@@ -59,7 +59,7 @@ typedef struct {
 //' @author Tyler Sagendorf
 //'
 //' @noRd
-void update_first_positive(ES_bounds_t *pES_bounds,
+void update_first_positive(ESBounds *pES_bounds,
                            const int n_sizes,
                            const float *pES)
 {
@@ -126,8 +126,8 @@ inline void update_output_vectors(int *pn_same_sign,
                                   double *psum_ES_perm,
                                   const int n_sizes,
                                   const int nperm,
-                                  const ES_bounds_t *pES_bounds,
-                                  const perm_stats_t *pperm_stats)
+                                  const ESBounds *pES_bounds,
+                                  const PermStats *pperm_stats)
 {
   for (int s = 0; s < n_sizes; ++s) {
     const int start = pES_bounds[s].start;
@@ -156,7 +156,7 @@ inline void calc_ES_perm_internal(float *pES_perm_vec,
                                   const int n_genes,
                                   const int n_sizes,
                                   const int block_size,
-                                  const gene_data_t *pgene_data,
+                                  const GeneData *pgene_data,
                                   const int max_size,
                                   const float sum_ranks,
                                   const int *punique_m,
@@ -228,10 +228,10 @@ inline void calc_ES_perm_internal(float *pES_perm_vec,
 #ifdef USE_SIMD
 
 inline void update_n_as_extreme(int *pn_as_extreme,
-                                perm_stats_t *pperm_stats,
+                                PermStats *pperm_stats,
                                 float *pES_perm_vec,
                                 const float *pES,
-                                const ES_bounds_t *pES_bounds,
+                                const ESBounds *pES_bounds,
                                 const int n_sizes,
                                 const int block_size) {
   for (int s = 0; s < n_sizes; ++s) {
@@ -347,10 +347,10 @@ inline void update_n_as_extreme(int *pn_as_extreme,
 #else
 
 inline void update_n_as_extreme(int *pn_as_extreme,
-                                perm_stats_t *pperm_stats,
+                                PermStats *pperm_stats,
                                 const float *pES_perm_vec,
                                 const float *pES,
-                                const ES_bounds_t *pES_bounds,
+                                const ESBounds *pES_bounds,
                                 const int n_sizes,
                                 const int block_size) {
   for (int s = 0; s < n_sizes; ++s) {
@@ -480,18 +480,18 @@ void calc_ES_perm(SEXP n_same_sign,
     pES[i] = (float) pES_dbl[i];
   }
 
-  std::vector<gene_data_t> gene_data(n_genes);
-  gene_data_t *pgene_data = &gene_data[0];
+  std::vector<GeneData> gene_data(n_genes);
+  GeneData *pgene_data = &gene_data[0];
   for (int i = 0; i < n_genes; ++i) {
     pgene_data[i].r = (float) pr_dbl[i];
     pgene_data[i].y = (float) py_dbl[i];
   }
 
-  std::vector<perm_stats_t> perm_stats(n_sizes);
-  perm_stats_t *pperm_stats = &perm_stats[0];
+  std::vector<PermStats> perm_stats(n_sizes);
+  PermStats *pperm_stats = &perm_stats[0];
 
-  std::vector<ES_bounds_t> ES_bounds(n_sizes);
-  ES_bounds_t *pES_bounds = &ES_bounds[0];
+  std::vector<ESBounds> ES_bounds(n_sizes);
+  ESBounds *pES_bounds = &ES_bounds[0];
   pES_bounds[0].start = 0;
   pES_bounds[0].end = pES_end[0];
   for (int i = 1; i < n_sizes; ++i) {
@@ -583,14 +583,14 @@ inline void calc_ES_perm_dir_internal(float *pES_perm_vec,
                                       const int n_sizes_up,
                                       const int n_pairs,
                                       const int block_size,
-                                      const gene_data_t *pgene_data,
+                                      const GeneData *pgene_data,
                                       const int max_size,
                                       const float sum_ranks,
                                       const int *punique_m_down,
                                       const int *punique_m_up,
                                       const float *pinv_w_up,
                                       const float *pinv_w_down,
-                                      const pair_map_t *ppair_map) {
+                                      const PairMap *ppair_map) {
   for (int b = 0; b < block_size; ++b) {
     const Rcpp::IntegerVector random_indices = dqrng::dqsample_int(
       n_genes,
@@ -728,26 +728,26 @@ void calc_ES_perm_dir(SEXP n_same_sign,
     pES[i] = (float) pES_dbl[i];
   }
 
-  std::vector<gene_data_t> gene_data(n_genes);
-  gene_data_t *pgene_data = &gene_data[0];
+  std::vector<GeneData> gene_data(n_genes);
+  GeneData *pgene_data = &gene_data[0];
   for (int i = 0; i < n_genes; ++i) {
     pgene_data[i].r = (float) pr_dbl[i];
     pgene_data[i].y = (float) py_dbl[i];
   }
 
-  std::vector<pair_map_t> pair_map(n_pairs);
-  pair_map_t *ppair_map = &pair_map[0];
+  std::vector<PairMap> pair_map(n_pairs);
+  PairMap *ppair_map = &pair_map[0];
   // Convert from 1-based to 0-based indices
   for (int i = 0; i < n_pairs; ++i) {
     ppair_map[i].up = pmap_unique_to_pairs_up[i] - 1;
     ppair_map[i].down = pmap_unique_to_pairs_down[i] - 1;
   }
 
-  std::vector<perm_stats_t> perm_stats(n_pairs);
-  perm_stats_t *pperm_stats = &perm_stats[0];
+  std::vector<PermStats> perm_stats(n_pairs);
+  PermStats *pperm_stats = &perm_stats[0];
 
-  std::vector<ES_bounds_t> ES_bounds(n_pairs);
-  ES_bounds_t *pES_bounds = &ES_bounds[0];
+  std::vector<ESBounds> ES_bounds(n_pairs);
+  ESBounds *pES_bounds = &ES_bounds[0];
   pES_bounds[0].start = 0;
   pES_bounds[0].end = pES_end[0];
   for (int i = 1; i < n_pairs; ++i) {
