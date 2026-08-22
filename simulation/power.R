@@ -11,11 +11,6 @@ genes <- paste0("gene", seq_len(n_genes))
 
 get_pvals <- function(method, set_size, n_DE, mu) {
 
-  method <- match.arg(
-    arg = method,
-    choices = c("hpgsea", "fgsea", "t-test")
-  )
-
   gene_set <- list(
     "set" = genes[seq_len(set_size)]
   )
@@ -32,32 +27,47 @@ get_pvals <- function(method, set_size, n_DE, mu) {
 
     switch(
       method,
-      hpgsea = {
+      hpgsea_0 = {
         pval <- hpgsea(
           stats = stats,
           gene_sets = gene_set,
+          alpha = 0,
           seed = 0L
         )[["p_value"]]
       },
-      fgsea = {
+      hpgsea_1 = {
+        pval <- hpgsea(
+          stats = stats,
+          gene_sets = gene_set,
+          alpha = 1,
+          seed = 0L
+        )[["p_value"]]
+      },
+      fgsea_0 = {
         invisible({
           capture.output({
             set.seed(0L)
             pval <- fgseaSimple(
               pathways = gene_set,
               stats = stats,
-              nperm = 1e3L,
-              nproc = 1L,
+              gseaParam = 0,
+              nproc = 1L 
             )[["pval"]]
           })
         })
       },
-      `t-test` = {
-        pval <- t.test(
-          x = stats[seq_len(set_size)],
-          y = stats[(set_size + 1L):n_genes],
-          var.equal = TRUE
-        )[["p.value"]]
+      fgsea_1 = {
+        invisible({
+          capture.output({
+            set.seed(0L)
+            pval <- fgsea(
+              pathways = gene_set,
+              stats = stats,
+              gseaParam = 1,
+              nproc = 1L 
+            )[["pval"]]
+          })
+        })
       }
     )
 
@@ -67,22 +77,25 @@ get_pvals <- function(method, set_size, n_DE, mu) {
   return(pvals)
 }
 
-methods <- c("hpgsea", "fgsea", "t-test")
+methods <- c("fgsea_0", "fgsea_1", "hpgsea_0", "hpgsea_1")
 
 res <- lapply(methods, function(method) {
-  message(method, "...")
 
   expand.grid(
     set_size = c(20L, 100L, 200L),
-    prop_DE = c(0.1, seq(0.2, 1, 0.2)),
-    mu = c(0.25, 0.5, 1, 2)
+    prop_DE = seq(0.1, 1, 0.1),
+    mu = c(0.2, 0.5, 1, 2)
   ) %>%
     mutate(
       n_DE = ceiling(prop_DE * set_size),
       pvals = pmap(
         .l = list(method, set_size, n_DE, mu),
         .f = get_pvals,
-        .progress = TRUE
+        .progress = list(
+          name = method,
+          clear = FALSE,
+          show_after = 0
+        )
       )
     ) %>%
     tidyr::unnest(
@@ -97,19 +110,19 @@ res <- lapply(methods, function(method) {
     .id = "method"
   ) %>%
   mutate(
-    set_size = factor(
-      x = set_size,
-      levels = sort(set_size),
-      labels = paste0("m = ", sort(set_size))
-    ),
-    mu = factor(
-      x = mu,
-      levels = sort(unique(mu))
+    across(
+      .cols = c(
+        set_size,
+        mu
+      ),
+      .fns = ~ factor(
+        x = .x,
+        levels = sort(unique(.x))
+      )
     ),
     method = factor(
       x = method,
-      levels = methods,
-      labels = c("HPGSEA", "FGSEA", "t-test")
+      levels = methods
     )
   ) %>%
   summarise(
