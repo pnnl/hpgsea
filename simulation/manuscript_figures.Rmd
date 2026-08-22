@@ -223,3 +223,169 @@ ggsave(
   bg = "white", dpi = 450
 )
 ```
+
+
+```{r power}
+df <- file.path(
+  "..", 
+  "data", 
+  "power_simulation.rds"
+) %>% 
+  readRDS()
+
+levels(df$set_size) <- paste0("m = ", levels(df$set_size))
+levels(df$method) <- sub("_", ", \u03b1 = ", toupper(levels(df$method)))
+
+p <- ggplot(df, aes(x = prop_DE, y = power, color = method, linetype = mu)) +
+  geom_line(
+    linewidth = 0.6
+  ) +
+  facet_wrap(
+    ~ set_size,
+    nrow = 1L
+  ) +
+  scale_x_continuous(
+    name = "Proportion of DEGs",
+    limits = c(0.1, 1),
+    breaks = seq(0.2, 1, 0.2),
+    expand = expansion(
+      mult = 0.05
+    )
+  ) +
+  scale_y_continuous(
+    name = "Power",
+    limits = c(0, 1),
+    breaks = seq(0, 1, 0.2),
+    expand = expansion(
+      mult = c(5e-3, 0.02)
+    )
+  ) +
+  scale_color_manual(
+    name = "Method",
+    values = c("black", "grey60", "#ff7f00", "#fdbf6f"),
+    breaks = rev(levels(df$method))
+  ) +
+  scale_linetype_manual(
+    name = "Effect size",
+    values = c("82", "11", "3132", "solid")
+  ) +
+  coord_equal() +
+  guides(
+    color = guide_legend(
+      order = 1L,
+      nrow = 2L,
+      theme = theme(
+        legend.key.width = unit(12, "pt")
+      )
+    ),
+    linetype = guide_legend(
+      nrow = 2L,
+      theme = theme(
+        legend.key.width = unit(24, "pt")
+      )
+    )
+  ) +
+  theme_bw(
+    base_size = 10
+  ) +
+  theme(
+    axis.title.x = element_text(
+      color = "black",
+      size = 8,
+      margin = margin(t = 8, unit = "pt")
+    ),
+    axis.title.y = element_text(
+      color = "black", 
+      size = 8
+    ),
+    axis.ticks = element_line(
+      color = "black",
+      linewidth = 0.5
+    ),
+    axis.text = element_text(
+      color = "black", 
+      size = 8
+    ),
+    panel.border = element_rect(
+      linewidth = 0.5,
+      fill = NA,
+      color = "black"
+    ),
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor = element_blank(),
+    panel.grid.major.x = element_line(
+      color = "grey95",
+      linewidth = 0.3
+    ),
+    panel.spacing.x = unit(8, units = "pt"),
+    strip.background = element_blank(),
+    strip.text = element_text(size = 9),
+    plot.margin = unit(c(-6, 1, 1, 1), "pt"),
+    legend.key.height = unit(10, "pt"),
+    legend.key.spacing.x = unit(12, "pt"),
+    legend.margin = margin(t = -6, b = 0, unit = "pt"),
+    legend.title = element_text(
+      color = "black", 
+      size = 8,
+      hjust = 0.5
+    ),
+    legend.text = element_text(
+      color = "black", 
+      size = 8
+    ),
+    legend.title.position = "top",
+    legend.spacing.x = unit(64, "pt"),
+    legend.position = "bottom",
+    legend.direction = "horizontal",
+    legend.box = "horizontal",
+    legend.location = "plot"
+  )
+
+ggsave(
+  filename = "../figures/power_simulation.pdf",
+  plot = p,
+  height = 2.7,
+  width = 5,
+  device = cairo_pdf # correctly render unicode
+)
+```
+
+
+```{r table-type-I-error}
+df <- file.path(
+  "..",
+  "data",
+  "pvalues_type_I_error.rds"
+) %>% 
+  readRDS()
+
+kable(
+  x = df, 
+  col.names = c("Method", sub("^p", "", colnames(df)[-1L])),
+  format = "latex",
+  digits = 4L
+) %>%
+  add_header_above(
+    header = c(" " = 2L, "Nominal P-value" = 4L)
+  )
+```
+
+
+```{r table-inter-gene-cor}
+df <- file.path(
+  "..",
+  "data",
+  "pvalues_inter_gene_correlation.rds"
+) %>% 
+  readRDS()
+
+kable(
+  x = df, 
+  col.names = c("Method", sub("^p", "", colnames(df)[-1L])),
+  format = "latex",
+  digits = 4L
+) %>%
+  add_header_above(
+    header = c(" " = 2L, "Nominal P-value" = 4L)
+  )
+```
