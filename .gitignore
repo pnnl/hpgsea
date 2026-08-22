@@ -11,4 +11,4 @@ sandbox
 simulation/scripts/*.pdf
 simulation/scripts/*.tex
 *.eps
-simulation/data/ptm.sig.db.all.flanking.human.v2.0.0.gmt
+simulation/**/*.gmt*
