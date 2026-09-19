@@ -3,11 +3,14 @@ suppressPackageStartupMessages({
   library(fgsea)
   library(dplyr)
   library(purrr)
+  library(BiocParallel)
 })
 
 n_datasets <- 1e3L
 n_genes <- 1e4L
 genes <- paste0("gene", seq_len(n_genes))
+
+BPPARAM <- bpparam()
 
 get_pvals <- function(method, set_size, n_DE, mu) {
 
@@ -15,64 +18,69 @@ get_pvals <- function(method, set_size, n_DE, mu) {
     "set" = genes[seq_len(set_size)]
   )
 
-  pvals <- map_dbl(.x = seq_len(n_datasets), .f = function(i) {
-    set.seed(i)
+  # Since fgsea also uses bplapply internally, this will constantly trigger the
+  # "failed to open port" error. This doesn't cause any issues with the
+  # analysis, but it will cause the progress bar to be printed multiple times.
+  pvals <- bplapply(
+    BPPARAM = BPPARAM,
+    X = seq_len(n_datasets),
+    FUN = function(i) {
+      set.seed(i)
 
-    stats <- c(
-      rnorm(n_DE, mean = mu),
-      rnorm(n_genes - n_DE)
-    )
+      stats <- rnorm(n_genes)
+      stats[seq_len(n_DE)] <- stats[seq_len(n_DE)] + mu
+      names(stats) <- genes
 
-    names(stats) <- genes
-
-    switch(
-      method,
-      hpgsea_0 = {
-        pval <- hpgsea(
-          stats = stats,
-          gene_sets = gene_set,
-          alpha = 0,
-          seed = 0L
-        )[["p_value"]]
-      },
-      hpgsea_1 = {
-        pval <- hpgsea(
-          stats = stats,
-          gene_sets = gene_set,
-          alpha = 1,
-          seed = 0L
-        )[["p_value"]]
-      },
-      fgsea_0 = {
-        invisible({
-          capture.output({
-            set.seed(0L)
-            pval <- fgseaSimple(
-              pathways = gene_set,
-              stats = stats,
-              gseaParam = 0,
-              nproc = 1L 
-            )[["pval"]]
+      switch(
+        method,
+        hpgsea_0 = {
+          pval <- hpgsea(
+            stats = stats,
+            gene_sets = gene_set,
+            alpha = 0,
+            seed = 0L
+          )[["p_value"]]
+        },
+        hpgsea_1 = {
+          pval <- hpgsea(
+            stats = stats,
+            gene_sets = gene_set,
+            alpha = 1,
+            seed = 0L
+          )[["p_value"]]
+        },
+        fgsea_0 = {
+          invisible({
+            capture.output({
+              set.seed(0L)
+              pval <- fgsea(
+                pathways = gene_set,
+                stats = stats,
+                gseaParam = 0,
+                nproc = 1L
+              )[["pval"]]
+            })
           })
-        })
-      },
-      fgsea_1 = {
-        invisible({
-          capture.output({
-            set.seed(0L)
-            pval <- fgsea(
-              pathways = gene_set,
-              stats = stats,
-              gseaParam = 1,
-              nproc = 1L 
-            )[["pval"]]
+        },
+        fgsea_1 = {
+          invisible({
+            capture.output({
+              set.seed(0L)
+              pval <- fgsea(
+                pathways = gene_set,
+                stats = stats,
+                gseaParam = 1,
+                nproc = 1L
+              )[["pval"]]
+            })
           })
-        })
-      }
-    )
+        }
+      )
 
-    return(pval)
-  })
+      return(pval)
+    }
+  ) %>%
+    unlist()
 
   return(pvals)
 }
