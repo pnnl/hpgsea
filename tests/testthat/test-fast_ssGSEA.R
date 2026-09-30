@@ -354,13 +354,13 @@ test_that("the ES are correct for directional sets", {
   )
 
   ## alpha = 1 ----
+  set.seed(0L)
   res1 <- hpgsea_multicol(
     stats_mat = stats_mat,
     gene_sets = gene_sets_dir,
     alpha = 1,
     nperm = 1e4L,
-    sort = FALSE,
-    seed = 0
+    sort = FALSE
   )
 
   # Need to calculate ES in a piece-wise fashion for directional sets
@@ -431,13 +431,13 @@ test_that("the ES are correct for directional sets", {
   # The gene set is the same as gene_set2_down (without the expected direction
   # of change), but the sign of the ES and NES will have opposite signs to the
   # res1 results.
+  set.seed(0L)
   res2 <- hpgsea_multicol(
     stats_mat = stats_mat,
     gene_sets = list("Set1" = sub(";d", "", gene_set2_down)),
     alpha = 1,
     nperm = 1e4L,
-    sort = FALSE,
-    seed = 0
+    sort = FALSE
   )
 
   expect_equal(
@@ -449,18 +449,18 @@ test_that("the ES are correct for directional sets", {
   # permutation enrichment scores in Rcpp_calcESPermCore()
   expect_equal(
     signif(res1$NES[res1$set == "Set2"], digits = 5L),
-    c(-6.15990, -0.16928, 0.77529, 0.09746)
+    c(-6.06160, -0.171710, 0.777000, 0.099863)
   )
 
 
   ## alpha = 0 ----
+  set.seed(0L)
   res1 <- hpgsea_multicol(
     stats_mat = stats_mat,
     gene_sets = gene_sets_dir,
     alpha = 0,
     nperm = 1e4L,
-    sort = FALSE,
-    seed = 0
+    sort = FALSE
   )
 
   # The "up" enrichment scores for Set2 should be 0, since no genes in the set
@@ -477,13 +477,13 @@ test_that("the ES are correct for directional sets", {
   # The gene set is the same as gene_set2_down (without the expected direction
   # of change), but the sign of the ES and NES will have opposite signs to the
   # res1 results.
+  set.seed(0L)
   res2 <- hpgsea_multicol(
     stats_mat = stats_mat,
     gene_sets = list("Set1" = sub(";d", "", gene_set2_down)),
     alpha = 0,
     nperm = 1e4L,
-    sort = FALSE,
-    seed = 0
+    sort = FALSE
   )
 
   expect_equal(
@@ -493,7 +493,7 @@ test_that("the ES are correct for directional sets", {
 
   expect_equal(
     signif(res1$NES[res1$set == "Set2"], digits = 5L),
-    c(-10.41400, 0.064937, 0.374570, -0.050986)
+    c(-10.259000, 0.066071, 0.373870, -0.050820)
   )
 })
 
@@ -543,12 +543,12 @@ test_that("ES_u or ES_d is 0 when there are fewer than min_size up- or down-regu
     )
   )
 
+  set.seed(0L)
   res <- hpgsea(
     stats = stats_mat[, 1L],
     gene_sets = gene_sets,
     nperm = 500L,
     min_size = 3L,
-    seed = 0L,
     sort = FALSE
   )
 
@@ -579,26 +579,26 @@ test_that("NES are mostly within [-4, +4]", {
   })
   names(gene_sets) <- paste0("set.", seq_along(gene_sets))
 
+  set.seed(0L)
   res1 <- hpgsea_multicol(
     stats_mat = stats_mat,
     gene_sets = gene_sets,
     alpha = 0,
     nperm = 500L,
-    sort = FALSE,
-    seed = 0L
+    sort = FALSE
   )
 
   expect_true(
     mean(res1$NES <= 4 & res1$NES >= -4) >= 0.995
   )
 
+  set.seed(0L)
   res2 <- hpgsea_multicol(
     stats_mat = stats_mat,
     gene_sets = gene_sets,
     alpha = 1,
     nperm = 500L,
-    sort = FALSE,
-    seed = 0L
+    sort = FALSE
   )
 
   expect_true(

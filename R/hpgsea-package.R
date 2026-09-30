@@ -1,3 +1,4 @@
+#' @import BH
 #' @import dqrng
 #' @importFrom Rcpp evalCpp
 #'

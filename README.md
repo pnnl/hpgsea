@@ -128,6 +128,7 @@ calculate P-values and normalized enrichment scores (NES).
 library(hpgsea)
 
 # Runtime (in seconds)
+set.seed(0L)
 system.time({
   res <- hpgsea(
     stats = stats,
@@ -135,28 +136,27 @@ system.time({
     alpha = 1,
     nperm = 1e6L,
     min_size = min_size,
-    max_size = max_size,
-    seed = 0L
+    max_size = max_size
   )
 })
 ```
 
     ##    user  system elapsed 
-    ##   4.110   0.048   4.083
+    ##   3.469   0.041   3.429
 
 ``` r
 str(res)
 ```
 
     ## 'data.frame':    20000 obs. of  8 variables:
-    ##  $ set         : chr  "set15224" "set9014" "set14650" "set7155" ...
-    ##  $ set_size    : int  157 415 235 290 62 439 455 389 280 27 ...
-    ##  $ ES          : num  -1681 -952 -1288 -1116 -2272 ...
-    ##  $ NES         : num  -5.11 -4.74 -4.8 -4.63 -4.31 ...
-    ##  $ n_same_sign : int  486561 478962 483258 482342 491895 522137 477630 520005 517360 494438 ...
-    ##  $ n_as_extreme: int  24 62 66 124 149 159 147 194 199 205 ...
-    ##  $ p_value     : num  5.14e-05 1.32e-04 1.39e-04 2.59e-04 3.05e-04 ...
-    ##  $ adj_p_value : num  0.74 0.74 0.74 0.74 0.74 ...
+    ##  $ set         : chr  "set15224" "set14650" "set9014" "set7155" ...
+    ##  $ set_size    : int  157 235 415 290 439 62 455 389 280 365 ...
+    ##  $ ES          : num  -1681 -1288 -952 -1116 909 ...
+    ##  $ NES         : num  -5.1 -4.8 -4.74 -4.63 4.43 ...
+    ##  $ n_same_sign : int  486027 483686 478465 482064 522291 490985 477346 520334 517260 520177 ...
+    ##  $ n_as_extreme: int  18 65 81 129 141 145 154 175 179 201 ...
+    ##  $ p_value     : num  3.91e-05 1.36e-04 1.71e-04 2.70e-04 2.72e-04 ...
+    ##  $ adj_p_value : num  0.698 0.698 0.698 0.698 0.698 ...
 
 ### Session Information
 
@@ -176,14 +176,16 @@ print(sessionInfo(), locale = FALSE, tzone = FALSE)
     ## [1] stats     graphics  grDevices utils     datasets  methods   base     
     ## 
     ## other attached packages:
-    ## [1] dqrng_0.4.1       hpgsea_0.1.0.9036
+    ## [1] hpgsea_0.1.0.9037
     ## 
     ## loaded via a namespace (and not attached):
-    ##  [1] digest_0.6.39     collapse_2.1.7    fastmap_1.2.0     xfun_0.57        
-    ##  [5] parallel_4.6.1    knitr_1.51        htmltools_0.5.9   rmarkdown_2.31   
-    ##  [9] cli_3.6.6         data.table_1.18.4 compiler_4.6.1    rstudioapi_0.18.0
-    ## [13] tools_4.6.1       evaluate_1.0.5    Rcpp_1.1.2        yaml_2.3.12      
-    ## [17] otel_0.2.0        rlang_1.3.0
+    ##  [1] digest_0.6.39       dqrng_0.4.1         collapse_2.1.8     
+    ##  [4] fastmap_1.2.0       xfun_0.60           BH_1.90.0-1        
+    ##  [7] parallel_4.6.1      knitr_1.51          htmltools_0.5.9    
+    ## [10] rmarkdown_2.31      cli_3.6.6           data.table_1.18.6.1
+    ## [13] compiler_4.6.1      rstudioapi_0.19.0   tools_4.6.1        
+    ## [16] evaluate_1.0.5      Rcpp_1.1.2          yaml_2.3.12        
+    ## [19] otel_0.2.0          rlang_1.3.0
 
 ## Benchmarking
 

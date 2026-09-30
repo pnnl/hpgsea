@@ -151,7 +151,7 @@ pb <- filter(time_res, nperm == levels(nperm)[2L]) %>%
 
 # 1,000,000 permutations
 pc <- filter(time_res, nperm == levels(nperm)[3L]) %>%
-  plot_time(y_breaks = seq(0, 10, 2), y_max = 10 * 1.05, expand_upper = 0) +
+  plot_time(y_breaks = seq(0, 8, 2), y_max = 10 * 1.05, expand_upper = 0) +
   labs(x = "", y = "")
 
 # Combine plots

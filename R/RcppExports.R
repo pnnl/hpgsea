@@ -114,8 +114,6 @@ NULL
 #'   permutation ES that are at least as extreme as each true ES.
 #' @param sum_ES_perm numeric vector of zeros. Used to store the absolute sums
 #'   of the permutation ES with the same sign as each true ES.
-#' @param seed integer or \code{NULL}; seed to obtain reproducible results from
-#'   permutation tests.
 #' @param nperm integer; total number of permutations.
 #' @param ES_dbl numeric vector of enrichment scores, sorted in ascending order
 #'   by gene set size and then by the values of the ES.
@@ -176,11 +174,11 @@ NULL
 #' @noRd
 NULL
 
-.Cpp_calc_ES_perm <- function(n_same_sign, n_as_extreme, sum_ES_perm, seed, nperm, ES_dbl, ES_end, y_dbl, r_dbl, max_size, Rsum_ranks, unique_m, unique_w) {
-    invisible(.Call(`_hpgsea_calc_ES_perm`, n_same_sign, n_as_extreme, sum_ES_perm, seed, nperm, ES_dbl, ES_end, y_dbl, r_dbl, max_size, Rsum_ranks, unique_m, unique_w))
+.Cpp_calc_ES_perm <- function(n_same_sign, n_as_extreme, sum_ES_perm, nperm, ES_dbl, ES_end, y_dbl, r_dbl, max_size, Rsum_ranks, unique_m, unique_w) {
+    invisible(.Call(`_hpgsea_calc_ES_perm`, n_same_sign, n_as_extreme, sum_ES_perm, nperm, ES_dbl, ES_end, y_dbl, r_dbl, max_size, Rsum_ranks, unique_m, unique_w))
 }
 
-.Cpp_calc_ES_perm_dir <- function(n_same_sign, n_as_extreme, sum_ES_perm, seed, nperm, ES_dbl, ES_end, y_dbl, r_dbl, max_size, Rsum_ranks, unique_m_up, unique_w_up, unique_m_down, unique_w_down, map_unique_to_pairs_up, map_unique_to_pairs_down) {
-    invisible(.Call(`_hpgsea_calc_ES_perm_dir`, n_same_sign, n_as_extreme, sum_ES_perm, seed, nperm, ES_dbl, ES_end, y_dbl, r_dbl, max_size, Rsum_ranks, unique_m_up, unique_w_up, unique_m_down, unique_w_down, map_unique_to_pairs_up, map_unique_to_pairs_down))
+.Cpp_calc_ES_perm_dir <- function(n_same_sign, n_as_extreme, sum_ES_perm, nperm, ES_dbl, ES_end, y_dbl, r_dbl, max_size, Rsum_ranks, unique_m_up, unique_w_up, unique_m_down, unique_w_down, map_unique_to_pairs_up, map_unique_to_pairs_down) {
+    invisible(.Call(`_hpgsea_calc_ES_perm_dir`, n_same_sign, n_as_extreme, sum_ES_perm, nperm, ES_dbl, ES_end, y_dbl, r_dbl, max_size, Rsum_ranks, unique_m_up, unique_w_up, unique_m_down, unique_w_down, map_unique_to_pairs_up, map_unique_to_pairs_down))
 }
 

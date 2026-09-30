@@ -49,19 +49,19 @@ for (inter_gene_cor in c(0, 0.05)) {
       switch(
         method,
         hpgsea_0 = {
+          set.seed(0L)
           pval <- hpgsea(
             stats = stats,
             gene_sets = gene_set,
-            alpha = 0,
-            seed = 0L
+            alpha = 0
           )[["p_value"]]
         },
         hpgsea_1 = {
+          set.seed(0L)
           pval <- hpgsea(
             stats = stats,
             gene_sets = gene_set,
-            alpha = 1,
-            seed = 0L
+            alpha = 1
           )[["p_value"]]
         },
         ssgsea2_0 = {

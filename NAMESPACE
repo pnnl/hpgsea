@@ -3,6 +3,7 @@
 export(hpgsea)
 export(read_gmt)
 exportPattern("^[[:alpha:]]+")
+import(BH)
 import(dqrng)
 importFrom(Rcpp,evalCpp)
 importFrom(collapse,alloc)

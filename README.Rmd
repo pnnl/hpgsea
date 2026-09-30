@@ -98,6 +98,7 @@ This shows the runtime of `hpgsea` on an AMD Ryzen 5 7600X CPU with a clock spee
 library(hpgsea)
 
 # Runtime (in seconds)
+set.seed(0L)
 system.time({
   res <- hpgsea(
     stats = stats,
@@ -105,8 +106,7 @@ system.time({
     alpha = 1,
     nperm = 1e6L,
     min_size = min_size,
-    max_size = max_size,
-    seed = 0L
+    max_size = max_size
   )
 })
 
