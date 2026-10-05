@@ -12,7 +12,6 @@ hpgsea(
   min_size = 2L,
   max_size = Inf,
   sort = TRUE,
-  seed = NULL,
   alternative = c("two.sided", "less", "greater")
 )
 }
@@ -40,9 +39,6 @@ is recommended.}
 
 \item{sort}{logical; should the results be sorted by p-value? Default is
 \code{TRUE}.}
-
-\item{seed}{integer or \code{NULL}; if \code{NULL} (default), the normalized
-enrichment scores and p-values will vary between runs.}
 
 \item{alternative}{character; the alternative hypothesis. One of
 "\code{two.sided}" (default), "\code{less}", or "\code{greater}". The
@@ -113,10 +109,10 @@ gene_sets <- lapply(10:500, function(size_i) {
 })
 names(gene_sets) <- paste0("set", seq_along(gene_sets))
 
+set.seed(9001L) # reproducible results
 df <- hpgsea(
   stats = stats,
-  gene_sets = gene_sets,
-  seed = 0L # reproducible results
+  gene_sets = gene_sets
 )
 
 head(df)

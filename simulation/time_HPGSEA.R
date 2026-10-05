@@ -43,6 +43,8 @@ time_df <- lapply(seq_len(3L), function(j) { # 3 replicates
 
     invisible(gc())
 
+    set.seed(0L)
+
     tic <- Sys.time()
 
     res <- hpgsea(
@@ -51,8 +53,7 @@ time_df <- lapply(seq_len(3L), function(j) { # 3 replicates
       alpha = alpha,
       nperm = row_i[["nperm"]],
       min_size = min_size,
-      max_size = row_i[["maxSetSize"]],
-      seed = 0L
+      max_size = row_i[["maxSetSize"]]
     )
 
     toc <- Sys.time()

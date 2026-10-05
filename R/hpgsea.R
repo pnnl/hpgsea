@@ -21,8 +21,6 @@
 #'   is recommended.
 #' @param sort logical; should the results be sorted by p-value? Default is
 #'   \code{TRUE}.
-#' @param seed integer or \code{NULL}; if \code{NULL} (default), the normalized
-#'   enrichment scores and p-values will vary between runs.
 #' @param alternative character; the alternative hypothesis. One of
 #'   "\code{two.sided}" (default), "\code{less}", or "\code{greater}". The
 #'   latter two will perform one-sided tests.
@@ -98,23 +96,22 @@
 #' })
 #' names(gene_sets) <- paste0("set", seq_along(gene_sets))
 #'
+#' set.seed(9001L) # reproducible results
 #' df <- hpgsea(
 #'   stats = stats,
-#'   gene_sets = gene_sets,
-#'   seed = 0L # reproducible results
+#'   gene_sets = gene_sets
 #' )
 #'
 #' head(df)
 #'
 hpgsea <- function(stats,
-                        gene_sets,
-                        alpha = 1,
-                        nperm = 1e5L,
-                        min_size = 2L,
-                        max_size = Inf,
-                        sort = TRUE,
-                        seed = NULL,
-                        alternative = c("two.sided", "less", "greater")) {
+                   gene_sets,
+                   alpha = 1,
+                   nperm = 1e5L,
+                   min_size = 2L,
+                   max_size = Inf,
+                   sort = TRUE,
+                   alternative = c("two.sided", "less", "greater")) {
   alternative <- match.arg(
     arg = alternative,
     choices = c("two.sided", "less", "greater")
@@ -129,7 +126,6 @@ hpgsea <- function(stats,
     min_size = min_size,
     max_size = max_size,
     sort = sort,
-    seed = seed,
     n_genes = n_genes
   )
 
@@ -143,7 +139,6 @@ hpgsea <- function(stats,
   )
 
   tab <- .calc_ES_perm(
-    seed = seed,
     nperm = nperm,
     n_genes = n_genes,
     ES_list = ES_list

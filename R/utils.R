@@ -55,7 +55,6 @@
                              min_size = 2L,
                              max_size = Inf,
                              sort = TRUE,
-                             seed = NULL,
                              n_genes) {
   if (
     !is.vector(alpha, mode = "numeric") ||
@@ -77,9 +76,6 @@
   ) {
     stop("`nperm` must be an integer between 0 and 2 billion.", call. = FALSE)
   }
-
-  set.seed(seed) # let set.seed validate the seed
-  set.seed(NULL)
 
   if (
     !is.vector(min_size, mode = "numeric") ||
@@ -640,8 +636,7 @@
 #' @importFrom data.table data.table := setorderv
 #'
 #' @noRd
-.calc_ES_perm <- function(seed = NULL,
-                          nperm = 1e5L,
+.calc_ES_perm <- function(nperm = 1e5L,
                           n_genes,
                           ES_list) {
   list2env(ES_list, envir = environment())
@@ -710,7 +705,6 @@
         n_same_sign,
         n_as_extreme,
         sum_ES_perm,
-        seed,
         nperm,
         ES,
         ES_end,
@@ -730,7 +724,6 @@
         n_same_sign,
         n_as_extreme,
         sum_ES_perm,
-        seed,
         nperm,
         ES,
         ES_end,

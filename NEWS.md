@@ -4,6 +4,7 @@
 - Renamed function `fast_ssgsea` to `hpgsea`.
 - Renamed the `X` parameter of `hpgsea` to `stats`. Parameter `stats` accepts a named numeric vector, rather than a numeric matrix with dimension names. This also led to the removal of the `adjust.globally` parameter.
 - Removed the `batch.size` parameter from `hpgsea`.
+- Removed the `seed` parameter from `hpgsea`. The seed is now managed externally by the user with `set.seed()`.
 
 ## ENHANCEMENTS
 - Greatly reduced runtime of permutation tests, especially when testing directional gene sets.

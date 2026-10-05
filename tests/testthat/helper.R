@@ -92,7 +92,6 @@ hpgsea_multicol <- function(stats_mat,
                                  min_size = 2L,
                                  max_size = Inf,
                                  sort = TRUE,
-                                 seed = NULL,
                                  alternative = c(
                                    "two.sided",
                                    "less",
@@ -107,7 +106,6 @@ hpgsea_multicol <- function(stats_mat,
       min_size = min_size,
       max_size = max_size,
       sort = sort,
-      seed = seed,
       alternative = alternative
     )
   })

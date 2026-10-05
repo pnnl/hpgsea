@@ -1,8 +1,8 @@
 Package: hpgsea
 Type: Package
 Title: High-Performance Gene Set Enrichment Analysis (HPGSEA)
-Version: 0.1.0.9036
-Date: 2026-08-02
+Version: 0.1.0.9037
+Date: 2026-09-29
 Authors@R: 
       person(given = "Tyler", family = "Sagendorf", 
              email = "tyler.sagendorf@pnnl.gov", 
@@ -13,11 +13,13 @@ Description: High-performance pre-ranked Gene Set Enrichment Analysis, capable
 License: file LICENSE
 Encoding: UTF-8
 LinkingTo: 
+   BH,
    Rcpp,
    dqrng
 Depends:
    R (>= 4.0.0)
 Imports:
+   BH,
    collapse,
    data.table,
    dqrng,

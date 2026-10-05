@@ -61,6 +61,8 @@ res <- map(.x = organisms, .f = function(organism) {
 
         if (method == "hpgsea") {
 
+          set.seed(0L)
+
           tic <- Sys.time()
 
           df <- hpgsea(
@@ -69,8 +71,7 @@ res <- map(.x = organisms, .f = function(organism) {
             alpha = alpha,
             nperm = 1e5L,
             min_size = min_size,
-            max_size = max_size,
-            seed = 0L
+            max_size = max_size
           )
 
           toc <- Sys.time()

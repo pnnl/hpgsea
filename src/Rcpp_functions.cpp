@@ -1,9 +1,13 @@
-// [[Rcpp::depends(dqrng)]]
+#include <Rcpp.h>
+// [[Rcpp::depends(dqrng, BH)]]
+#include <dqrng_generator.h>
+#include <dqrng_sample.h>
 #include <dqrng.h>
 
 #define BLOCK_SIZE 200
 #define USE_SIMD
 
+dqrng::rng64_t rng = dqrng::generator();
 
 // Gene-level values
 typedef struct {
@@ -162,15 +166,17 @@ inline void calc_ES_perm_internal(float *pES_perm_vec,
                                   const int *punique_m,
                                   const float *pinv_w) {
   for (int b = 0; b < block_size; ++b) {
-    const Rcpp::IntegerVector random_indices = dqrng::dqsample_int(
-      n_genes,
-      max_size
-    );
-    const int *prandom_indices = random_indices.begin();
+    // Same idea as dqrng::dqsample_int(), but the overhead of indexing the
+    // std::vector is much lower than indexing an Rcpp::IntegerVector
+    std::vector<int> random_indices =
+      dqrng::sample::sample<std::vector<int>, uint32_t>(
+        *rng, uint32_t(n_genes), uint32_t(max_size), false, 0
+      );
+    const int *prandom_indices = &random_indices[0];
 
     int perm_idx = b;
     int start = 0;
-    float sum_r = 0.0f;
+    float delta_ranks = -sum_ranks;
     float sum_y = 0.0f;
     float sum_ry = 0.0f;
 
@@ -178,13 +184,13 @@ inline void calc_ES_perm_internal(float *pES_perm_vec,
       const int end = punique_m[s];
 
       while (start < end) {
-        const int rand_idx = prandom_indices[start++];
-        sum_r += pgene_data[rand_idx].r;
-        sum_y += pgene_data[rand_idx].y;
-        sum_ry += pgene_data[rand_idx].r * pgene_data[rand_idx].y;
+        const GeneData gene = pgene_data[prandom_indices[start++]];
+        delta_ranks += gene.r;
+        sum_y += gene.y;
+        sum_ry += gene.r * gene.y;
       }
 
-      pES_perm_vec[perm_idx] = (sum_ry / sum_y) + (sum_r - sum_ranks) * pinv_w[s];
+      pES_perm_vec[perm_idx] = (sum_ry / sum_y) + delta_ranks * pinv_w[s];
     }
   }
 }
@@ -414,8 +420,6 @@ inline void update_n_as_extreme(int *pn_as_extreme,
 //'   permutation ES that are at least as extreme as each true ES.
 //' @param sum_ES_perm numeric vector of zeros. Used to store the absolute sums
 //'   of the permutation ES with the same sign as each true ES.
-//' @param seed integer or \code{NULL}; seed to obtain reproducible results from
-//'   permutation tests.
 //' @param nperm integer; total number of permutations.
 //' @param ES_dbl numeric vector of enrichment scores, sorted in ascending order
 //'   by gene set size and then by the values of the ES.
@@ -448,7 +452,6 @@ inline void update_n_as_extreme(int *pn_as_extreme,
 void calc_ES_perm(SEXP n_same_sign,
                   SEXP n_as_extreme,
                   SEXP sum_ES_perm,
-                  const Rcpp::Nullable<Rcpp::IntegerVector> seed,
                   const int nperm,
                   const SEXP ES_dbl,
                   const SEXP ES_end,
@@ -509,8 +512,10 @@ void calc_ES_perm(SEXP n_same_sign,
   std::vector<float> ES_perm_vec(BLOCK_SIZE * n_sizes);
   float *pES_perm_vec = &ES_perm_vec[0];
 
-  dqrng::dqset_seed(seed);
   const int partial_block_size = nperm % BLOCK_SIZE;
+
+  uint64_t _seed = dqrng::get_seed_from_r();
+  rng->seed(_seed);
 
   if (partial_block_size != 0) {
     calc_ES_perm_internal(
@@ -592,15 +597,15 @@ inline void calc_ES_perm_dir_internal(float *pES_perm_vec,
                                       const float *pinv_w_down,
                                       const PairMap *ppair_map) {
   for (int b = 0; b < block_size; ++b) {
-    const Rcpp::IntegerVector random_indices = dqrng::dqsample_int(
-      n_genes,
-      max_size
-    );
-    const int *prandom_indices = random_indices.begin();
+    std::vector<int> random_indices =
+      dqrng::sample::sample<std::vector<int>, uint32_t>(
+          *rng, uint32_t(n_genes), uint32_t(max_size), false, 0
+      );
+    const int *prandom_indices = &random_indices[0];
 
     // Up-regulated genes ====
     int start = 0;
-    float sum_r = 0.0f;
+    float delta_ranks = -sum_ranks;
     float sum_y = 0.0f;
     float sum_ry = 0.0f;
 
@@ -609,19 +614,19 @@ inline void calc_ES_perm_dir_internal(float *pES_perm_vec,
       const bool empty_set = (start == end);
 
       while (start < end) {
-        const int rand_idx = prandom_indices[start++];
-        sum_r += pgene_data[rand_idx].r;
-        sum_y += pgene_data[rand_idx].y;
-        sum_ry += pgene_data[rand_idx].r * pgene_data[rand_idx].y;
+        const GeneData gene = pgene_data[prandom_indices[start++]];
+        delta_ranks += gene.r;
+        sum_y += gene.y;
+        sum_ry += gene.r * gene.y;
       }
 
       pES_perm_up[i_up] = empty_set ? 0.0f :
-        (sum_ry / sum_y) + (sum_r - sum_ranks) * pinv_w_up[i_up];
+        (sum_ry / sum_y) + delta_ranks * pinv_w_up[i_up];
     }
 
     // Down-regulated genes ====
     start = max_size - 1;
-    sum_r = 0.0f;
+    delta_ranks = -sum_ranks;
     sum_y = 0.0f;
     sum_ry = 0.0f;
 
@@ -633,14 +638,14 @@ inline void calc_ES_perm_dir_internal(float *pES_perm_vec,
       // end of random_indices to avoid selecting the same values that were used
       // for the up-regulated permutation ES.
       while (start > end) {
-        const int rand_idx = prandom_indices[start--];
-        sum_r += pgene_data[rand_idx].r;
-        sum_y += pgene_data[rand_idx].y;
-        sum_ry += pgene_data[rand_idx].r * pgene_data[rand_idx].y;
+        const GeneData gene = pgene_data[prandom_indices[start--]];
+        delta_ranks += gene.r;
+        sum_y += gene.y;
+        sum_ry += gene.r * gene.y;
       }
 
       pES_perm_down[i_down] = empty_set ? 0.0f :
-        (sum_ry / sum_y) + (sum_r - sum_ranks) * pinv_w_down[i_down];
+        (sum_ry / sum_y) + delta_ranks * pinv_w_down[i_down];
     }
 
     // ES = ES_up - ES_down for each unique pair
@@ -686,7 +691,6 @@ inline void calc_ES_perm_dir_internal(float *pES_perm_vec,
 void calc_ES_perm_dir(SEXP n_same_sign,
                       SEXP n_as_extreme,
                       SEXP sum_ES_perm,
-                      const Rcpp::Nullable<Rcpp::IntegerVector> seed,
                       const int nperm,
                       const SEXP ES_dbl,
                       const SEXP ES_end,
@@ -781,8 +785,10 @@ void calc_ES_perm_dir(SEXP n_same_sign,
   float *pES_perm_down = &ES_perm_down[0];
   float *pES_perm_vec = &ES_perm_vec[0];
 
-  dqrng::dqset_seed(seed);
   const int partial_block_size = nperm % BLOCK_SIZE;
+
+  uint64_t _seed = dqrng::get_seed_from_r();
+  rng->seed(_seed);
 
   if (partial_block_size != 0) {
     calc_ES_perm_dir_internal(

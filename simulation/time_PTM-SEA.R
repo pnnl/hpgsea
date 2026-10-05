@@ -39,6 +39,8 @@ time_hpgsea <- lapply(seq_len(3L), function(j) { # 3 replicates
 
     invisible(gc())
 
+    set.seed(0L)
+
     tic <- Sys.time()
 
     res <- hpgsea(
@@ -46,8 +48,7 @@ time_hpgsea <- lapply(seq_len(3L), function(j) { # 3 replicates
       gene_sets = sets,
       alpha = alpha,
       nperm = row_i[["nperm"]],
-      min_size = min_size,
-      seed = 0L
+      min_size = min_size
     )
 
     toc <- Sys.time()
