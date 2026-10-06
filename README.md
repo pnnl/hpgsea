@@ -10,9 +10,6 @@
     - [Simulate Data](#simulate-data)
     - [Runtime and Results](#runtime-and-results)
     - [Session Information](#session-information)
-  - [Benchmarking](#benchmarking)
-    - [HPGSEA](#hpgsea-1)
-    - [FGSEA-simple](#fgsea-simple)
   - [References](#references)
 
 # hpgsea
@@ -142,7 +139,7 @@ system.time({
 ```
 
     ##    user  system elapsed 
-    ##   3.469   0.041   3.429
+    ##   3.499   0.039   3.457
 
 ``` r
 str(res)
@@ -186,50 +183,6 @@ print(sessionInfo(), locale = FALSE, tzone = FALSE)
     ## [13] compiler_4.6.1      rstudioapi_0.19.0   tools_4.6.1        
     ## [16] evaluate_1.0.5      Rcpp_1.1.2          yaml_2.3.12        
     ## [19] otel_0.2.0          rlang_1.3.0
-
-## Benchmarking
-
-Benchmarking was performed on the same AMD Ryzen 5 7600X CPU, single
-threaded, to measure the runtime of HPGSEA (`hpgsea::hpgsea`) and
-FGSEA-simple (`fgsea::fgseaSimple`). Different combinations of the
-number of gene sets, maximum gene set size, and the number of
-permutations ($\pi$) were tested in a random order (3 replicates each)
-to minimize the influence of previous runs. The R scripts and data are
-available in the simulation/ directory.
-
-### HPGSEA
-
-<div class="figure" style="text-align: center">
-
-<img src="./man/figures/README-figure-1.png" alt="Runtime of hpgsea with 10,000, 100,000, or 1,000,000 permutations." width="720" />
-<p class="caption">
-
-Runtime of hpgsea with 10,000, 100,000, or 1,000,000 permutations.
-</p>
-
-</div>
-
-### FGSEA-simple
-
-Like HPGSEA, FGSEA-simple relies purely on the number of permutations to
-calculate p-values, which limits how small they can become. While
-FGSEA-simple is meant to be run with a smaller number of permutations
-and followed up by FGSEA-multilevel (the method capable of calculating
-arbitrarily small p-values) ([Korotkevich et al.
-2021](#ref-korotkevich-fast-2021)), these results serve to illustrate
-the difference in runtime between the two approaches. This difference is
-largely the result of changes to how the ES is defined.
-
-<div class="figure" style="text-align: center">
-
-<img src="./man/figures/README-figure-2.png" alt="Runtime of fgsea::fgseaSimple with 10,000, 100,000, or 1,000,000 permutations." width="720" />
-<p class="caption">
-
-Runtime of fgsea::fgseaSimple with 10,000, 100,000, or 1,000,000
-permutations.
-</p>
-
-</div>
 
 ## References
 

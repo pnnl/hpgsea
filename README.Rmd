@@ -119,31 +119,4 @@ str(res)
 print(sessionInfo(), locale = FALSE, tzone = FALSE)
 ```
 
-
-## Benchmarking
-
-Benchmarking was performed on the same AMD Ryzen 5 7600X CPU, single threaded, to measure the runtime of HPGSEA (`hpgsea::hpgsea`) and FGSEA-simple (`fgsea::fgseaSimple`). Different combinations of the number of gene sets, maximum gene set size, and the number of permutations ($\pi$) were tested in a random order (3 replicates each) to minimize the influence of previous runs. The R scripts and data are available in the simulation/ directory.
-
-### HPGSEA
-
-```{r, echo=FALSE}
-fig1_cap <- "Runtime of hpgsea with 10,000, 100,000, or 1,000,000 permutations."
-```
-
-```{r, echo=FALSE, fig.cap=fig1_cap}
-knitr::include_graphics("./man/figures/README-figure-1.png")
-```
-
-### FGSEA-simple
-
-Like HPGSEA, FGSEA-simple relies purely on the number of permutations to calculate p-values, which limits how small they can become. While FGSEA-simple is meant to be run with a smaller number of permutations and followed up by FGSEA-multilevel (the method capable of calculating arbitrarily small p-values) [@korotkevich-fast-2021], these results serve to illustrate the difference in runtime between the two approaches. This difference is largely the result of changes to how the ES is defined.
-
-```{r, echo=FALSE}
-fig2_cap <- "Runtime of fgsea::fgseaSimple with 10,000, 100,000, or 1,000,000 permutations."
-```
-
-```{r, echo=FALSE, fig.cap=fig2_cap}
-knitr::include_graphics("./man/figures/README-figure-2.png")
-```
-
 ## References
