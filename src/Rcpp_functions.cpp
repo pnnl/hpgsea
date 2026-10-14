@@ -596,6 +596,8 @@ inline void calc_ES_perm_dir_internal(float *pES_perm_vec,
                                       const float *pinv_w_up,
                                       const float *pinv_w_down,
                                       const PairMap *ppair_map) {
+  int perm_idx;
+
   for (int b = 0; b < block_size; ++b) {
     std::vector<int> random_indices =
       dqrng::sample::sample<std::vector<int>, uint32_t>(
@@ -604,12 +606,13 @@ inline void calc_ES_perm_dir_internal(float *pES_perm_vec,
     const int *prandom_indices = &random_indices[0];
 
     // Up-regulated genes ====
+    perm_idx = b;
     int start = 0;
     float delta_ranks = -sum_ranks;
     float sum_y = 0.0f;
     float sum_ry = 0.0f;
 
-    for (int i_up = 0; i_up < n_sizes_up; ++i_up) {
+    for (int i_up = 0; i_up < n_sizes_up; ++i_up, perm_idx += block_size) {
       const int end = punique_m_up[i_up];
       const bool empty_set = (start == end);
 
@@ -620,17 +623,18 @@ inline void calc_ES_perm_dir_internal(float *pES_perm_vec,
         sum_ry += gene.r * gene.y;
       }
 
-      pES_perm_up[i_up] = empty_set ? 0.0f :
+      pES_perm_up[perm_idx] = empty_set ? 0.0f :
         (sum_ry / sum_y) + delta_ranks * pinv_w_up[i_up];
     }
 
     // Down-regulated genes ====
+    perm_idx = b;
     start = max_size - 1;
     delta_ranks = -sum_ranks;
     sum_y = 0.0f;
     sum_ry = 0.0f;
 
-    for (int i_down = 0; i_down < n_sizes_down; ++i_down) {
+    for (int i_down = 0; i_down < n_sizes_down; ++i_down, perm_idx += block_size) {
       const int end = punique_m_down[i_down];
       const bool empty_set = (start == end);
 
@@ -644,14 +648,21 @@ inline void calc_ES_perm_dir_internal(float *pES_perm_vec,
         sum_ry += gene.r * gene.y;
       }
 
-      pES_perm_down[i_down] = empty_set ? 0.0f :
+      pES_perm_down[perm_idx] = empty_set ? 0.0f :
         (sum_ry / sum_y) + delta_ranks * pinv_w_down[i_down];
     }
+  }
 
-    // ES = ES_up - ES_down for each unique pair
-    int perm_idx = b;
-    for (int s = 0; s < n_pairs; ++s, perm_idx += block_size) {
-      pES_perm_vec[perm_idx] = pES_perm_up[ppair_map[s].up] - pES_perm_down[ppair_map[s].down];
+  perm_idx = 0;
+
+  // ES = ES_up - ES_down for each unique pair
+  for (int s = 0; s < n_pairs; ++s) {
+    const PairMap pair = ppair_map[s];
+
+    for (int b = 0; b < block_size; ++b) {
+      pES_perm_vec[perm_idx++] =
+        pES_perm_up[pair.up * block_size + b] -
+        pES_perm_down[pair.down * block_size + b];
     }
   }
 }
@@ -778,8 +789,8 @@ void calc_ES_perm_dir(SEXP n_same_sign,
     pinv_w_down[i] = (float) (1.0 / punique_w_down[i]);
   }
 
-  std::vector<float> ES_perm_up(n_sizes_up);
-  std::vector<float> ES_perm_down(n_sizes_down);
+  std::vector<float> ES_perm_up(BLOCK_SIZE * n_sizes_up);
+  std::vector<float> ES_perm_down(BLOCK_SIZE * n_sizes_down);
   std::vector<float> ES_perm_vec(BLOCK_SIZE * n_pairs);
   float *pES_perm_up = &ES_perm_up[0];
   float *pES_perm_down = &ES_perm_down[0];
