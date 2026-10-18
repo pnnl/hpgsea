@@ -140,7 +140,7 @@ inline void update_output_vectors(int *pn_same_sign,
 
     const int n_negative = pperm_stats[s].n_negative;
     const int n_positive = nperm - n_negative;
-    const double sum_negative = (double) pperm_stats[s].sum_negative;
+    const double sum_negative = (double) -pperm_stats[s].sum_negative;
     const double sum_positive = (double) pperm_stats[s].sum_positive;
 
     for (int i = start; i < first_positive; ++i) {
@@ -255,7 +255,7 @@ inline void update_n_as_extreme(int *pn_as_extreme,
         pES_perm_vec[block_start_perm + k] = pES_perm_vec[first_positive_perm];
         pES_perm_vec[first_positive_perm] = swap;
 
-        sum_negative_perm -= swap;
+        sum_negative_perm += swap;
         ++first_positive_perm;
       } else {
         sum_positive_perm += swap;
@@ -371,7 +371,7 @@ inline void update_n_as_extreme(int *pn_as_extreme,
       const float swap = pES_perm_vec[block_start_perm + k];
 
       if (swap < 0.0f) {
-        sum_negative_perm -= swap;
+        sum_negative_perm += swap;
         ++n_negative;
       } else {
         sum_positive_perm += swap;
