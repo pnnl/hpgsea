@@ -2,11 +2,15 @@ suppressPackageStartupMessages({
   library(dplyr)
   library(hpgsea)
 
-  source("simulation/scripts/functions/function-ssgsea2.R")
+  source("simulation/functions/function-ssgsea2.R")
+  source("simulation/functions/function-create_dir.R")
 })
 
-# See simulation/scripts/prepare_PTMsigDB.R for details
-sets <- readRDS("simulation/data/ptm.sig.db.all.flanking.human.v2.0.0.rds")
+data_dir <- create_data_dir()
+
+# See simulation/prepare_PTMsigDB.R for details
+sets <- file.path(data_dir, "ptm.sig.db.all.flanking.human.v2.0.0.rds") %>%
+  readRDS()
 
 flanking <- unlist(sets) %>%
   substr(1L, 17L) %>%
@@ -107,12 +111,12 @@ time_ssgsea2 <- lapply(seq_len(3L), function(j) { # 3 replicates
 time_ssgsea2 <- do.call(what = rbind, args = time_ssgsea2)
 
 res <- list(
-  "HPGSEA" = time_hpgsea,
+  "hpgsea" = time_hpgsea,
   "ssGSEA2.0" = time_ssgsea2
 ) %>%
   bind_rows(.id = "method")
 
 saveRDS(
   object = res,
-  file = "simulation/data/PTM-SEA_times.rds"
+  file = file.path(data_dir, "time_PTM-SEA.rds")
 )

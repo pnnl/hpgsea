@@ -7,13 +7,20 @@ suppressPackageStartupMessages({
   library(glue)
   library(data.table)
   library(float)
+
+  source("simulation/functions/function-create_dir.R")
 })
 
+data_dir <- create_data_dir()
+
 out_dir <- file.path(
-  "simulation",
-  "data",
+  data_dir,
   "test_605_datasets"
 )
+
+if (!dir.exists(out_dir)) {
+  dir.create(out_dir)
+}
 
 get_file_names <- function(html) {
   files <- html_text2(html)

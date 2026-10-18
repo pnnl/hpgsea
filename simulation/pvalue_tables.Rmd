@@ -1,0 +1,47 @@
+---
+output:
+  bookdown::pdf_document2:
+    keep_tex: true
+    number_sections: false
+    toc: false
+---
+
+```{r setup, echo=FALSE, warning=FALSE, message=FALSE}
+knitr::opts_chunk$set(
+  echo = FALSE,
+  cache = FALSE,
+  warning = FALSE,
+  fig.align = "center"
+)
+
+library(knitr)
+library(kableExtra)
+```
+
+```{r table-type-I-error}
+df <- readRDS("data/pvalues_type_I_error.rds")
+
+kable(
+  x = df, 
+  col.names = c("Method", sub("^p", "", colnames(df)[-1L])),
+  format = "latex",
+  digits = 4L
+) %>%
+  add_header_above(
+    header = c(" " = 2L, "Nominal P-value" = 4L)
+  )
+```
+
+```{r table-inter-gene-cor}
+df <- readRDS("data/pvalues_inter_gene_correlation.rds")
+
+kable(
+  x = df, 
+  col.names = c("Method", sub("^p", "", colnames(df)[-1L])),
+  format = "latex",
+  digits = 4L
+) %>%
+  add_header_above(
+    header = c(" " = 2L, "Nominal P-value" = 4L)
+  )
+```

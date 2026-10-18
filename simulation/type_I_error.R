@@ -4,8 +4,11 @@ suppressPackageStartupMessages({
   library(dplyr)
   library(purrr)
 
-  source("simulation/scripts/functions/function-ssgsea2.R")
+  source("simulation/functions/function-ssgsea2.R")
+  source("simulation/functions/function-create_dir.R")
 })
+
+data_dir <- create_data_dir()
 
 n_datasets <- 1e4L # p-values to 4 decimal places
 n_genes <- 1e4L
@@ -172,8 +175,7 @@ for (inter_gene_cor in c(0, 0.05)) {
     saveRDS(
       res,
       file = file.path(
-        "simulation",
-        "data",
+        data_dir,
         "pvalues_type_I_error.rds"
       )
     )
@@ -181,8 +183,7 @@ for (inter_gene_cor in c(0, 0.05)) {
     saveRDS(
       res,
       file = file.path(
-        "simulation",
-        "data",
+        data_dir,
         "pvalues_inter_gene_correlation.rds"
       )
     )

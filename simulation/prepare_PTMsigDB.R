@@ -4,7 +4,6 @@
 library(hpgsea)
 library(dplyr)
 
-# This file is 2.5 MB, so it is not tracked by git
 x <- read_gmt("simulation/data/ptm.sig.db.all.flanking.human.v2.0.0.gmt")
 
 # Remove flanking sequences that are both up and down in the same set

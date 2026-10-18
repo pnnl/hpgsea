@@ -1,14 +1,16 @@
 # This script simulates 10,000 sets of 10 to 500 genes to compare the runtime of
-# HPGSEA to ssGSEA2.0.
+# hpgsea to ssGSEA2.0.
 
 suppressPackageStartupMessages({
   library(dplyr)
   library(hpgsea)
 
-  source("simulation/scripts/functions/function-generate_data.R")
-  source("simulation/scripts/functions/function-ssgsea2.R")
+  source("simulation/functions/function-generate_data.R")
+  source("simulation/functions/function-ssgsea2.R")
+  source("simulation/functions/function-create_dir.R")
 })
 
+data_dir <- create_data_dir()
 
 # Benchmark parameters
 nperm <- c(1e3L, 1e4L, 1e5L, 1e6L)
@@ -26,7 +28,7 @@ li <- generate_data(
 stats <- li[["stats"]]
 gene_sets <- li[["gene_sets"]]
 
-# HPGSEA ----
+# hpgsea ----
 time_hpgsea <- lapply(seq_len(3L), function(j) { # 3 replicates
   set.seed(j)
   comb_df_j <- data.frame(
@@ -76,7 +78,7 @@ nperm <- c(1e3L, 1e4L)
 
 # Results are continuously saved to a temporary file in case the analysis gets
 # interrupted (e.g., power outage).
-temp_file <- "simulation/data/TEMP_ssGSEA2.0_times.rds"
+temp_file <- file.path(data_dir, "TEMP_ssGSEA2.0_times.rds")
 
 if (file.exists(temp_file)) {
   file.remove(temp_file)
@@ -122,14 +124,14 @@ time_ssgsea2 <- lapply(seq_len(3L), function(j) {
 time_ssgsea2 <- do.call(what = rbind, args = time_ssgsea2)
 
 res <- list(
-  "HPGSEA" = time_hpgsea,
+  "hpgsea" = time_hpgsea,
   "ssGSEA2.0" = time_ssgsea2
 ) %>%
   bind_rows(.id = "method")
 
 saveRDS(
   object = res,
-  file = "simulation/data/ssGSEA2.0_times.rds"
+  file = file.path(data_dir, "time_ssGSEA2.0.rds")
 )
 
 if (file.exists(temp_file)) {

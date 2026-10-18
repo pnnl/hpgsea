@@ -5,17 +5,24 @@ suppressPackageStartupMessages({
   library(purrr)
   library(glue)
   library(float)
+
+  source("simulation/functions/function-create_dir.R")
 })
 
 # Set size limits
 min_size <- 10L
 max_size <- 500L
 
+data_dir <- create_data_dir()
+
 out_dir <- file.path(
-  "simulation",
-  "data",
+  data_dir,
   "test_605_datasets"
 )
+
+if (!dir.exists(out_dir)) {
+  dir.create(out_dir)
+}
 
 organisms <- c("human", "mouse")
 
@@ -112,7 +119,6 @@ res <- map(.x = organisms, .f = function(organism) {
 
         out_i <- data.frame(
           n_sets = nrow(df),
-          median_set_size = median(df$size),
           n_signif = sum(df$padj < 0.05),
           min_pval = min(df$pval),
           time_seconds = time_diff
@@ -186,7 +192,6 @@ res <- map(.x = organisms, .f = function(organism) {
     values_from = c(
       n_sets,
       n_signif,
-      median_set_size,
       min_pval,
       time_seconds
     )
@@ -197,7 +202,7 @@ saveRDS(
   object = res,
   file = file.path(
     out_dir,
-    "dataset_analysis_results.rds"
+    "analysis_results.rds"
   ),
   compress = "xz"
 )
