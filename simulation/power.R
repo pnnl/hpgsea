@@ -31,28 +31,26 @@ get_pvals <- function(method, set_size, n_DE, mu) {
       stats[seq_len(n_DE)] <- stats[seq_len(n_DE)] + mu
       names(stats) <- genes
 
+      set.seed(0L)
       switch(
         method,
         hpgsea_0 = {
           pval <- hpgsea(
             stats = stats,
             gene_sets = gene_set,
-            alpha = 0,
-            seed = 0L
+            alpha = 0
           )[["p_value"]]
         },
         hpgsea_1 = {
           pval <- hpgsea(
             stats = stats,
             gene_sets = gene_set,
-            alpha = 1,
-            seed = 0L
+            alpha = 1
           )[["p_value"]]
         },
         fgsea_0 = {
           invisible({
             capture.output({
-              set.seed(0L)
               pval <- fgsea(
                 pathways = gene_set,
                 stats = stats,
@@ -65,7 +63,6 @@ get_pvals <- function(method, set_size, n_DE, mu) {
         fgsea_1 = {
           invisible({
             capture.output({
-              set.seed(0L)
               pval <- fgsea(
                 pathways = gene_set,
                 stats = stats,
