@@ -21,7 +21,7 @@
 
 ## MISC
 - Added the _collapse_ package to Imports.
-- Updated runtime data and figures in simulation/.
+- Updated runtime data and figures in manuscript/.
 
 
 # hpgsea 0.1.0

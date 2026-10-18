@@ -9,7 +9,7 @@ sandbox
 *DS_Store
 *.log
 *.eps
-simulation/**/*.tex
-simulation/**/*.pdf
-simulation/**/figures
-simulation/**/data
+manuscript/**/*.tex
+manuscript/**/*.pdf
+manuscript/**/figures
+manuscript/**/data
