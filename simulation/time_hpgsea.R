@@ -1,12 +1,14 @@
 library(hpgsea)
 
-source("simulation/scripts/functions/function-generate_data.R")
+source("simulation/functions/function-generate_data.R")
+source("simulation/functions/function-create_dir.R")
+
+data_dir <- create_data_dir()
 
 # Parameter combinations ----
 param_list <- list(
   "maxSetSize" = c(500L, 1000L),
-  "nSets" = c(2e4L, 4e4L, 6e4L),
-  "nperm" = c(1e4L, 1e5L, 1e6L)
+  "nSets" = c(2e4L, 4e4L, 6e4L)
 )
 
 n_genes <- 1e4L
@@ -51,7 +53,7 @@ time_df <- lapply(seq_len(3L), function(j) { # 3 replicates
       stats = stats_i,
       gene_sets = gene_sets_i,
       alpha = alpha,
-      nperm = row_i[["nperm"]],
+      nperm = 1e6L,
       min_size = min_size,
       max_size = row_i[["maxSetSize"]]
     )
@@ -74,12 +76,15 @@ time_df <- lapply(seq_len(3L), function(j) { # 3 replicates
 
 time_df <- do.call(what = rbind, args = time_df)
 
+if (!dir.exists(data_dir)) {
+  invisible(dir.create(data_dir))
+}
+
 # Save results
 saveRDS(
   object = time_df,
   file = file.path(
-    "simulation",
-    "data",
-    "hpgsea_times.rds"
+    data_dir,
+    "time_hpgsea.rds"
   )
 )

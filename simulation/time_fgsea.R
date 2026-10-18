@@ -1,12 +1,14 @@
 library(fgsea)
 
-source("simulation/scripts/functions/function-generate_data.R")
+source("simulation/functions/function-generate_data.R")
+source("simulation/functions/function-create_dir.R")
+
+data_dir <- create_data_dir()
 
 # Parameter combinations ----
 param_list <- list(
   "maxSetSize" = c(500L, 1000L),
-  "nSets" = c(2e4L, 4e4L, 6e4L),
-  "nperm" = c(1e4L, 1e5L, 1e6L)
+  "nSets" = c(2e4L, 4e4L, 6e4L)
 )
 
 n_genes <- 1e4L
@@ -49,11 +51,10 @@ for (nproc in c(1L, 0L)) {
 
       invisible({
         capture.output({
-          res <- fgseaSimple(
+          res <- fgsea(
             stats = stats_i,
             pathways = gene_sets_i,
             gseaParam = alpha,
-            nperm = row_i[["nperm"]],
             minSize = min_size,
             maxSize = row_i[["maxSetSize"]],
             nproc = nproc
@@ -83,9 +84,8 @@ for (nproc in c(1L, 0L)) {
   saveRDS(
     object = time_df,
     file = file.path(
-      "simulation",
-      "data",
-      sprintf("fgsea_times_nproc_%d.rds", nproc)
+      data_dir,
+      sprintf("time_fgsea_nproc_%d.rds", nproc)
     )
   )
 
