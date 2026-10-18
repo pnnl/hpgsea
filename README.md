@@ -2,10 +2,6 @@
 - [hpgsea](#hpgsea)
   - [Overview](#overview)
   - [Installation](#installation)
-    - [macOS](#macos)
-    - [Windows](#windows)
-    - [Linux](#linux)
-    - [Install](#install)
   - [Usage](#usage)
     - [Simulate Data](#simulate-data)
     - [Runtime and Results](#runtime-and-results)
@@ -21,69 +17,56 @@
 
 ## Overview
 
-`hpgsea` is an R package ([R Core Team 2026](#ref-R-core-team)) for a
-highly optimized variant of pre-ranked Gene Set Enrichment Analysis
-(GSEA) ([Subramanian et al. 2005](#ref-subramanian-gene-2005)). Unlike
-standard GSEA, HPGSEA is capable of testing gene sets where each gene
-has an expected direction of change (up- or down-regulation; indicated
-by appending a “;u” or “;d” to the end of every gene in a set) from a
-prior experiment.
+The **hpgsea** R package provides a high-performance variant of
+gene-permutation gene set enrichment analysis (GSEA) ([Subramanian et
+al. 2005](#ref-subramanian-gene-2005)) that serves as a replacement for
+the Broad Institute’s
+[ssGSEA2.0](https://github.com/broadinstitute/ssGSEA2.0) repository (R
+package version by Nicole Gay: <https://github.com/nicolerg/ssGSEA2>).
 
-HPGSEA is based on Post-Translational Modification Signature Enrichment
-Analysis (PTM-SEA) ([Krug et al. 2019](#ref-krug-curated-2019)), and it
-borrows optimization techniques from the simple implementation of Fast
-Gene Set Enrichment Analysis (FGSEA-simple) ([Korotkevich et al.
-2021](#ref-korotkevich-fast-2021)).
+Benchmarks showed that **hpgsea** was at least 15.21-fold faster than
+ssGSEA2.0. Furthermore, its speed, statistical power, and false positive
+rates were comparable to those of the popular
+[**fgsea**](https://bioconductor.org/packages//release/bioc/html/fgsea.html)
+R package ([Korotkevich et al. 2021](#ref-korotkevich-fast-2021)) across
+thousands of simulated datasets and 605 mouse and human datasets.
+Although **hpgsea** can not compute arbitrarily small P-values like
+**fgsea**, it has the advantage of being able to test bidirectional
+databases—those where each biomolecule in a set has an expected
+direction of change from prior experiments—like the Post-Translational
+Modification Signatures Database (PTMsigDB). (Note that the combination
+of **hpgsea** with PTMsigDB is known as PTM Signature Enrichment
+Analysis, or PTM-SEA ([Krug et al. 2019](#ref-krug-curated-2019)).)
 
-The primary function, `hpgsea`, accepts a vector of signed statistics
-with genes or other molecules as names. The values must be approximately
-symmetric around zero, with more extreme values indicating greater
-importance. A named list of gene sets (more generally, molecular
-signatures) is also required. Other arguments control the behavior of
-HPGSEA, and they are described in the documentation.
+Moreover, while ssGSEA2.0’s false positive rate is inflated because it
+unintentionally permutes the values of the genes, rather than their
+labels (see [this
+issue](https://github.com/broadinstitute/ssGSEA2.0/issues/45) for
+details), this is not the case with **hpgsea**.
 
-The package also contains a `read_gmt` function, which reads a Gene
-Matrix Transposed (GMT) file to construct a named list of gene sets for
-use with `hpgsea`.
+All code to reproduce the results are provided in the manuscript/
+directory. The data and results will be available for download from
+Zenodo in the near future.
 
 ## Installation
 
-R version 4.0.0 or greater is required to install `hpgsea`.
+**macOS:** macOS users must install the [Xcode developer
+tools](https://mac.r-project.org/tools/) from Apple to compile C and C++
+code.
 
-### macOS
+**Windows:** Windows users must install
+[Rtools](https://cran.r-project.org/bin/windows/Rtools/) to compile C
+and C++ code.
 
-A macOS binary is provided in the [latest
-release](https://github.com/pnnl/hpgsea/releases). Users looking to
-build and install the development version of `hpgsea` must have the
-Xcode developer tools from Apple. See <https://mac.r-project.org/tools/>
-for instructions.
+**Linux:** No extra work should be necessary to install **hpgsea** on
+Linux, as most distributions already include a C/C++ compiler.
 
-### Windows
-
-No Windows binary is available, so
-[Rtools](https://cran.r-project.org/bin/windows/Rtools/) must be
-installed to compile C and C++ code. Then, the development version of
-`hpgsea` can be installed with the code below.
-
-### Linux
-
-Most Linux distributions come pre-packaged with tools to compile C and
-C++ code, so no extra work is needed. Users can install the development
-version of `hpgsea` on Linux by running the code below.
-
-### Install
-
-The development version of `hpgsea` can be installed with either of the
-following
+The development version of **hpgsea**, which requires R \>= 4.0.0, can
+then be installed with
 
 ``` r
-# install.packages("pak")
-pak::pak("pnnl/hpgsea")
-```
-
-``` r
-# install.packages("renv")
-renv::install("pnnl/hpgsea")
+# install.packages("remotes")
+remotes::install_github("pnnl/hpgsea")
 ```
 
 ## Usage
@@ -102,7 +85,7 @@ set.seed(9001L)
 stats <- rnorm(n = n_genes)
 names(stats) <- genes
 
-# Simulate list of gene sets
+# Simulate named list of gene sets
 n_sets <- 2e4L
 min_size <- 5L
 max_size <- 500L
@@ -117,9 +100,9 @@ names(gene_sets) <- paste0("set", seq_along(gene_sets))
 
 ### Runtime and Results
 
-This shows the runtime of `hpgsea` on an AMD Ryzen 5 7600X CPU with a
-clock speed of 4.7 GHz. A total of 1 million permutations were used to
-calculate P-values and normalized enrichment scores (NES).
+This shows the runtime of `hpgsea` on an AMD Ryzen 5 7600X (Zen 4) CPU
+with its clock speed fixed at 4.7 GHz. A total of 1 million permutations
+were used to calculate P-values and normalized enrichment scores (NES).
 
 ``` r
 library(hpgsea)
@@ -139,7 +122,7 @@ system.time({
 ```
 
     ##    user  system elapsed 
-    ##   3.499   0.039   3.457
+    ##   3.366   0.041   3.322
 
 ``` r
 str(res)
@@ -178,7 +161,7 @@ print(sessionInfo(), locale = FALSE, tzone = FALSE)
     ## loaded via a namespace (and not attached):
     ##  [1] digest_0.6.39       dqrng_0.4.1         collapse_2.1.8     
     ##  [4] fastmap_1.2.0       xfun_0.60           BH_1.90.0-1        
-    ##  [7] parallel_4.6.1      knitr_1.51          htmltools_0.5.9    
+    ##  [7] parallel_4.6.1      knitr_1.52          htmltools_0.5.9    
     ## [10] rmarkdown_2.31      cli_3.6.6           data.table_1.18.6.1
     ## [13] compiler_4.6.1      rstudioapi_0.19.0   tools_4.6.1        
     ## [16] evaluate_1.0.5      Rcpp_1.1.2          yaml_2.3.12        
@@ -202,14 +185,6 @@ Krug, Karsten, Philipp Mertins, Bin Zhang, et al. 2019. “A Curated
 Resource for Phosphosite-Specific Signature Analysis.” *Molecular &
 Cellular Proteomics* 18 (3): 576–93.
 <https://doi.org/10.1074/mcp.TIR118.000943>.
-
-</div>
-
-<div id="ref-R-core-team" class="csl-entry">
-
-R Core Team. 2026. *R: A Language and Environment for Statistical
-Computing*. R Foundation for Statistical Computing.
-<https://doi.org/10.32614/R.manuals>.
 
 </div>
 
