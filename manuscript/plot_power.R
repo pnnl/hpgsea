@@ -1,6 +1,6 @@
 library(ggplot2)
 
-source("simulation/functions/function-create_dir.R")
+source("manuscript/functions/function-create_dir.R")
 
 data_dir <- create_data_dir()
 figures_dir <- create_figures_dir()

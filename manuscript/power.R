@@ -4,7 +4,11 @@ suppressPackageStartupMessages({
   library(dplyr)
   library(purrr)
   library(BiocParallel)
+
+  source("manuscript/functions/function-create_dir.R")
 })
+
+data_dir <- create_data_dir()
 
 n_datasets <- 1e3L
 n_genes <- 1e4L
@@ -143,9 +147,8 @@ res <- lapply(methods, function(method) {
 saveRDS(
   res,
   file = file.path(
-    "simulation",
-    "data",
-    "power_simulation.rds"
+    data_dir,
+    "power.rds"
   ),
   compress = "xz"
 )

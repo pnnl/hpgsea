@@ -4,7 +4,15 @@
 library(hpgsea)
 library(dplyr)
 
-x <- read_gmt("simulation/data/ptm.sig.db.all.flanking.human.v2.0.0.gmt")
+source("manuscript/functions/function-create_dir.R")
+
+data_dir <- create_data_dir()
+
+x <- file.path(
+  data_dir,
+  "ptm.sig.db.all.flanking.human.v2.0.0.gmt"
+) %>%
+  readRDS()
 
 # Remove flanking sequences that are both up and down in the same set
 sets <- data.frame(
@@ -36,6 +44,6 @@ sets <- data.frame(
 
 saveRDS(
   object = sets,
-  file = "simulation/data/ptm.sig.db.all.flanking.human.v2.0.0.rds",
+  file = file.path(data_dir, "ptm.sig.db.all.flanking.human.v2.0.0.rds"),
   compress = "xz"
 )

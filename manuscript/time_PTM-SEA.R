@@ -2,13 +2,13 @@ suppressPackageStartupMessages({
   library(dplyr)
   library(hpgsea)
 
-  source("simulation/functions/function-ssgsea2.R")
-  source("simulation/functions/function-create_dir.R")
+  source("manuscript/functions/function-ssgsea2.R")
+  source("manuscript/functions/function-create_dir.R")
 })
 
 data_dir <- create_data_dir()
 
-# See simulation/prepare_PTMsigDB.R for details
+# See manuscript/prepare_PTMsigDB.R for details
 sets <- file.path(data_dir, "ptm.sig.db.all.flanking.human.v2.0.0.rds") %>%
   readRDS()
 

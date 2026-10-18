@@ -1,7 +1,7 @@
 library(fgsea)
 
-source("simulation/functions/function-generate_data.R")
-source("simulation/functions/function-create_dir.R")
+source("manuscript/functions/function-generate_data.R")
+source("manuscript/functions/function-create_dir.R")
 
 data_dir <- create_data_dir()
 

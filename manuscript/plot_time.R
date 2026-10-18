@@ -4,7 +4,7 @@ suppressPackageStartupMessages({
   library(ggpubr)
   library(ggh4x)
 
-  source("simulation/functions/function-create_dir.R")
+  source("manuscript/functions/function-create_dir.R")
 })
 
 data_dir <- create_data_dir()

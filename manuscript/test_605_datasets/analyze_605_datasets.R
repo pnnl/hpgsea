@@ -6,7 +6,7 @@ suppressPackageStartupMessages({
   library(glue)
   library(float)
 
-  source("simulation/functions/function-create_dir.R")
+  source("manuscript/functions/function-create_dir.R")
 })
 
 # Set size limits
