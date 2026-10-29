@@ -24,7 +24,7 @@
 #define MIN(x, y) ((x) < (y) ? (x) : (y))
 #define MAX(x, y) ((x) > (y) ? (x) : (y))
 
-dqrng::rng64_t rng = dqrng::generator();
+dqrng::rng64_t global_rng = dqrng::generator();
 
 // Gene-level values
 typedef struct {
@@ -173,7 +173,7 @@ inline void update_output_vectors(int *pn_same_sign,
 }
 
 
-inline void calc_ES_perm_internal(dqrng::random_64bit_generator &_rng,
+inline void calc_ES_perm_internal(dqrng::random_64bit_generator &rng,
                                   float *pES_perm_vec,
                                   const int n_genes,
                                   const int n_sizes,
@@ -186,7 +186,7 @@ inline void calc_ES_perm_internal(dqrng::random_64bit_generator &_rng,
   for (int b = 0; b < block_size; ++b) {
     std::vector<int> random_indices =
       dqrng::sample::sample<std::vector<int>, uint32_t>(
-        _rng, uint32_t(n_genes), uint32_t(max_size), false, 0
+        rng, uint32_t(n_genes), uint32_t(max_size), false, 0
       );
     const int *prandom_indices = &random_indices[0];
 
@@ -425,11 +425,6 @@ inline void update_n_as_extreme(int *pn_as_extreme,
 #endif
 
 
-uint64_t get_tower_stream(int tower_id) {
-  return (uint64_t) (tower_id + 1);
-}
-
-
 void combine_thread_results(const int nthreads,
                             const int n_towers,
                             const int n_sets,
@@ -579,68 +574,7 @@ void calc_ES_perm(SEXP n_same_sign,
   int *pn_as_extreme_threads = &n_as_extreme_threads[0];
 
   uint64_t _seed = dqrng::get_seed_from_r();
-  rng->seed(_seed, (uint64_t) 0);
-
-  // The first tower may be partially filled. The individual blocks in the tower
-  // may be complete, or the first block may be a partial one.
-  if (partial_tower_size != 0) {
-    const int partial_block_size = (partial_tower_size < BLOCK_SIZE) ?
-      partial_tower_size : (partial_tower_size % BLOCK_SIZE);
-
-    if (partial_block_size != 0) {
-      calc_ES_perm_internal(
-        *rng,
-        pES_perm_vec,
-        n_genes,
-        n_sizes,
-        partial_block_size,
-        pgene_data,
-        max_size,
-        sum_ranks,
-        punique_m,
-        pinv_w
-      );
-
-      update_n_as_extreme(
-        pn_as_extreme,
-        pperm_stats,
-        pES_perm_vec,
-        pES,
-        pES_bounds,
-        n_sizes,
-        partial_block_size
-      );
-    }
-
-    Rcpp::checkUserInterrupt();
-
-    const int n_blocks = partial_tower_size / BLOCK_SIZE;
-
-    for (int i = 0; i < n_blocks; ++i) {
-      calc_ES_perm_internal(
-        *rng,
-        pES_perm_vec,
-        n_genes,
-        n_sizes,
-        BLOCK_SIZE,
-        pgene_data,
-        max_size,
-        sum_ranks,
-        punique_m,
-        pinv_w
-      );
-
-      update_n_as_extreme(
-        pn_as_extreme,
-        pperm_stats,
-        pES_perm_vec,
-        pES,
-        pES_bounds,
-        n_sizes,
-        BLOCK_SIZE
-      );
-    }
-  }
+  global_rng->seed(_seed);
 
   const int n_blocks_per_tower = TOWER_SIZE / BLOCK_SIZE;
 
@@ -659,8 +593,8 @@ void calc_ES_perm(SEXP n_same_sign,
     for (int _tower_id = 0; _tower_id < hypertower_size; ++_tower_id) {
       const int thread_id = GET_THREAD_ID();
 
-      uint64_t tower_stream = get_tower_stream(tower_id + _tower_id);
-      auto rng_tower = rng->clone(tower_stream);
+      uint64_t tower_stream = (uint64_t) (tower_id + _tower_id);
+      auto rng_tower = global_rng->clone(tower_stream);
 
       // Pointers to thread-safe chunks of data
       float *pES_perm_vec_tower = pES_perm_vec + thread_id * BLOCK_SIZE * n_sizes;
@@ -704,8 +638,8 @@ void calc_ES_perm(SEXP n_same_sign,
   for (int _tower_id = 0; _tower_id < towers_remaining; ++_tower_id) {
     const int thread_id = GET_THREAD_ID();
 
-    uint64_t tower_stream = get_tower_stream(tower_id + _tower_id);
-    auto rng_tower = rng->clone(tower_stream);
+    uint64_t tower_stream = (uint64_t) (tower_id + _tower_id);
+    auto rng_tower = global_rng->clone(tower_stream);
 
     // Pointers to thread-safe chunks of data
     float *pES_perm_vec_tower = pES_perm_vec + thread_id * BLOCK_SIZE * n_sizes;
@@ -738,6 +672,67 @@ void calc_ES_perm(SEXP n_same_sign,
     }
   }
 
+  // The last tower may be partially filled. The individual blocks in the tower
+  // may be complete, or the first block may be a partial one.
+  if (partial_tower_size != 0) {
+    auto rng_partial_tower = global_rng->clone(n_towers);
+    const int partial_block_size = partial_tower_size % BLOCK_SIZE;
+
+    if (partial_block_size != 0) {
+      calc_ES_perm_internal(
+        *rng_partial_tower,
+        pES_perm_vec,
+        n_genes,
+        n_sizes,
+        partial_block_size,
+        pgene_data,
+        max_size,
+        sum_ranks,
+        punique_m,
+        pinv_w
+      );
+
+      update_n_as_extreme(
+        pn_as_extreme,
+        pperm_stats,
+        pES_perm_vec,
+        pES,
+        pES_bounds,
+        n_sizes,
+        partial_block_size
+      );
+    }
+
+    Rcpp::checkUserInterrupt();
+
+    const int n_blocks = partial_tower_size / BLOCK_SIZE;
+
+    for (int i = 0; i < n_blocks; ++i) {
+      calc_ES_perm_internal(
+        *rng_partial_tower,
+        pES_perm_vec,
+        n_genes,
+        n_sizes,
+        BLOCK_SIZE,
+        pgene_data,
+        max_size,
+        sum_ranks,
+        punique_m,
+        pinv_w
+      );
+
+      update_n_as_extreme(
+        pn_as_extreme,
+        pperm_stats,
+        pES_perm_vec,
+        pES,
+        pES_bounds,
+        n_sizes,
+        BLOCK_SIZE
+      );
+    }
+  }
+
   combine_thread_results(
     nthreads,
     n_towers,
@@ -759,7 +754,8 @@ void calc_ES_perm(SEXP n_same_sign,
 }
 
 
-inline void calc_ES_perm_dir_internal(float *pES_perm_vec,
+inline void calc_ES_perm_dir_internal(dqrng::random_64bit_generator &rng,
+                                      float *pES_perm_vec,
                                       float *pES_perm_down,
                                       float *pES_perm_up,
                                       const int n_genes,
@@ -780,7 +776,7 @@ inline void calc_ES_perm_dir_internal(float *pES_perm_vec,
   for (int b = 0; b < block_size; ++b) {
     std::vector<int> random_indices =
       dqrng::sample::sample<std::vector<int>, uint32_t>(
-          *rng, uint32_t(n_genes), uint32_t(max_size), false, 0
+          rng, uint32_t(n_genes), uint32_t(max_size), false, 0
       );
     const int *prandom_indices = &random_indices[0];
 
@@ -978,10 +974,11 @@ void calc_ES_perm_dir(SEXP n_same_sign,
   const int partial_block_size = nperm % BLOCK_SIZE;
 
   uint64_t _seed = dqrng::get_seed_from_r();
-  rng->seed(_seed);
+  global_rng->seed(_seed);
 
   if (partial_block_size != 0) {
     calc_ES_perm_dir_internal(
+      *global_rng,
       pES_perm_vec,
       pES_perm_down,
       pES_perm_up,
@@ -1017,6 +1014,7 @@ void calc_ES_perm_dir(SEXP n_same_sign,
     Rcpp::checkUserInterrupt();
 
     calc_ES_perm_dir_internal(
+      *global_rng,
       pES_perm_vec,
       pES_perm_down,
       pES_perm_up,
