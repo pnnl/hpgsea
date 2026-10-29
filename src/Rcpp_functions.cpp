@@ -8,7 +8,7 @@
   #include <omp.h>
   #define GET_THREAD_ID() omp_get_thread_num()
   #define OMP_MAX_THREADS omp_get_max_threads()
-#elif
+#else
   #define GET_THREAD_ID() 0
   #define OMP_MAX_THREADS 1
 #endif
