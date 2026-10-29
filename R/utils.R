@@ -55,6 +55,7 @@
                              min_size = 2L,
                              max_size = Inf,
                              sort = TRUE,
+                             nthreads = 1L,
                              n_genes) {
   if (
     !is.vector(alpha, mode = "numeric") ||
@@ -108,6 +109,19 @@
       is.na(sort)
   ) {
     stop("`sort` must be TRUE or FALSE.", call. = FALSE)
+  }
+
+  if (
+    !is.vector(nthreads, mode = "numeric") ||
+    length(nthreads) != 1L ||
+    is.na(nthreads) ||
+    nthreads < 0L ||
+    nthreads %% 1 != 0
+  ) {
+    stop(
+      "`nthreads` must be an integer >= 0.",
+      call. = FALSE
+    )
   }
 }
 
@@ -637,6 +651,7 @@
 #'
 #' @noRd
 .calc_ES_perm <- function(nperm = 1e5L,
+                          nthreads = 1L,
                           n_genes,
                           ES_list) {
   list2env(ES_list, envir = environment())
@@ -732,7 +747,8 @@
         max_size,
         sum_ranks,
         unique_m,
-        unique_w
+        unique_w,
+        nthreads
       )
     }
   }

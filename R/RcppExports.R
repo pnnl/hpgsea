@@ -174,8 +174,8 @@ NULL
 #' @noRd
 NULL
 
-.Cpp_calc_ES_perm <- function(n_same_sign, n_as_extreme, sum_ES_perm, nperm, ES_dbl, ES_end, y_dbl, r_dbl, max_size, Rsum_ranks, unique_m, unique_w) {
-    invisible(.Call(`_hpgsea_calc_ES_perm`, n_same_sign, n_as_extreme, sum_ES_perm, nperm, ES_dbl, ES_end, y_dbl, r_dbl, max_size, Rsum_ranks, unique_m, unique_w))
+.Cpp_calc_ES_perm <- function(n_same_sign, n_as_extreme, sum_ES_perm, nperm, ES_dbl, ES_end, y_dbl, r_dbl, max_size, Rsum_ranks, unique_m, unique_w, Rnthreads) {
+    invisible(.Call(`_hpgsea_calc_ES_perm`, n_same_sign, n_as_extreme, sum_ES_perm, nperm, ES_dbl, ES_end, y_dbl, r_dbl, max_size, Rsum_ranks, unique_m, unique_w, Rnthreads))
 }
 
 .Cpp_calc_ES_perm_dir <- function(n_same_sign, n_as_extreme, sum_ES_perm, nperm, ES_dbl, ES_end, y_dbl, r_dbl, max_size, Rsum_ranks, unique_m_up, unique_w_up, unique_m_down, unique_w_down, map_unique_to_pairs_up, map_unique_to_pairs_down) {

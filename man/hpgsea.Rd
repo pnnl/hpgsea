@@ -12,7 +12,8 @@ hpgsea(
   min_size = 2L,
   max_size = Inf,
   sort = TRUE,
-  alternative = c("two.sided", "less", "greater")
+  alternative = c("two.sided", "less", "greater"),
+  nthreads = 1L
 )
 }
 \arguments{
@@ -43,6 +44,10 @@ is recommended.}
 \item{alternative}{character; the alternative hypothesis. One of
 "\code{two.sided}" (default), "\code{less}", or "\code{greater}". The
 latter two will perform one-sided tests.}
+
+\item{nthreads}{integer; the number of threads to use for the permutation
+tests. If \code{nthreads = 0L}, it will be treated as
+\code{parallel::detectCores()}.}
 }
 \value{
 A \code{data.frame} with the following columns:
