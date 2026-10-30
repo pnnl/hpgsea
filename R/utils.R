@@ -732,7 +732,8 @@
         unique_m_down,
         unique_w_down,
         map_unique_to_pairs_up,
-        map_unique_to_pairs_down
+        map_unique_to_pairs_down,
+        nthreads
       )
     } else {
       .Cpp_calc_ES_perm(
