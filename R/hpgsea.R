@@ -26,7 +26,7 @@
 #'   latter two will perform one-sided tests.
 #' @param nthreads integer; the number of threads to use for the permutation
 #'   tests. If \code{nthreads = 0L}, it will be treated as
-#'   \code{parallel::detectCores()}.
+#'   \code{parallel::detectCores() - 2L}.
 #'
 #' @returns A \code{data.frame} with the following columns:
 #'

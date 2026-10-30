@@ -47,7 +47,7 @@ latter two will perform one-sided tests.}
 
 \item{nthreads}{integer; the number of threads to use for the permutation
 tests. If \code{nthreads = 0L}, it will be treated as
-\code{parallel::detectCores()}.}
+\code{parallel::detectCores() - 2L}.}
 }
 \value{
 A \code{data.frame} with the following columns:

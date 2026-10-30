@@ -515,7 +515,7 @@ void calc_ES_perm(SEXP n_same_sign,
   const int n_towers = nperm / TOWER_SIZE;
   int nthreads = MIN(OMP_MAX_THREADS, INTEGER(Rnthreads)[0]);
   nthreads = n_towers < nthreads ? MAX(n_towers, 1) : nthreads;
-  nthreads = (nthreads == 0) ? MAX(1, MIN(n_towers, OMP_MAX_THREADS)) : nthreads;
+  nthreads = (nthreads == 0) ? MAX(1, MIN(n_towers, OMP_MAX_THREADS - 2)) : nthreads;
 
   int *pn_same_sign = INTEGER(n_same_sign);
   int *pn_as_extreme = INTEGER(n_as_extreme);
@@ -894,7 +894,7 @@ void calc_ES_perm_dir(SEXP n_same_sign,
   const int n_towers = nperm / TOWER_SIZE;
   int nthreads = MIN(OMP_MAX_THREADS, INTEGER(Rnthreads)[0]);
   nthreads = n_towers < nthreads ? MAX(n_towers, 1) : nthreads;
-  nthreads = (nthreads == 0) ? MAX(1, MIN(n_towers, OMP_MAX_THREADS)) : nthreads;
+  nthreads = (nthreads == 0) ? MAX(1, MIN(n_towers, OMP_MAX_THREADS - 2)) : nthreads;
 
   int *pn_same_sign = INTEGER(n_same_sign);
   int *pn_as_extreme = INTEGER(n_as_extreme);
