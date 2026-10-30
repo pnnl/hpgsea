@@ -24,6 +24,9 @@
 #' @param alternative character; the alternative hypothesis. One of
 #'   "\code{two.sided}" (default), "\code{less}", or "\code{greater}". The
 #'   latter two will perform one-sided tests.
+#' @param nthreads integer; the number of threads to use for the permutation
+#'   tests. If \code{nthreads = 0L}, it will be treated as
+#'   \code{parallel::detectCores() - 2L}.
 #'
 #' @returns A \code{data.frame} with the following columns:
 #'
@@ -111,7 +114,8 @@ hpgsea <- function(stats,
                    min_size = 2L,
                    max_size = Inf,
                    sort = TRUE,
-                   alternative = c("two.sided", "less", "greater")) {
+                   alternative = c("two.sided", "less", "greater"),
+                   nthreads = 1L) {
   alternative <- match.arg(
     arg = alternative,
     choices = c("two.sided", "less", "greater")
@@ -126,6 +130,7 @@ hpgsea <- function(stats,
     min_size = min_size,
     max_size = max_size,
     sort = sort,
+    nthreads = nthreads,
     n_genes = n_genes
   )
 
@@ -140,6 +145,7 @@ hpgsea <- function(stats,
 
   tab <- .calc_ES_perm(
     nperm = nperm,
+    nthreads = as.integer(nthreads),
     n_genes = n_genes,
     ES_list = ES_list
   )

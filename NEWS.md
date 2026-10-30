@@ -12,6 +12,7 @@
 - Greatly reduced memory usage and slightly improved runtime by removing the need for incidence matrices. This also led to the removal of the _Matrix_ and _RcppArmadillo_ packages from Imports.
 - Added parameter `alternative` to `hpgsea` to perform one-sided hypothesis tests.
 - Added parameter `max_size` to `hpgsea` to limit the maximum size of sets that will be tested.
+- Added parameter `nthreads` to `hpgsea` and parallelized the permutation tests with OpenMP.
 - Added function `read_gmt`, which reads a named list of gene sets from a Gene Matrix Transposed (GMT) file.
 
 ## BUGFIXES

@@ -4,10 +4,27 @@
 #include <dqrng_sample.h>
 #include <dqrng.h>
 
-#define BLOCK_SIZE 200
+#ifdef _OPENMP
+  #include <omp.h>
+  #define GET_THREAD_ID() omp_get_thread_num()
+  #define OMP_MAX_THREADS omp_get_max_threads()
+#else
+  #define GET_THREAD_ID() 0
+  #define OMP_MAX_THREADS 1
+#endif
+
+// [[Rcpp::plugins(openmp)]]
+
+#define BLOCK_SIZE 200 // permutations per block
+#define TOWER_SIZE 10000 // permutations per tower
+#define TOWERS_PER_HYPERTOWER 5
+
 #define USE_SIMD
 
-dqrng::rng64_t rng = dqrng::generator();
+#define MIN(x, y) ((x) < (y) ? (x) : (y))
+#define MAX(x, y) ((x) > (y) ? (x) : (y))
+
+dqrng::rng64_t global_rng = dqrng::generator();
 
 // Gene-level values
 typedef struct {
@@ -156,7 +173,8 @@ inline void update_output_vectors(int *pn_same_sign,
 }
 
 
-inline void calc_ES_perm_internal(float *pES_perm_vec,
+inline void calc_ES_perm_internal(dqrng::random_64bit_generator &rng,
+                                  float *pES_perm_vec,
                                   const int n_genes,
                                   const int n_sizes,
                                   const int block_size,
@@ -166,11 +184,9 @@ inline void calc_ES_perm_internal(float *pES_perm_vec,
                                   const int *punique_m,
                                   const float *pinv_w) {
   for (int b = 0; b < block_size; ++b) {
-    // Same idea as dqrng::dqsample_int(), but the overhead of indexing the
-    // std::vector is much lower than indexing an Rcpp::IntegerVector
     std::vector<int> random_indices =
       dqrng::sample::sample<std::vector<int>, uint32_t>(
-        *rng, uint32_t(n_genes), uint32_t(max_size), false, 0
+        rng, uint32_t(n_genes), uint32_t(max_size), false, 0
       );
     const int *prandom_indices = &random_indices[0];
 
@@ -409,6 +425,39 @@ inline void update_n_as_extreme(int *pn_as_extreme,
 #endif
 
 
+void combine_thread_results(const int nthreads,
+                            const int n_towers,
+                            const int n_sets,
+                            const int n_sizes,
+                            PermStats *pperm_stats,
+                            int *pn_as_extreme_threads,
+                            int *pn_as_extreme) {
+  for (int j = 1; j < nthreads; ++j) {
+    const int offset1 = n_sizes * j;
+
+    for (int i = 0; i < n_sizes; ++i) {
+      pperm_stats[i].n_negative += pperm_stats[i + offset1].n_negative;
+      pperm_stats[i].sum_negative += pperm_stats[i + offset1].sum_negative;
+      pperm_stats[i].sum_positive += pperm_stats[i + offset1].sum_positive;
+    }
+  }
+
+  for (int j = 1; j < nthreads; ++j) {
+    const int offset2 = n_sets * j;
+
+    for (int i = 0; i < n_sets; ++i) {
+      pn_as_extreme_threads[i] += pn_as_extreme_threads[i + offset2];
+    }
+  }
+
+  if (n_towers != 0) {
+    for (int i = 0; i < n_sets; ++i) {
+      pn_as_extreme[i] += pn_as_extreme_threads[i];
+    }
+  }
+}
+
+
 //' @title Permutation Tests
 //'
 //' @description Calculate permutation enrichment scores and update vectors
@@ -460,8 +509,14 @@ void calc_ES_perm(SEXP n_same_sign,
                   const int max_size,
                   const SEXP Rsum_ranks,
                   const SEXP unique_m,
-                  const SEXP unique_w)
+                  const SEXP unique_w,
+                  const SEXP Rnthreads)
 {
+  const int n_towers = nperm / TOWER_SIZE;
+  int nthreads = MIN(OMP_MAX_THREADS, INTEGER(Rnthreads)[0]);
+  nthreads = n_towers < nthreads ? MAX(n_towers, 1) : nthreads;
+  nthreads = (nthreads == 0) ? MAX(1, MIN(n_towers, OMP_MAX_THREADS - 2)) : nthreads;
+
   int *pn_same_sign = INTEGER(n_same_sign);
   int *pn_as_extreme = INTEGER(n_as_extreme);
   double *psum_ES_perm = REAL(sum_ES_perm);
@@ -490,7 +545,7 @@ void calc_ES_perm(SEXP n_same_sign,
     pgene_data[i].y = (float) py_dbl[i];
   }
 
-  std::vector<PermStats> perm_stats(n_sizes);
+  std::vector<PermStats> perm_stats(n_sizes * nthreads);
   PermStats *pperm_stats = &perm_stats[0];
 
   std::vector<ESBounds> ES_bounds(n_sizes);
@@ -509,65 +564,183 @@ void calc_ES_perm(SEXP n_same_sign,
     pinv_w[i] = (float) (1.0 / punique_w[i]);
   }
 
-  std::vector<float> ES_perm_vec(BLOCK_SIZE * n_sizes);
+  std::vector<float> ES_perm_vec(n_sizes * BLOCK_SIZE * nthreads);
   float *pES_perm_vec = &ES_perm_vec[0];
 
-  const int partial_block_size = nperm % BLOCK_SIZE;
+  std::vector<int> n_as_extreme_threads(n_sets * nthreads);
+  int *pn_as_extreme_threads = &n_as_extreme_threads[0];
 
   uint64_t _seed = dqrng::get_seed_from_r();
-  rng->seed(_seed);
+  global_rng->seed(_seed);
 
-  if (partial_block_size != 0) {
-    calc_ES_perm_internal(
-      pES_perm_vec,
-      n_genes,
-      n_sizes,
-      partial_block_size,
-      pgene_data,
-      max_size,
-      sum_ranks,
-      punique_m,
-      pinv_w
-    );
+  const int n_blocks_per_tower = TOWER_SIZE / BLOCK_SIZE;
 
-    update_n_as_extreme(
-      pn_as_extreme,
-      pperm_stats,
-      pES_perm_vec,
-      pES,
-      pES_bounds,
-      n_sizes,
-      partial_block_size
-    );
-  }
+  int tower_id = 0;
+  int towers_remaining = n_towers;
 
-  const int n_blocks = nperm / BLOCK_SIZE;
+  // I create hypertowers (collections of towers) because
+  // Rcpp::checkUserInterrupt() must be called outside of the OpenMP for loop.
+  const int hypertower_size = nthreads * TOWERS_PER_HYPERTOWER;
 
-  for (int i = 0; i < n_blocks; ++i) {
+  // Complete hypertowers
+  while (towers_remaining >= hypertower_size) {
     Rcpp::checkUserInterrupt();
 
-    calc_ES_perm_internal(
-      pES_perm_vec,
-      n_genes,
-      n_sizes,
-      BLOCK_SIZE,
-      pgene_data,
-      max_size,
-      sum_ranks,
-      punique_m,
-      pinv_w
-    );
+    #pragma omp parallel for num_threads(nthreads)
+    for (int _tower_id = 0; _tower_id < hypertower_size; ++_tower_id) {
+      const int thread_id = GET_THREAD_ID();
 
-    update_n_as_extreme(
-      pn_as_extreme,
-      pperm_stats,
-      pES_perm_vec,
-      pES,
-      pES_bounds,
-      n_sizes,
-      BLOCK_SIZE
-    );
+      uint64_t tower_stream = (uint64_t) (tower_id + _tower_id);
+      auto rng_tower = global_rng->clone(tower_stream);
+
+      // Pointers to thread-safe chunks of data
+      float *pES_perm_vec_tower = pES_perm_vec + thread_id * BLOCK_SIZE * n_sizes;
+      PermStats *pperm_stats_tower = pperm_stats + thread_id * n_sizes;
+      int *pn_as_extreme_tower = pn_as_extreme_threads + thread_id * n_sets;
+
+      for (int i = 0; i < n_blocks_per_tower; ++i) {
+        calc_ES_perm_internal(
+          *rng_tower,
+          pES_perm_vec_tower,
+          n_genes,
+          n_sizes,
+          BLOCK_SIZE,
+          pgene_data,
+          max_size,
+          sum_ranks,
+          punique_m,
+          pinv_w
+        );
+
+        update_n_as_extreme(
+          pn_as_extreme_tower,
+          pperm_stats_tower,
+          pES_perm_vec_tower,
+          pES,
+          pES_bounds,
+          n_sizes,
+          BLOCK_SIZE
+        );
+      }
+    }
+
+    tower_id += hypertower_size;
+    towers_remaining -= hypertower_size;
   }
+
+  Rcpp::checkUserInterrupt();
+
+  // Partial hypertower
+  #pragma omp parallel for num_threads(nthreads)
+  for (int _tower_id = 0; _tower_id < towers_remaining; ++_tower_id) {
+    const int thread_id = GET_THREAD_ID();
+
+    uint64_t tower_stream = (uint64_t) (tower_id + _tower_id);
+    auto rng_tower = global_rng->clone(tower_stream);
+
+    // Pointers to thread-safe chunks of data
+    float *pES_perm_vec_tower = pES_perm_vec + thread_id * BLOCK_SIZE * n_sizes;
+    PermStats *pperm_stats_tower = pperm_stats + thread_id * n_sizes;
+    int *pn_as_extreme_tower = pn_as_extreme_threads + thread_id * n_sets;
+
+    for (int i = 0; i < n_blocks_per_tower; ++i) {
+      calc_ES_perm_internal(
+        *rng_tower,
+        pES_perm_vec_tower,
+        n_genes,
+        n_sizes,
+        BLOCK_SIZE,
+        pgene_data,
+        max_size,
+        sum_ranks,
+        punique_m,
+        pinv_w
+      );
+
+      update_n_as_extreme(
+        pn_as_extreme_tower,
+        pperm_stats_tower,
+        pES_perm_vec_tower,
+        pES,
+        pES_bounds,
+        n_sizes,
+        BLOCK_SIZE
+      );
+    }
+  }
+
+  const int partial_tower_size = nperm % TOWER_SIZE;
+
+  // The last tower may be partially filled. The individual blocks in the tower
+  // may be complete, or the first block may be a partial one.
+  if (partial_tower_size != 0) {
+    auto rng_partial_tower = global_rng->clone(n_towers);
+    const int partial_block_size = partial_tower_size % BLOCK_SIZE;
+
+    if (partial_block_size != 0) {
+      calc_ES_perm_internal(
+        *rng_partial_tower,
+        pES_perm_vec,
+        n_genes,
+        n_sizes,
+        partial_block_size,
+        pgene_data,
+        max_size,
+        sum_ranks,
+        punique_m,
+        pinv_w
+      );
+
+      update_n_as_extreme(
+        pn_as_extreme,
+        pperm_stats,
+        pES_perm_vec,
+        pES,
+        pES_bounds,
+        n_sizes,
+        partial_block_size
+      );
+    }
+
+    Rcpp::checkUserInterrupt();
+
+    const int n_blocks = partial_tower_size / BLOCK_SIZE;
+
+    for (int i = 0; i < n_blocks; ++i) {
+      calc_ES_perm_internal(
+        *rng_partial_tower,
+        pES_perm_vec,
+        n_genes,
+        n_sizes,
+        BLOCK_SIZE,
+        pgene_data,
+        max_size,
+        sum_ranks,
+        punique_m,
+        pinv_w
+      );
+
+      update_n_as_extreme(
+        pn_as_extreme,
+        pperm_stats,
+        pES_perm_vec,
+        pES,
+        pES_bounds,
+        n_sizes,
+        BLOCK_SIZE
+      );
+    }
+  }
+
+  combine_thread_results(
+    nthreads,
+    n_towers,
+    n_sets,
+    n_sizes,
+    pperm_stats,
+    pn_as_extreme_threads,
+    pn_as_extreme
+  );
 
   update_output_vectors(
     pn_same_sign,
@@ -580,7 +753,8 @@ void calc_ES_perm(SEXP n_same_sign,
 }
 
 
-inline void calc_ES_perm_dir_internal(float *pES_perm_vec,
+inline void calc_ES_perm_dir_internal(dqrng::random_64bit_generator &rng,
+                                      float *pES_perm_vec,
                                       float *pES_perm_down,
                                       float *pES_perm_up,
                                       const int n_genes,
@@ -601,7 +775,7 @@ inline void calc_ES_perm_dir_internal(float *pES_perm_vec,
   for (int b = 0; b < block_size; ++b) {
     std::vector<int> random_indices =
       dqrng::sample::sample<std::vector<int>, uint32_t>(
-          *rng, uint32_t(n_genes), uint32_t(max_size), false, 0
+          rng, uint32_t(n_genes), uint32_t(max_size), false, 0
       );
     const int *prandom_indices = &random_indices[0];
 
@@ -714,8 +888,14 @@ void calc_ES_perm_dir(SEXP n_same_sign,
                       const SEXP unique_m_down,
                       const SEXP unique_w_down,
                       SEXP map_unique_to_pairs_up,
-                      SEXP map_unique_to_pairs_down)
+                      SEXP map_unique_to_pairs_down,
+                      const SEXP Rnthreads)
 {
+  const int n_towers = nperm / TOWER_SIZE;
+  int nthreads = MIN(OMP_MAX_THREADS, INTEGER(Rnthreads)[0]);
+  nthreads = n_towers < nthreads ? MAX(n_towers, 1) : nthreads;
+  nthreads = (nthreads == 0) ? MAX(1, MIN(n_towers, OMP_MAX_THREADS - 2)) : nthreads;
+
   int *pn_same_sign = INTEGER(n_same_sign);
   int *pn_as_extreme = INTEGER(n_as_extreme);
   double *psum_ES_perm = REAL(sum_ES_perm);
@@ -758,7 +938,7 @@ void calc_ES_perm_dir(SEXP n_same_sign,
     ppair_map[i].down = pmap_unique_to_pairs_down[i] - 1;
   }
 
-  std::vector<PermStats> perm_stats(n_pairs);
+  std::vector<PermStats> perm_stats(n_pairs * nthreads);
   PermStats *pperm_stats = &perm_stats[0];
 
   std::vector<ESBounds> ES_bounds(n_pairs);
@@ -789,83 +969,219 @@ void calc_ES_perm_dir(SEXP n_same_sign,
     pinv_w_down[i] = (float) (1.0 / punique_w_down[i]);
   }
 
-  std::vector<float> ES_perm_up(BLOCK_SIZE * n_sizes_up);
-  std::vector<float> ES_perm_down(BLOCK_SIZE * n_sizes_down);
-  std::vector<float> ES_perm_vec(BLOCK_SIZE * n_pairs);
+  std::vector<float> ES_perm_up(n_sizes_up * BLOCK_SIZE * nthreads);
+  std::vector<float> ES_perm_down(n_sizes_down * BLOCK_SIZE * nthreads);
+  std::vector<float> ES_perm_vec(n_pairs * BLOCK_SIZE * nthreads);
   float *pES_perm_up = &ES_perm_up[0];
   float *pES_perm_down = &ES_perm_down[0];
   float *pES_perm_vec = &ES_perm_vec[0];
 
-  const int partial_block_size = nperm % BLOCK_SIZE;
+  std::vector<int> n_as_extreme_threads(n_sets * nthreads);
+  int *pn_as_extreme_threads = &n_as_extreme_threads[0];
 
   uint64_t _seed = dqrng::get_seed_from_r();
-  rng->seed(_seed);
+  global_rng->seed(_seed);
 
-  if (partial_block_size != 0) {
-    calc_ES_perm_dir_internal(
-      pES_perm_vec,
-      pES_perm_down,
-      pES_perm_up,
-      n_genes,
-      n_sizes_down,
-      n_sizes_up,
-      n_pairs,
-      partial_block_size,
-      pgene_data,
-      max_size,
-      sum_ranks,
-      punique_m_down,
-      punique_m_up,
-      pinv_w_up,
-      pinv_w_down,
-      ppair_map
-    );
+  const int n_blocks_per_tower = TOWER_SIZE / BLOCK_SIZE;
 
-    update_n_as_extreme(
-      pn_as_extreme,
-      pperm_stats,
-      pES_perm_vec,
-      pES,
-      pES_bounds,
-      n_pairs,
-      partial_block_size
-    );
-  }
+  // I create hypertowers (collections of towers) because
+  // Rcpp::checkUserInterrupt() must be called outside of the OpenMP for loop.
+  const int hypertower_size = nthreads * TOWERS_PER_HYPERTOWER;
 
-  const int n_blocks = nperm / BLOCK_SIZE;
+  int tower_id = 0;
+  int towers_remaining = n_towers;
 
-  for (int i = 0; i < n_blocks; ++i) {
+  // Complete hypertowers
+  while (towers_remaining >= hypertower_size) {
     Rcpp::checkUserInterrupt();
 
-    calc_ES_perm_dir_internal(
-      pES_perm_vec,
-      pES_perm_down,
-      pES_perm_up,
-      n_genes,
-      n_sizes_down,
-      n_sizes_up,
-      n_pairs,
-      BLOCK_SIZE,
-      pgene_data,
-      max_size,
-      sum_ranks,
-      punique_m_down,
-      punique_m_up,
-      pinv_w_up,
-      pinv_w_down,
-      ppair_map
-    );
+    #pragma omp parallel for num_threads(nthreads)
+    for (int _tower_id = 0; _tower_id < hypertower_size; ++_tower_id) {
+      const int thread_id = GET_THREAD_ID();
 
-    update_n_as_extreme(
-      pn_as_extreme,
-      pperm_stats,
-      pES_perm_vec,
-      pES,
-      pES_bounds,
-      n_pairs,
-      BLOCK_SIZE
-    );
+      uint64_t tower_stream = (uint64_t) (tower_id + _tower_id);
+      auto rng_tower = global_rng->clone(tower_stream);
+
+      // Pointers to thread-safe chunks of data
+      float *pES_perm_down_tower = pES_perm_down + thread_id * BLOCK_SIZE * n_sizes_down;
+      float *pES_perm_up_tower = pES_perm_up + thread_id * BLOCK_SIZE * n_sizes_up;
+      float *pES_perm_vec_tower = pES_perm_vec + thread_id * BLOCK_SIZE * n_pairs;
+      PermStats *pperm_stats_tower = pperm_stats + thread_id * n_pairs;
+      int *pn_as_extreme_tower = pn_as_extreme_threads + thread_id * n_sets;
+
+      for (int i = 0; i < n_blocks_per_tower; ++i) {
+        calc_ES_perm_dir_internal(
+          *rng_tower,
+          pES_perm_vec_tower,
+          pES_perm_down_tower,
+          pES_perm_up_tower,
+          n_genes,
+          n_sizes_down,
+          n_sizes_up,
+          n_pairs,
+          BLOCK_SIZE,
+          pgene_data,
+          max_size,
+          sum_ranks,
+          punique_m_down,
+          punique_m_up,
+          pinv_w_up,
+          pinv_w_down,
+          ppair_map
+        );
+
+        update_n_as_extreme(
+          pn_as_extreme_tower,
+          pperm_stats_tower,
+          pES_perm_vec,
+          pES,
+          pES_bounds,
+          n_pairs,
+          BLOCK_SIZE
+        );
+      }
+    }
+
+    tower_id += hypertower_size;
+    towers_remaining -= hypertower_size;
   }
+
+  Rcpp::checkUserInterrupt();
+
+  // Partial hypertower
+  #pragma omp parallel for num_threads(nthreads)
+  for (int _tower_id = 0; _tower_id < towers_remaining; ++_tower_id) {
+    const int thread_id = GET_THREAD_ID();
+
+    uint64_t tower_stream = (uint64_t) (tower_id + _tower_id);
+    auto rng_tower = global_rng->clone(tower_stream);
+
+    // Pointers to thread-safe chunks of data
+    float *pES_perm_down_tower = pES_perm_down + thread_id * BLOCK_SIZE * n_sizes_down;
+    float *pES_perm_up_tower = pES_perm_up + thread_id * BLOCK_SIZE * n_sizes_up;
+    float *pES_perm_vec_tower = pES_perm_vec + thread_id * BLOCK_SIZE * n_pairs;
+    PermStats *pperm_stats_tower = pperm_stats + thread_id * n_pairs;
+    int *pn_as_extreme_tower = pn_as_extreme_threads + thread_id * n_sets;
+
+    for (int i = 0; i < n_blocks_per_tower; ++i) {
+      calc_ES_perm_dir_internal(
+        *rng_tower,
+        pES_perm_vec_tower,
+        pES_perm_down_tower,
+        pES_perm_up_tower,
+        n_genes,
+        n_sizes_down,
+        n_sizes_up,
+        n_pairs,
+        BLOCK_SIZE,
+        pgene_data,
+        max_size,
+        sum_ranks,
+        punique_m_down,
+        punique_m_up,
+        pinv_w_up,
+        pinv_w_down,
+        ppair_map
+      );
+
+      update_n_as_extreme(
+        pn_as_extreme_tower,
+        pperm_stats_tower,
+        pES_perm_vec,
+        pES,
+        pES_bounds,
+        n_pairs,
+        BLOCK_SIZE
+      );
+    }
+  }
+
+  const int partial_tower_size = nperm % TOWER_SIZE;
+
+  // The last tower may be partially filled. The individual blocks in the tower
+  // may be complete, or the first block may be a partial one.
+  if (partial_tower_size != 0) {
+    auto rng_partial_tower = global_rng->clone(n_towers);
+    const int partial_block_size = partial_tower_size % BLOCK_SIZE;
+
+    if (partial_block_size != 0) {
+      calc_ES_perm_dir_internal(
+        *rng_partial_tower,
+        pES_perm_vec,
+        pES_perm_down,
+        pES_perm_up,
+        n_genes,
+        n_sizes_down,
+        n_sizes_up,
+        n_pairs,
+        partial_block_size,
+        pgene_data,
+        max_size,
+        sum_ranks,
+        punique_m_down,
+        punique_m_up,
+        pinv_w_up,
+        pinv_w_down,
+        ppair_map
+      );
+
+      update_n_as_extreme(
+        pn_as_extreme_threads,
+        pperm_stats,
+        pES_perm_vec,
+        pES,
+        pES_bounds,
+        n_pairs,
+        partial_block_size
+      );
+    }
+
+    Rcpp::checkUserInterrupt();
+
+    const int n_blocks = partial_tower_size / BLOCK_SIZE;
+
+    for (int i = 0; i < n_blocks; ++i) {
+      calc_ES_perm_dir_internal(
+        *rng_partial_tower,
+        pES_perm_vec,
+        pES_perm_down,
+        pES_perm_up,
+        n_genes,
+        n_sizes_down,
+        n_sizes_up,
+        n_pairs,
+        BLOCK_SIZE,
+        pgene_data,
+        max_size,
+        sum_ranks,
+        punique_m_down,
+        punique_m_up,
+        pinv_w_up,
+        pinv_w_down,
+        ppair_map
+      );
+
+      update_n_as_extreme(
+        pn_as_extreme_threads,
+        pperm_stats,
+        pES_perm_vec,
+        pES,
+        pES_bounds,
+        n_pairs,
+        BLOCK_SIZE
+      );
+    }
+  }
+
+  combine_thread_results(
+    nthreads,
+    n_towers,
+    n_sets,
+    n_pairs,
+    pperm_stats,
+    pn_as_extreme_threads,
+    pn_as_extreme
+  );
 
   update_output_vectors(
     pn_same_sign,

@@ -11,8 +11,8 @@ Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
 // calc_ES_perm
-void calc_ES_perm(SEXP n_same_sign, SEXP n_as_extreme, SEXP sum_ES_perm, const int nperm, const SEXP ES_dbl, const SEXP ES_end, const SEXP y_dbl, const SEXP r_dbl, const int max_size, const SEXP Rsum_ranks, const SEXP unique_m, const SEXP unique_w);
-RcppExport SEXP _hpgsea_calc_ES_perm(SEXP n_same_signSEXP, SEXP n_as_extremeSEXP, SEXP sum_ES_permSEXP, SEXP npermSEXP, SEXP ES_dblSEXP, SEXP ES_endSEXP, SEXP y_dblSEXP, SEXP r_dblSEXP, SEXP max_sizeSEXP, SEXP Rsum_ranksSEXP, SEXP unique_mSEXP, SEXP unique_wSEXP) {
+void calc_ES_perm(SEXP n_same_sign, SEXP n_as_extreme, SEXP sum_ES_perm, const int nperm, const SEXP ES_dbl, const SEXP ES_end, const SEXP y_dbl, const SEXP r_dbl, const int max_size, const SEXP Rsum_ranks, const SEXP unique_m, const SEXP unique_w, const SEXP Rnthreads);
+RcppExport SEXP _hpgsea_calc_ES_perm(SEXP n_same_signSEXP, SEXP n_as_extremeSEXP, SEXP sum_ES_permSEXP, SEXP npermSEXP, SEXP ES_dblSEXP, SEXP ES_endSEXP, SEXP y_dblSEXP, SEXP r_dblSEXP, SEXP max_sizeSEXP, SEXP Rsum_ranksSEXP, SEXP unique_mSEXP, SEXP unique_wSEXP, SEXP RnthreadsSEXP) {
 BEGIN_RCPP
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< SEXP >::type n_same_sign(n_same_signSEXP);
@@ -27,13 +27,14 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const SEXP >::type Rsum_ranks(Rsum_ranksSEXP);
     Rcpp::traits::input_parameter< const SEXP >::type unique_m(unique_mSEXP);
     Rcpp::traits::input_parameter< const SEXP >::type unique_w(unique_wSEXP);
-    calc_ES_perm(n_same_sign, n_as_extreme, sum_ES_perm, nperm, ES_dbl, ES_end, y_dbl, r_dbl, max_size, Rsum_ranks, unique_m, unique_w);
+    Rcpp::traits::input_parameter< const SEXP >::type Rnthreads(RnthreadsSEXP);
+    calc_ES_perm(n_same_sign, n_as_extreme, sum_ES_perm, nperm, ES_dbl, ES_end, y_dbl, r_dbl, max_size, Rsum_ranks, unique_m, unique_w, Rnthreads);
     return R_NilValue;
 END_RCPP
 }
 // calc_ES_perm_dir
-void calc_ES_perm_dir(SEXP n_same_sign, SEXP n_as_extreme, SEXP sum_ES_perm, const int nperm, const SEXP ES_dbl, const SEXP ES_end, const SEXP y_dbl, const SEXP r_dbl, const int max_size, const SEXP Rsum_ranks, const SEXP unique_m_up, const SEXP unique_w_up, const SEXP unique_m_down, const SEXP unique_w_down, SEXP map_unique_to_pairs_up, SEXP map_unique_to_pairs_down);
-RcppExport SEXP _hpgsea_calc_ES_perm_dir(SEXP n_same_signSEXP, SEXP n_as_extremeSEXP, SEXP sum_ES_permSEXP, SEXP npermSEXP, SEXP ES_dblSEXP, SEXP ES_endSEXP, SEXP y_dblSEXP, SEXP r_dblSEXP, SEXP max_sizeSEXP, SEXP Rsum_ranksSEXP, SEXP unique_m_upSEXP, SEXP unique_w_upSEXP, SEXP unique_m_downSEXP, SEXP unique_w_downSEXP, SEXP map_unique_to_pairs_upSEXP, SEXP map_unique_to_pairs_downSEXP) {
+void calc_ES_perm_dir(SEXP n_same_sign, SEXP n_as_extreme, SEXP sum_ES_perm, const int nperm, const SEXP ES_dbl, const SEXP ES_end, const SEXP y_dbl, const SEXP r_dbl, const int max_size, const SEXP Rsum_ranks, const SEXP unique_m_up, const SEXP unique_w_up, const SEXP unique_m_down, const SEXP unique_w_down, SEXP map_unique_to_pairs_up, SEXP map_unique_to_pairs_down, const SEXP Rnthreads);
+RcppExport SEXP _hpgsea_calc_ES_perm_dir(SEXP n_same_signSEXP, SEXP n_as_extremeSEXP, SEXP sum_ES_permSEXP, SEXP npermSEXP, SEXP ES_dblSEXP, SEXP ES_endSEXP, SEXP y_dblSEXP, SEXP r_dblSEXP, SEXP max_sizeSEXP, SEXP Rsum_ranksSEXP, SEXP unique_m_upSEXP, SEXP unique_w_upSEXP, SEXP unique_m_downSEXP, SEXP unique_w_downSEXP, SEXP map_unique_to_pairs_upSEXP, SEXP map_unique_to_pairs_downSEXP, SEXP RnthreadsSEXP) {
 BEGIN_RCPP
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< SEXP >::type n_same_sign(n_same_signSEXP);
@@ -52,7 +53,8 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const SEXP >::type unique_w_down(unique_w_downSEXP);
     Rcpp::traits::input_parameter< SEXP >::type map_unique_to_pairs_up(map_unique_to_pairs_upSEXP);
     Rcpp::traits::input_parameter< SEXP >::type map_unique_to_pairs_down(map_unique_to_pairs_downSEXP);
-    calc_ES_perm_dir(n_same_sign, n_as_extreme, sum_ES_perm, nperm, ES_dbl, ES_end, y_dbl, r_dbl, max_size, Rsum_ranks, unique_m_up, unique_w_up, unique_m_down, unique_w_down, map_unique_to_pairs_up, map_unique_to_pairs_down);
+    Rcpp::traits::input_parameter< const SEXP >::type Rnthreads(RnthreadsSEXP);
+    calc_ES_perm_dir(n_same_sign, n_as_extreme, sum_ES_perm, nperm, ES_dbl, ES_end, y_dbl, r_dbl, max_size, Rsum_ranks, unique_m_up, unique_w_up, unique_m_down, unique_w_down, map_unique_to_pairs_up, map_unique_to_pairs_down, Rnthreads);
     return R_NilValue;
 END_RCPP
 }
@@ -64,8 +66,8 @@ RcppExport SEXP _C_remove_extreme_gene_sets(SEXP, SEXP, SEXP);
 RcppExport SEXP _C_rep_int(SEXP, SEXP);
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_hpgsea_calc_ES_perm", (DL_FUNC) &_hpgsea_calc_ES_perm, 12},
-    {"_hpgsea_calc_ES_perm_dir", (DL_FUNC) &_hpgsea_calc_ES_perm_dir, 16},
+    {"_hpgsea_calc_ES_perm", (DL_FUNC) &_hpgsea_calc_ES_perm, 13},
+    {"_hpgsea_calc_ES_perm_dir", (DL_FUNC) &_hpgsea_calc_ES_perm_dir, 17},
     {"_C_calc_ES",                  (DL_FUNC) &_C_calc_ES,                  7},
     {"_C_group_sizes",              (DL_FUNC) &_C_group_sizes,              2},
     {"_C_pair_szudzik",             (DL_FUNC) &_C_pair_szudzik,             2},
