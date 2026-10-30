@@ -156,7 +156,7 @@ print(sessionInfo(), locale = FALSE, tzone = FALSE)
     ## [1] stats     graphics  grDevices utils     datasets  methods   base     
     ## 
     ## other attached packages:
-    ## [1] hpgsea_0.1.0.9037
+    ## [1] hpgsea_0.1.0.9038
     ## 
     ## loaded via a namespace (and not attached):
     ##  [1] digest_0.6.39       dqrng_0.4.1         collapse_2.1.8     
