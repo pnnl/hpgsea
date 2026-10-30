@@ -425,8 +425,17 @@ inline void update_n_as_extreme(int *pn_as_extreme,
 #endif
 
 
+int get_nthreads(const SEXP Rnthreads,
+                 const int n_towers) {
+  int nthreads = MIN(OMP_MAX_THREADS, INTEGER(Rnthreads)[0]);
+  nthreads = n_towers < nthreads ? MAX(n_towers, 1) : nthreads;
+  nthreads = (nthreads == 0) ? MAX(1, MIN(n_towers, OMP_MAX_THREADS - 2)) : nthreads;
+
+  return nthreads;
+}
+
+
 void combine_thread_results(const int nthreads,
-                            const int n_towers,
                             const int n_sets,
                             const int n_sizes,
                             PermStats *pperm_stats,
@@ -442,17 +451,11 @@ void combine_thread_results(const int nthreads,
     }
   }
 
-  for (int j = 1; j < nthreads; ++j) {
+  for (int j = 0; j < nthreads; ++j) {
     const int offset2 = n_sets * j;
 
     for (int i = 0; i < n_sets; ++i) {
-      pn_as_extreme_threads[i] += pn_as_extreme_threads[i + offset2];
-    }
-  }
-
-  if (n_towers != 0) {
-    for (int i = 0; i < n_sets; ++i) {
-      pn_as_extreme[i] += pn_as_extreme_threads[i];
+      pn_as_extreme[i] += pn_as_extreme_threads[i + offset2];
     }
   }
 }
@@ -513,9 +516,7 @@ void calc_ES_perm(SEXP n_same_sign,
                   const SEXP Rnthreads)
 {
   const int n_towers = nperm / TOWER_SIZE;
-  int nthreads = MIN(OMP_MAX_THREADS, INTEGER(Rnthreads)[0]);
-  nthreads = n_towers < nthreads ? MAX(n_towers, 1) : nthreads;
-  nthreads = (nthreads == 0) ? MAX(1, MIN(n_towers, OMP_MAX_THREADS - 2)) : nthreads;
+  const int nthreads = get_nthreads(Rnthreads, n_towers);
 
   int *pn_same_sign = INTEGER(n_same_sign);
   int *pn_as_extreme = INTEGER(n_as_extreme);
@@ -575,12 +576,12 @@ void calc_ES_perm(SEXP n_same_sign,
 
   const int n_blocks_per_tower = TOWER_SIZE / BLOCK_SIZE;
 
-  int tower_id = 0;
-  int towers_remaining = n_towers;
-
   // I create hypertowers (collections of towers) because
   // Rcpp::checkUserInterrupt() must be called outside of the OpenMP for loop.
   const int hypertower_size = nthreads * TOWERS_PER_HYPERTOWER;
+
+  int tower_id = 0;
+  int towers_remaining = n_towers;
 
   // Complete hypertowers
   while (towers_remaining >= hypertower_size) {
@@ -633,10 +634,9 @@ void calc_ES_perm(SEXP n_same_sign,
   // Partial hypertower
   #pragma omp parallel for num_threads(nthreads)
   for (int _tower_id = 0; _tower_id < towers_remaining; ++_tower_id) {
-    const int thread_id = GET_THREAD_ID();
+    auto rng_tower = global_rng->clone(tower_id + _tower_id);
 
-    uint64_t tower_stream = (uint64_t) (tower_id + _tower_id);
-    auto rng_tower = global_rng->clone(tower_stream);
+    const int thread_id = GET_THREAD_ID();
 
     // Pointers to thread-safe chunks of data
     float *pES_perm_vec_tower = pES_perm_vec + thread_id * BLOCK_SIZE * n_sizes;
@@ -675,6 +675,7 @@ void calc_ES_perm(SEXP n_same_sign,
   // may be complete, or the first block may be a partial one.
   if (partial_tower_size != 0) {
     auto rng_partial_tower = global_rng->clone(n_towers);
+
     const int partial_block_size = partial_tower_size % BLOCK_SIZE;
 
     if (partial_block_size != 0) {
@@ -734,7 +735,6 @@ void calc_ES_perm(SEXP n_same_sign,
 
   combine_thread_results(
     nthreads,
-    n_towers,
     n_sets,
     n_sizes,
     pperm_stats,
@@ -892,9 +892,7 @@ void calc_ES_perm_dir(SEXP n_same_sign,
                       const SEXP Rnthreads)
 {
   const int n_towers = nperm / TOWER_SIZE;
-  int nthreads = MIN(OMP_MAX_THREADS, INTEGER(Rnthreads)[0]);
-  nthreads = n_towers < nthreads ? MAX(n_towers, 1) : nthreads;
-  nthreads = (nthreads == 0) ? MAX(1, MIN(n_towers, OMP_MAX_THREADS - 2)) : nthreads;
+  const int nthreads = get_nthreads(Rnthreads, n_towers);
 
   int *pn_same_sign = INTEGER(n_same_sign);
   int *pn_as_extreme = INTEGER(n_as_extreme);
@@ -997,10 +995,9 @@ void calc_ES_perm_dir(SEXP n_same_sign,
 
     #pragma omp parallel for num_threads(nthreads)
     for (int _tower_id = 0; _tower_id < hypertower_size; ++_tower_id) {
-      const int thread_id = GET_THREAD_ID();
+      auto rng_tower = global_rng->clone(tower_id + _tower_id);
 
-      uint64_t tower_stream = (uint64_t) (tower_id + _tower_id);
-      auto rng_tower = global_rng->clone(tower_stream);
+      const int thread_id = GET_THREAD_ID();
 
       // Pointers to thread-safe chunks of data
       float *pES_perm_down_tower = pES_perm_down + thread_id * BLOCK_SIZE * n_sizes_down;
@@ -1033,7 +1030,7 @@ void calc_ES_perm_dir(SEXP n_same_sign,
         update_n_as_extreme(
           pn_as_extreme_tower,
           pperm_stats_tower,
-          pES_perm_vec,
+          pES_perm_vec_tower,
           pES,
           pES_bounds,
           n_pairs,
@@ -1051,10 +1048,9 @@ void calc_ES_perm_dir(SEXP n_same_sign,
   // Partial hypertower
   #pragma omp parallel for num_threads(nthreads)
   for (int _tower_id = 0; _tower_id < towers_remaining; ++_tower_id) {
-    const int thread_id = GET_THREAD_ID();
+    auto rng_tower = global_rng->clone(tower_id + _tower_id);
 
-    uint64_t tower_stream = (uint64_t) (tower_id + _tower_id);
-    auto rng_tower = global_rng->clone(tower_stream);
+    const int thread_id = GET_THREAD_ID();
 
     // Pointers to thread-safe chunks of data
     float *pES_perm_down_tower = pES_perm_down + thread_id * BLOCK_SIZE * n_sizes_down;
@@ -1087,7 +1083,7 @@ void calc_ES_perm_dir(SEXP n_same_sign,
       update_n_as_extreme(
         pn_as_extreme_tower,
         pperm_stats_tower,
-        pES_perm_vec,
+        pES_perm_vec_tower,
         pES,
         pES_bounds,
         n_pairs,
@@ -1102,6 +1098,7 @@ void calc_ES_perm_dir(SEXP n_same_sign,
   // may be complete, or the first block may be a partial one.
   if (partial_tower_size != 0) {
     auto rng_partial_tower = global_rng->clone(n_towers);
+
     const int partial_block_size = partial_tower_size % BLOCK_SIZE;
 
     if (partial_block_size != 0) {
@@ -1126,7 +1123,7 @@ void calc_ES_perm_dir(SEXP n_same_sign,
       );
 
       update_n_as_extreme(
-        pn_as_extreme_threads,
+        pn_as_extreme,
         pperm_stats,
         pES_perm_vec,
         pES,
@@ -1162,7 +1159,7 @@ void calc_ES_perm_dir(SEXP n_same_sign,
       );
 
       update_n_as_extreme(
-        pn_as_extreme_threads,
+        pn_as_extreme,
         pperm_stats,
         pES_perm_vec,
         pES,
@@ -1175,7 +1172,6 @@ void calc_ES_perm_dir(SEXP n_same_sign,
 
   combine_thread_results(
     nthreads,
-    n_towers,
     n_sets,
     n_pairs,
     pperm_stats,
