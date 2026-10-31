@@ -51,7 +51,7 @@
 #'
 #' @noRd
 .validate_params <- function(alpha = 1,
-                             nperm = 1e5L,
+                             nperm = 1e6L,
                              min_size = 2L,
                              max_size = Inf,
                              sort = TRUE,
@@ -650,7 +650,7 @@
 #' @importFrom data.table data.table := setorderv
 #'
 #' @noRd
-.calc_ES_perm <- function(nperm = 1e5L,
+.calc_ES_perm <- function(nperm = 1e6L,
                           nthreads = 1L,
                           n_genes,
                           ES_list) {
@@ -781,7 +781,7 @@
 #'
 #' @noRd
 .calc_pvals <- function(tab,
-                        nperm = 1e5L,
+                        nperm = 1e6L,
                         sort = TRUE,
                         alternative = "two.sided") {
   tab[, NES := ES / (sum_ES_perm / n_same_sign)]

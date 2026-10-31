@@ -110,7 +110,7 @@
 hpgsea <- function(stats,
                    gene_sets,
                    alpha = 1,
-                   nperm = 1e5L,
+                   nperm = 1e6L,
                    min_size = 2L,
                    max_size = Inf,
                    sort = TRUE,

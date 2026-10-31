@@ -8,7 +8,7 @@
 
 ## ENHANCEMENTS
 - Greatly reduced runtime of permutation tests, especially when testing directional gene sets.
-- Increased default `nperm` to 100,000 in `hpgsea` and increased the permutation limit from 1 million to 2 billion, which is close to `.Machine$integer.max`.
+- Increased default `nperm` to 1 million in `hpgsea` and increased the permutation limit from 1 million to 2 billion, which is close to `.Machine$integer.max`.
 - Greatly reduced memory usage and slightly improved runtime by removing the need for incidence matrices. This also led to the removal of the _Matrix_ and _RcppArmadillo_ packages from Imports.
 - Added parameter `alternative` to `hpgsea` to perform one-sided hypothesis tests.
 - Added parameter `max_size` to `hpgsea` to limit the maximum size of sets that will be tested.

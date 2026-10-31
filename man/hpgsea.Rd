@@ -8,7 +8,7 @@ hpgsea(
   stats,
   gene_sets,
   alpha = 1,
-  nperm = 100000L,
+  nperm = 1000000L,
   min_size = 2L,
   max_size = Inf,
   sort = TRUE,
