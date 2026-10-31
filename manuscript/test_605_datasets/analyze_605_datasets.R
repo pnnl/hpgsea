@@ -9,6 +9,8 @@ suppressPackageStartupMessages({
   source("manuscript/functions/function-create_dir.R")
 })
 
+source("manuscript/test_605_datasets/download_605_datasets.R")
+
 # Set size limits
 min_size <- 10L
 max_size <- 500L
@@ -78,7 +80,8 @@ res <- map(.x = organisms, .f = function(organism) {
             alpha = alpha,
             nperm = 1e5L,
             min_size = min_size,
-            max_size = max_size
+            max_size = max_size,
+	    nthreads = 0L
           )
 
           toc <- Sys.time()
@@ -206,3 +209,5 @@ saveRDS(
   ),
   compress = "xz"
 )
+
+source("manuscript/test_605_datasets/plot_analysis_results.R")

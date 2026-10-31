@@ -56,7 +56,8 @@ for (inter_gene_cor in c(0, 0.05)) {
           pval <- hpgsea(
             stats = stats,
             gene_sets = gene_set,
-            alpha = 0
+            alpha = 0,
+	    nthreads = 0L
           )[["p_value"]]
         },
         hpgsea_1 = {
@@ -64,7 +65,8 @@ for (inter_gene_cor in c(0, 0.05)) {
           pval <- hpgsea(
             stats = stats,
             gene_sets = gene_set,
-            alpha = 1
+            alpha = 1,
+	    nthreads = 0L
           )[["p_value"]]
         },
         ssgsea2_0 = {

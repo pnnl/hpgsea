@@ -152,3 +152,5 @@ saveRDS(
   ),
   compress = "xz"
 )
+
+source("manuscript/plot_power.R")

@@ -8,9 +8,16 @@ suppressPackageStartupMessages({
 
 data_dir <- create_data_dir()
 
-# See manuscript/prepare_PTMsigDB.R for details
-sets <- file.path(data_dir, "ptm.sig.db.all.flanking.human.v2.0.0.rds") %>%
-  readRDS()
+gmt_file <- file.path(
+  data_dir,
+  "ptm.sig.db.all.flanking.human.v2.0.0.rds"
+)
+
+if (!file.exists(gmt_file)) {
+  source("manuscript/prepare_PTMsigDB.R")
+}
+
+sets <- readRDS(gmt_file)
 
 flanking <- unlist(sets) %>%
   substr(1L, 17L) %>%
