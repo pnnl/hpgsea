@@ -13,7 +13,8 @@ figures_dir <- create_figures_dir()
 plot_df <- list(
   "fgsea_1" = "time_fgsea_nproc_1.rds",
   "fgsea_0" = "time_fgsea_nproc_0.rds",
-  "hpgsea" = "time_hpgsea.rds"
+  "hpgsea_1" = "time_hpgsea_nthreads_1.rds",
+  "hpgsea_0" = "time_hpgsea_nthreads_0.rds"
 ) %>%
   lapply(function(f) {
     readRDS(
@@ -30,29 +31,40 @@ plot_df <- list(
       levels = sort(unique(nSets)),
       labels = scales::label_comma()(sort(unique(nSets)))
     ),
-    method = factor(
-      x = method,
-      levels = unique(method)
+    nproc = sub(".*_", "", method),
+    method = sub("_.*", "", method),
+    nproc = paste0(
+      ifelse(method == "hpgsea",
+             "nthreads = ",
+             "nproc = "),
+      nproc
+    ),
+    across(
+      .cols = c(nproc, method),
+      .fns = ~ factor(.x, levels = unique(.x))
     )
   )
 
-custom_labeller <- function(labels) {
-  lapply(labels, function(label) {
-    if (label == "hpgsea") {
-      bquote("hpgsea" * "," ~ "nperm" == 10^6)
-    } else if (label == "fgsea_0") {
-      bquote("fgsea" * "," ~ "nproc" == 0)
-    } else if (label == "fgsea_1") {
-      bquote("fgsea" * "," ~ "nproc" == 1)
-    } else {
-      stop("Invalid label")
-    }
-  })
-}
+plot_df %>%
+  summarise(
+    .by = c(method, maxSetSize, nSets, nproc),
+    mean_time = mean(elapsed_time)
+  ) %>%
+  mutate(
+    nproc = sub(".* ", "", nproc)
+  ) %>%
+  tidyr::pivot_wider(
+    names_from = method,
+    values_from = mean_time
+  ) %>%
+  mutate(
+    ratio = fgsea / hpgsea
+  ) %>%
+  arrange(nproc, ratio)
 
 p <- ggplot(plot_df, aes(x = x_pos, y = elapsed_time, color = nSets)) +
   geom_point(
-    size = 1.8,
+    size = 1.5,
     shape = 21,
     stroke = 0.8
   ) +
@@ -61,26 +73,37 @@ p <- ggplot(plot_df, aes(x = x_pos, y = elapsed_time, color = nSets)) +
     yintercept = 0,
     color = "white"
   ) +
-  facet_wrap(
-    ~ method,
+  ggh4x::facet_nested_wrap(
+    ~ method + nproc,
     nrow = 1L,
-    scales = "free_y",
-    labeller = as_labeller(custom_labeller, default = label_parsed)
+    scales = "free_y"
   ) +
   facetted_pos_scales(
     y = list(
-      # fgsea, nproc = 1
-      method == levels(method)[1L] ~ scale_y_continuous(
-        breaks = seq(0, 64, 16),
-        limits = c(0, 64),
-        expand = expansion(mult = c(4e-3, 0.05))
-      ),
-      # fgsea, nproc = 0; hpgsea
-      TRUE ~ scale_y_continuous(
-        breaks = seq(0, 16, 4),
-        limits = c(0, 16),
-        expand = expansion(mult = c(4e-3, 0.05))
-      )
+      nproc == "nproc = 1" ~
+        scale_y_continuous(
+          breaks = seq(0, 64, 16),
+          limits = c(0, 64),
+          expand = expansion(mult = c(4e-3, 0.05))
+        ),
+      nproc == "nproc = 0" ~
+        scale_y_continuous(
+          breaks = seq(0, 16, 4),
+          limits = c(0, 16),
+          expand = expansion(mult = c(4e-3, 0.05))
+        ),
+      nproc == "nthreads = 1" ~
+        scale_y_continuous(
+          breaks = seq(0, 16, 4),
+          limits = c(0, 16),
+          expand = expansion(mult = c(4e-3, 0.05))
+        ),
+      nproc == "nthreads = 0" ~
+        scale_y_continuous(
+          breaks = seq(0, 4, 1),
+          limits = c(0, 4),
+          expand = expansion(mult = c(4e-3, 0.05))
+        )
     )
   ) +
   scale_x_continuous(
@@ -142,9 +165,9 @@ p <- ggplot(plot_df, aes(x = x_pos, y = elapsed_time, color = nSets)) +
     strip.text = element_text(
       color = "black",
       size = 10,
-      margin = margin(t = 1, b = 2, unit = "pt")
+      margin = margin(t = 0, b = 2, unit = "pt")
     ),
-    panel.spacing.x = unit(8, "pt"),
+    panel.spacing.x = unit(2, "pt"),
     plot.margin = unit(c(0, 1, -0, 0), "pt")
   )
 
