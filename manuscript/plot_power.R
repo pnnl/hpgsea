@@ -1,25 +1,49 @@
-library(ggplot2)
+suppressPackageStartupMessages({
+  library(ggplot2)
+  library(dplyr)
+})
 
 source("manuscript/functions/function-create_dir.R")
 
 data_dir <- create_data_dir()
 figures_dir <- create_figures_dir()
 
-df <- readRDS(file.path(data_dir, "power.rds"))
+# margin of error for proportions
+prop_moe <- function(p, n = 1e3L) {
+  qnorm(1 - 0.05 / 2) * sqrt(p * (1 - p) / n)
+}
+
+df <- readRDS(file.path(data_dir, "power.rds")) %>%
+  mutate(
+    moe = prop_moe(power),
+    lower_ci = pmax(0, power - moe),
+    upper_ci = pmin(1, power + moe)
+  )
 
 levels(df$set_size) <- paste(levels(df$set_size), "genes")
 levels(df$method) <- sub("_", ", \u03b1 = ", levels(df$method))
 
+color_palette <- structure(
+  c("grey60", "black", "#fdbf6f", "#ff7f00"),
+  names = levels(df$method)
+)
+
 p <- ggplot(df, aes(x = prop_DE, y = power, color = method, linetype = mu)) +
+  geom_ribbon(
+    aes(ymin = lower_ci, ymax = upper_ci, fill = method),
+    alpha = 0.2,
+    linewidth = 0,
+    color = NA
+  ) +
   geom_line(
-    linewidth = 0.5
+    linewidth = 0.4
   ) +
   facet_wrap(
     ~ set_size,
     nrow = 1L
   ) +
   scale_x_continuous(
-    name = "Proportion of differentially expressed genes",
+    name = "Proportion of differentially expressed genes in the set",
     limits = c(0, 1),
     breaks = seq(0, 1, 0.2),
     expand = expansion(
@@ -36,14 +60,16 @@ p <- ggplot(df, aes(x = prop_DE, y = power, color = method, linetype = mu)) +
   ) +
   scale_color_manual(
     name = "Method:",
-    values = c("grey60", "black", "#fdbf6f", "#ff7f00"),
-    breaks = levels(df$method)
+    values = color_palette
+  ) +
+  scale_fill_manual(
+    name = "Method:",
+    values = color_palette
   ) +
   scale_linetype_manual(
     name = "Effect size:",
     values = c("82", "11", "3132", "solid")
   ) +
-  # coord_equal() +
   guides(
     color = guide_legend(
       order = 1L,
@@ -52,8 +78,12 @@ p <- ggplot(df, aes(x = prop_DE, y = power, color = method, linetype = mu)) +
         legend.key.width = unit(24, "pt")
       )
     ),
+    fill = guide_none(),
     linetype = guide_legend(
       nrow = 1L,
+      override.aes = list(
+        fill = NA
+      ),
       theme = theme(
         legend.key.width = unit(24, "pt")
       )
