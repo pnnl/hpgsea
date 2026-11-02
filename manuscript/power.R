@@ -42,14 +42,18 @@ get_pvals <- function(method, set_size, n_DE, mu) {
           pval <- hpgsea(
             stats = stats,
             gene_sets = gene_set,
-            alpha = 0
+            alpha = 0,
+            nperm = 1e6L,
+            nthreads = 0L
           )[["p_value"]]
         },
         hpgsea_1 = {
           pval <- hpgsea(
             stats = stats,
             gene_sets = gene_set,
-            alpha = 1
+            alpha = 1,
+            nperm = 1e6L,
+            nthreads = 0L
           )[["p_value"]]
         },
         fgsea_0 = {

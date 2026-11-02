@@ -78,10 +78,10 @@ res <- map(.x = organisms, .f = function(organism) {
             stats = stats,
             gene_sets = gene_sets,
             alpha = alpha,
-            nperm = 1e5L,
+            nperm = 1e6L,
             min_size = min_size,
             max_size = max_size,
-	    nthreads = 0L
+            nthreads = 0L
           )
 
           toc <- Sys.time()
@@ -123,7 +123,6 @@ res <- map(.x = organisms, .f = function(organism) {
         out_i <- data.frame(
           n_sets = nrow(df),
           n_signif = sum(df$padj < 0.05),
-          min_pval = min(df$pval),
           time_seconds = time_diff
         )
 
@@ -164,7 +163,7 @@ res <- map(.x = organisms, .f = function(organism) {
       .id = "method"
     )
 
-}) %>% # end map organisms
+}) %>%
   setNames(organisms) %>%
   bind_rows(
     .id = "organism"
@@ -195,7 +194,6 @@ res <- map(.x = organisms, .f = function(organism) {
     values_from = c(
       n_sets,
       n_signif,
-      min_pval,
       time_seconds
     )
   ) %>%
